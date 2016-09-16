@@ -6,3 +6,6 @@
 
 # OS structure file(s)
 .DS_Store
+
+# because the connection strings can contain database user/password info, those will be handled more carefully.
+databasing/db_conn_strings.py
