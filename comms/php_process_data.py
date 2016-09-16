@@ -70,5 +70,3 @@ def main(argv):
 # Receives initial ping to file
 if __name__ == '__main__':
     main(sys.argv[1:])
-
-# json_data = '{"header":{"lift_id":0,"lift_sampling_rate":50,"lift_weight":100,"lift_weight_units":"lbs"},"content":{"timepoint":["0,0.02,0.04"],"a_x":["230,773,169"]}}'

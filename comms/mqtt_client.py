@@ -1,20 +1,20 @@
 import json
-import time
-import sys
-import os
-from optparse import OptionParser
 
+from time import sleep
+from sys import argv, path as syspath
+from os.path import dirname, abspath
+from optparse import OptionParser
 from datetime import datetime as dt
 from urllib2 import urlopen
 
 import paho.mqtt.client as mqtt
 
 try:
-    path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    path = dirname(dirname(abspath(__file__)))
     print 'Adding {} to sys.path'.format(path)
-    sys.path.append(path)
+    syspath.append(path)
 except NameError:
-    sys.path.append('/Users/kyle/PycharmProjects/fitai_controller')
+    syspath.append('/Users/kyle/PycharmProjects/fitai_controller')
     print 'working in Dev mode.'
 
 from databasing.database import push_to_db
@@ -31,18 +31,17 @@ def mqtt_on_connect(client, userdata, rc):
         and reconnect, subscriptions will be renewed. '''
 
     print 'connection successful'
-    print 'ready'
     client.subscribe("fitai")
+    print 'ready'
 
 
 #: The callback for when a PUBLISH message is received from the broker
 #: There will need to be a lot of logic wrappers here; a lot could go wrong, and it should all be handled
 #: as gracefully as possible
-def mqtt_on_message(client, userdata, msg):
+def mqtt_on_message(lient, userdata, msg):
 
     topic = msg.topic
     print 'Received message from topic "{}"'.format(topic)
-    # print 'received message (type {t}): {m}'.format(t=type(msg.payload), m=msg.payload)
 
     try:
         data = json.loads(msg.payload)
@@ -74,12 +73,11 @@ def test_recurring_messages(client):
         print 'pushing message {} to broker'.format(i)
         write_message = '({i}) Message from IP {ip}. \nCurrent time: {t}'.format(i=i, ip=my_ip, t=dt.now())
         client.publish('fitai', write_message)
-        time.sleep(5)
+        sleep(5)
         i += 1
 
 
-def main(argv):
-
+def main(args):
     parser = OptionParser()
     parser.add_option('-p', '--port', dest='host_port', default=1883,
                       help='Port on server hosting MQTT')
@@ -90,10 +88,7 @@ def main(argv):
     parser.add_option('-v', '--verbose', dest='verbose', default=False, action='store_true',
                       help='Increase console outputs (good for dev purposes)')
 
-    (options, args) = parser.parse_args(argv)
-
-    print 'options (type {t}): {o}'.format(t=type(options), o=options)
-    # print 'args: {}'.format(args)
+    (options, _) = parser.parse_args(args)
 
     host_ip = options.host_ip
     host_port = options.host_port
@@ -101,6 +96,8 @@ def main(argv):
     verbose = options.verbose
 
     if verbose:
+        # print 'options (type {t}): {o}'.format(t=type(options), o=options)
+        # print 'args: {}'.format(args)
         print 'received args {}'.format(argv)
         print 'Attempting MQTT connection to {i}:{p} on topic {t}'.format(i=host_ip, p=host_port, t=mqtt_topic)
 
@@ -119,7 +116,7 @@ def main(argv):
 
 # Receives initial ping to file
 if __name__ == '__main__':
-    main(sys.argv[1:])
+    main(argv[1:])
 
 # Sample message:
 # "{'header': {'athlete_id': 0, 'lift_id': 0, 'lift_sampling_rate': 50, 'lift_start': '2016-09-01', 'lift_type': 'deadlift', 'lift_weight': 100, 'lift_weight_units': 'lbs', 'lift_num_reps': 10 }, 'content': 'a_x': [0, 1, 2, 1, 3, 2, 1, 3, 4]}"

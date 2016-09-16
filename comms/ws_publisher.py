@@ -35,6 +35,7 @@ def close_connection(ws):
     ws.close()
 
 
+# Publish the given header, velocity, and power lists to the PHP websocket server
 def ws_pub(head, vel, pwr):
     # msg = '{"header": { "u_id": 0, "lift_id": 1}, "content": {"v_rms": [0, 1, 2, 3, 4], "p_rms": [5, 6, 7, 8, 9] }}'
     msg_dict = {"header": head.to_dict(), "content": {"v_rms": list(vel), "p_rms": list(pwr)}}
