@@ -107,4 +107,4 @@ client.disconnect()
 
 # Sample message:
 # "{'header': {'athlete_id': 0, 'lift_id': 0, 'lift_sampling_rate': 50, 'lift_start': '2016-09-01', 'lift_type': 'deadlift', 'lift_weight': 100, 'lift_weight_units': 'lbs', 'lift_num_reps': 10 }, 'content': 'a_x': [0, 1, 2, 1, 3, 2, 1, 3, 4]}"
-#'{"header": {"athlete_id": 0, "lift_id": 0, "lift_sampling_rate": 50, "lift_start": "2016-09-01", "lift_type": "deadlift", "lift_weight": 100, "lift_weight_units": "lbs", "lift_num_reps": 10 }, "content": {"a_x": [0, 1, 2, 1, 3, 2, 1, 3, 4]} }'
+#'{"header": {"athlete_id": 0, "lift_id": 10, "lift_sampling_rate": 50, "lift_start": "2016-09-01", "lift_type": "deadlift", "lift_weight": 100, "lift_weight_units": "lbs", "lift_num_reps": 10 }, "content": {"a_x": [0, 1, 2, 1, 3, 2, 1, 3, 4]} }'

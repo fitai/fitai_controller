@@ -1,0 +1,8 @@
+# Ignore pycharm .idea/ structure
+.idea/*
+
+# Any python compiled files
+*.pyc
+
+# OS structure file(s)
+.DS_Store
