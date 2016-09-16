@@ -23,12 +23,6 @@ from comms.ws_publisher import ws_pub
 
 my_ip = urlopen('http://ip.42.pl/raw').read()
 
-# PERSONAL NOTES
-
-# To run the mosquitto service on mac osx
-# /usr/local/sbin/mosquitto -c /usr/local/etc/mosquitto/mosquitto.conf
-
-
 # The callback for when the client successfully connects to the broker
 def on_connect(client, userdata, rc):
     ''' We subscribe on_connect() so that if we lose the connection
@@ -50,15 +44,6 @@ def on_message(client, userdata, msg):
 
     try:
         data = json.loads(msg.payload)
-        # print 'Received json data \n{}'.format(data)
-
-        # To save the most recent data packet so it can be loaded in for dev purposes
-        # in case code breaks downstream
-        # with open('test_dict.txt', 'w') as outfile:
-        #     json.dump(data, outfile)
-
-        # Load saved data packet
-        # data = dict(data)
 
         print 'reading header...'
         head = read_header_mqtt(data)
@@ -69,7 +54,7 @@ def on_message(client, userdata, msg):
         _, v, p = process_data(head, accel)
         ws_pub(head, v, p)
 
-	# temporarily disabling
+        # temporarily disabling
         # push_to_db(head, accel)
 
     except ValueError, e:
@@ -99,9 +84,6 @@ def test_recurring_messages(client):
         client.publish('fitai', write_message)
         time.sleep(5)
         i += 1
-
-# Blocking call which processes all network traffic and dispatches
-# callbacks (see on_*() above). It also handles reconnecting.
 
 client.loop_forever()
 client.disconnect()
