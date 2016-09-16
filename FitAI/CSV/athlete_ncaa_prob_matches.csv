@@ -1,0 +1,366 @@
+,sport,name,year,gender,college,ncaa_college,full_prob,part_prob,ncaa_conf,ncaa_div,ncaa_reclass,ncaa_state
+0,Baseball,Mike Wagner,2014.0,M,Allegheny College,Allegheny College,100.0,100.0,North Coast Athletic Conference,III,,PA
+1,Baseball,Ryder Arsenault,2013.0,M,Colby College,Colby College,100.0,100.0,New England Small College Athletic Conference,III,,ME
+2,Baseball,Trevor Chapin,2013.0,M,Keene State,Keene State College,100.0,100.0,Little East Conference,III,,NH
+3,Baseball,Tyler Hill,2010.0,M,Endicott College,Endicott College,100.0,100.0,Commonwealth Coast Conference,III,,MA
+4,Baseball,Troy Thibodeau,2010.0,M,University of Southern Maine,University of Southern Maine,100.0,100.0,Little East Conference,III,,ME
+5,Baseball,Cole Warren,2010.0,M,University of Rhode Island,University of Rhode Island,100.0,100.0,Atlantic 10 Conference,I-FCS,,RI
+6,Baseball,Colin Lynch,2005.0,M,St. John's University,St. John Fisher College,72.0,80.0,Empire 8,III,,NY
+7,Baseball,Tom Pavesi,2005.0,M,Solano (CA) Community College,"University of Maryland, Baltimore County",48.0,48.0,America East Conference,I,,MD
+8,Baseball,Anthony Scialdone,2005.0,M,Central Connecticut State University,Central Connecticut State University,100.0,100.0,Northeast Conference,I-FCS,,CT
+9,Baseball,Greg Norris,1996.0,M,Wofford College,Wofford College,100.0,100.0,Southern Conference,I-FCS,,SC
+10,Basketball,Mike Auger,2014.0,M,U Penn,Union University,55.0,50.0,Gulf South Conference,II,,TN
+11,Basketball,Tory Miller,2014.0,M,University of Colorado  Boulder,"University of Colorado, Boulder",95.0,95.0,Pac-12 Conference,I-FBS,,CO
+12,Basketball,Josh Repine,2014.0,M,University of Colorado  Boulder,"University of Colorado, Boulder",95.0,95.0,Pac-12 Conference,I-FBS,,CO
+13,Basketball,Elijah Bryant,2014.0,M,Elon University,Elon University,100.0,100.0,Colonial Athletic Association,I-FCS,,NC
+14,Basketball,Aubrey Dawkins,2014.0,M,Univeristy of Michigan,University of Michigan,67.0,100.0,Big Ten Conference,I-FBS,,MI
+15,Basketball,Mike LeBlanc,2014.0,M,Princeton University,Princeton University,100.0,100.0,The Ivy League,I-FCS,,NJ
+16,Basketball,Matt Dean,2014.0,M,Wentworth Institute of Technology,Wentworth Institute of Technology,100.0,100.0,Commonwealth Coast Conference,III,,MA
+17,Basketball,Noah Vonleh,2013.0,M,Indiana,Indiana State University,70.0,100.0,Missouri Valley Conference,I-FCS,,IN
+18,Basketball,Travis Jorgenson,2013.0,M,Georgia Tech,Georgia College,74.0,100.0,Peach Belt Conference,II,,GA
+19,Basketball,Lincoln Davis,2013.0,M,Fairfield,Fairfield University,100.0,100.0,Metro Atlantic Athletic Conference,I,,CT
+20,Basketball,Garrett Dorfman,2013.0,M,Transylvania,Transylvania University,100.0,100.0,Heartland Collegiate Athletic Conference,III,,KY
+21,Basketball,Cole McConnell,2013.0,M,Michigan,University of Michigan,84.0,100.0,Big Ten Conference,I-FBS,,MI
+22,Basketball,Dustin Triano,2013.0,M,Gonzaga,Gonzaga University,100.0,100.0,West Coast Conference,I,,WA
+23,Basketball,Trevor Glassman,2013.0,M,Manhattan,Manhattan College,100.0,100.0,Metro Atlantic Athletic Conference,I,,NY
+24,Basketball,Zach Auguste,2012.0,M,Notre Dame,University of Notre Dame,87.0,100.0,Atlantic Coast Conference,I-FBS,,IN
+25,Basketball,James Dunivan,2012.0,M,Williams College,Williams College,100.0,100.0,New England Small College Athletic Conference,III,,MA
+26,Basketball,Barrington Alston,2012.0,M,Towson University,Towson University,100.0,100.0,Colonial Athletic Association,I-FCS,,MD
+27,Basketball,Kazuya Tamura,2012.0,M,University of Puget Sound,University of Puget Sound,100.0,100.0,Northwest Conference,III,,WA
+28,Basketball,Evan Manning,2012.0,M,Kansas University,University of Kansas,80.0,100.0,Big 12 Conference,I-FBS,,KS
+29,Basketball,Olivier Hanlan,2012.0,M,Boston College,Boston College,100.0,100.0,Atlantic Coast Conference,I-FBS,,MA
+30,Basketball,Aaron Hendricks,2012.0,M,University of the Pacific,University of the Pacific,100.0,100.0,West Coast Conference,I,,CA
+31,Basketball,Jordan Laguerre,2011.0,M,UMass,Marist College,55.0,60.0,Metro Atlantic Athletic Conference,I-FCS,,NY
+32,Basketball,Seth Liebert,2011.0,M,Swarthmore College,Swarthmore College,100.0,100.0,Centennial Conference,III,,PA
+33,Basketball,Stefano Mancini,2011.0,M,University of Maine,"University of Maine, Orono",70.0,100.0,America East Conference,I-FCS,,ME
+34,Basketball,Nick Paulos,2011.0,M,UNC Greensboro,Greensboro College,83.0,100.0,USA South Athletic Conference,III,,NC
+35,Basketball,Joey Ptasinski,2011.0,M,Lafayette College,Lafayette College,100.0,100.0,Patriot League,I-FCS,,PA
+36,Basketball,Travis Souza,2011.0,M,UC Irvine,Concordia University Irvine,62.0,78.0,Pacific West Conference,II,,CA
+37,Basketball,Will Davis,2011.0,M,UC Irvine,Concordia University Irvine,62.0,78.0,Pacific West Conference,II,,CA
+38,Basketball,Carter Trent,2011.0,M,Trinity College,Trine University,67.0,80.0,Michigan Intercol. Ath. Assn.,III,,IN
+39,Basketball,Brady Heslip,2010.0,M,Baylor,Baylor University,100.0,100.0,Big 12 Conference,I-FBS,,TX
+40,Basketball,Eric Dean,2010.0,M,Trinity College,Trine University,67.0,80.0,Michigan Intercol. Ath. Assn.,III,,IN
+41,Basketball,Dartaye Ruffin,2010.0,M,Drexel,Drexel University,100.0,100.0,Colonial Athletic Association,I,,PA
+42,Basketball,Kyle Cain,2010.0,M,UNC Greensboro,Greensboro College,83.0,100.0,USA South Athletic Conference,III,,NC
+43,Basketball,Evan Smotrycz,2010.0,M,Maryland University,Loyola University Maryland,67.0,100.0,Patriot League,I,,MD
+44,Basketball,Brady O'Neil,2010.0,M,St. Lawrence,St. Lawrence University,100.0,100.0,Liberty League,III,,NY
+45,Basketball,Jacob Liebert,2010.0,M,Navy,Barry University,44.0,50.0,Sunshine State Conference,II,,FL
+46,Basketball,Tim McKinney,2010.0,M,Bryant,Bryant University,100.0,100.0,Northeast Conference,I-FCS,,RI
+47,Basketball,Damen Bell-Holter,2009.0,M,Oral Roberts,Oral Roberts University,100.0,100.0,The Summit League,I,,OK
+48,Basketball,Jordan Callahan,2009.0,M,Tulane,Tulane University,100.0,100.0,American Athletic Conference,I-FBS,,LA
+49,Basketball,Mike Topercer,2009.0,M,Bentley,Bentley University,100.0,100.0,Northeast-10 Conference,II,,MA
+50,Basketball,John Daniels,2009.0,M,Columbia,Columbia University-Barnard College,64.0,100.0,The Ivy League,I-FCS,,NY
+51,Basketball,Twany Beckham,2008.0,M,University of Kentucky,University of Kentucky,100.0,100.0,Southeastern Conference,I-FBS,,KY
+52,Basketball,Kendall Durant,2008.0,M,Alabama,University of Alabama,82.0,100.0,Southeastern Conference,I-FBS,,AL
+53,Basketball,Orion Outerbridge,2008.0,M,URI,Upper Iowa University,31.0,33.0,Northern Sun Intercollegiate Conference,II,,IA
+54,Basketball,Patrick Saunders,2008.0,M,Princeton,Princeton University,100.0,100.0,The Ivy League,I-FCS,,NJ
+55,Basketball,Mike Howlett,2008.0,M,PENN,Elon University,25.0,25.0,Colonial Athletic Association,I-FCS,,NC
+56,Basketball,Sam Cieplicki,2008.0,M,NYU,New York University,36.0,33.0,University Athletic Association,III,,NY
+57,Basketball,"Menghe ""Papi"" a'Nyam",2006.0,M,Canisius College,Canisius College,100.0,100.0,Metro Atlantic Athletic Conference,I,,NY
+58,Basketball,Jaxon Leo,2006.0,M,Wheaton College,Barton College,62.0,73.0,Conference Carolinas,II,,NC
+59,Basketball,Radar Ongauetou,2006.0,M,University of New Hampshire,University of New Hampshire,100.0,100.0,America East Conference,I-FCS,,NH
+60,Basketball,TJ Topercer,2006.0,M,United States Naval Academy,U.S. Naval Academy,71.0,78.0,Patriot League,I-FBS,,MD
+61,Basketball,Jan Cocozziello,2005.0,M,Hartwick College,Hartwick College,100.0,100.0,Empire 8,III,,NY
+62,Basketball,Gabriel Chami,2004.0,M,James Madison University,James Madison University,100.0,100.0,Colonial Athletic Association,I-FCS,,VA
+63,Basketball,Bryan Adams,2004.0,M,Western Washington University,Western Washington University,100.0,100.0,Great Northwest Athletic Conference,II,,WA
+64,Basketball,Todd Checovich,2003.0,M,Colgate University,Colgate University,100.0,100.0,Patriot League,I-FCS,,NY
+65,Basketball,Michael Cook,2003.0,M,University of Pittsburgh,University of Pittsburgh,100.0,100.0,Atlantic Coast Conference,I-FBS,,PA
+66,Basketball,Josh Corriea,2003.0,M,Bentley College,Bentley University,100.0,100.0,Northeast-10 Conference,II,,MA
+67,Basketball,Oluwafemi Ibikunle,2003.0,M,Texas Christian University,Texas Christian University,100.0,100.0,Big 12 Conference,I-FBS,,TX
+68,Basketball,Tom Leikas,2003.0,M,University of North Dakota,University of North Dakota,100.0,100.0,Big Sky Conference,I-FCS,,ND
+69,Basketball,Tony Chatman,2003.0,M,Ohio University,Ohio University,100.0,100.0,Mid-American Conference,I-FBS,,OH
+70,Basketball,Collin Bray,2002.0,M,Colby Saywer College,Colby-Sawyer College,83.0,83.0,North Atlantic Conference,III,,NH
+71,Basketball,Michael Clarke,2002.0,M,Clarion University,Clarkson University,80.0,71.0,Liberty League,III,,NY
+72,Basketball,Michael Konovelchick,2002.0,M,Manhattan College,Manhattan College,100.0,100.0,Metro Atlantic Athletic Conference,I,,NY
+73,Basketball,John Naparlo,2002.0,M,James Madison University,James Madison University,100.0,100.0,Colonial Athletic Association,I-FCS,,VA
+74,Basketball,Donatas  Rackauskas,2002.0,M,Southern Methodist University,Southern Methodist University,100.0,100.0,American Athletic Conference,I-FBS,,TX
+75,Basketball,Rob Stockwell,2002.0,M,Bates College,Bates College,100.0,100.0,New England Small College Athletic Conference,III,,ME
+76,Basketball,Adam Tancredi,2002.0,M,Quinnipiac University,Quinnipiac University,100.0,100.0,Metro Atlantic Athletic Conference,I,,CT
+77,Basketball,Chet Truskowski,2002.0,M,Hobart College,Howard University,67.0,67.0,Mid-Eastern Athletic Conf.,I-FCS,,DC
+78,Basketball,Rashad McCants,2002.0,M,"University of North Carolina; Minnesota Timberwolves, Sacramento Kings, NBA",University of North Carolina Wilmington,50.0,75.0,Colonial Athletic Association,I,,NC
+79,Basketball,Wes Miller,2002.0,M,"University of North Carolina, Assistant Coach High Point University","University of North Carolina, Chapel Hill",61.0,67.0,Atlantic Coast Conference,I-FBS,,NC
+80,Basketball,Todd Towndsend,2001.0,M,Marquette University,Marquette University,100.0,100.0,Big East Conference,I,,WI
+81,Basketball,Alfredus Petkus,2001.0,M,University of Maine,"University of Maine, Orono",70.0,100.0,America East Conference,I-FCS,,ME
+82,Basketball,Ivan Bozovic,2001.0,M,St. Peters College,Saint Peter's University,78.0,80.0,Metro Atlantic Athletic Conference,I,,NJ
+83,Basketball,Brian Cuttica,2001.0,M,University of Chicago,University of Chicago,100.0,100.0,University Athletic Association,III,,IL
+84,Basketball,Garth Glissman,2001.0,M,University of Nebraska,University of Nebraska Omaha,79.0,100.0,The Summit League,I,,NE
+85,Basketball,Sam Brand,2000.0,M,Hampton University,Hampton University,100.0,100.0,Mid-Eastern Athletic Conf.,I-FCS,,VA
+86,Basketball,Justin DeBerry,2000.0,M,Lafayette College,Lafayette College,100.0,100.0,Patriot League,I-FCS,,PA
+87,Basketball,Allen Gould,2000.0,M,University of New Hampshire,University of New Hampshire,100.0,100.0,America East Conference,I-FCS,,NH
+88,Basketball,Gabriel Hughes,2000.0,M,"University of California, Berkeley","University of California, Berkeley",100.0,100.0,Pac-12 Conference,I-FBS,,CA
+89,Basketball,Michael Roberts,2000.0,M,"Indiana University, Assistant Coach Rice University",Indiana State University,56.0,62.0,Missouri Valley Conference,I-FCS,,IN
+90,Basketball,Bernard Robinson Jr.,2000.0,M,University of Michigan,University of Michigan,100.0,100.0,Big Ten Conference,I-FBS,,MI
+91,Basketball,Andy Smith,2000.0,M,U.S. Military Academy @ West Point,U.S. Military Academy,76.0,100.0,Patriot League,I-FBS,,NY
+92,Basketball,Tyrone Walker,2000.0,M,Winthrop University,Winthrop University,100.0,100.0,Big South Conference,I,,SC
+93,Basketball,Tom Coverdale,1999.0,M,"Indiana University; Rockford Lightning, CBA","Indiana University, Bloomington",52.0,57.0,Big Ten Conference,I-FBS,,IN
+94,Basketball,Marius Petravicius,1999.0,M,"University of South Carolina; Telindus, EuropeanBasket League",University of South Carolina Aiken,58.0,83.0,Peach Belt Conference,II,,SC
+95,Basketball,Michael Causey,1999.0,M,Harvard University,Harvard University,100.0,100.0,The Ivy League,I-FCS,,MA
+96,Basketball,Josh Kroenke,1999.0,M,University of Missouri,University of Central Missouri,73.0,82.0,Mid-America Intercollegiate Athletics Association,II,,MO
+97,Basketball,David Muller,1999.0,M,Cornell University,Cornell University,100.0,100.0,The Ivy League,I-FCS,,NY
+98,Basketball,Quincy Steele,1999.0,M,University of Redlands,University of Redlands,100.0,100.0,Southern California Intercollegiate Athletic Conf.,III,,CA
+99,Basketball,Rudy Wise,1999.0,M,Lake Forest College,Lake Forest College,100.0,100.0,Midwest Conference,III,,IL
+100,Basketball,Graham Bunn,1998.0,M,Appalachian State University,Appalachian State University,100.0,100.0,Sun Belt Conference,I-FBS,,NC
+101,Basketball,Brent Klassen,1998.0,M,Bowling Green Univesity,Bowling Green State University,71.0,79.0,Mid-American Conference,I-FBS,,OH
+102,Basketball,Greg Friel,1998.0,M,Dartmouth College,Dartmouth College,100.0,100.0,The Ivy League,I-FCS,,NH
+103,Basketball,Collier Drayton,1998.0,M,Northwestern University,Northwestern University,100.0,100.0,Big Ten Conference,I-FBS,,IL
+104,Basketball,Darius Songaila,1998.0,M,"Wake Forest University; Lithuanian Olympic Team, Bronze Medal; CSKA Moskow, European Professional League; Sacramento Kings, Chicago Bulls, Washington Wizards, New Orleans Hornets, NBA","California State University, Sacramento",22.0,52.0,Big Sky Conference,I-FCS,,CA
+105,Basketball,Rafael Vidaurreta,1997.0,M,Wake Forest University,Wake Forest University,100.0,100.0,Atlantic Coast Conference,I-FBS,,NC
+106,Basketball,Noel Bloom,1997.0,M,New Hampshire College,University of New Hampshire,90.0,100.0,America East Conference,I-FCS,,NH
+107,Basketball,Lee Moon,1997.0,M,Texas Christian University,Texas Christian University,100.0,100.0,Big 12 Conference,I-FBS,,TX
+108,Basketball,Marko Punda,1997.0,M,Valparaiso University,Valparaiso University,100.0,100.0,Horizon League,I-FCS,,IN
+109,Basketball,Michael Roy,1997.0,M,The Citadel,The Citadel,100.0,100.0,Southern Conference,I-FCS,,SC
+110,Basketball,J.D. Simpson,1997.0,M,Duke University,Duke University,100.0,100.0,Atlantic Coast Conference,I-FBS,,NC
+111,Basketball,Andrew Sloan,1997.0,M,Trinity College,Trine University,67.0,80.0,Michigan Intercol. Ath. Assn.,III,,IN
+112,Basketball,Awvee Storey,1997.0,M,"Arizona State University; New Jersey Nets, NBA","Rutgers, The State University of New Jersey, New Brunswick",55.0,67.0,Big Ten Conference,I-FBS,,NJ
+113,Basketball,Jason Ashur,1996.0,M,Connecticut College,Connecticut College,100.0,100.0,New England Small College Athletic Conference,III,,CT
+114,Basketball,Shawn Brown,1996.0,M,Merrimack College,Merrimack College,100.0,100.0,Northeast-10 Conference,II,,MA
+115,Basketball,Antonio Grant,1996.0,M,University of South Carolina,University of South Carolina Aiken,85.0,100.0,Peach Belt Conference,II,,SC
+116,Basketball,David Greer,1996.0,M,Millsaps College,Millsaps College,100.0,100.0,Southern Athletic Association,III,,MS
+117,Basketball,LaSean Howard,1996.0,M,Long Beach State University,Long Beach State University,100.0,100.0,Big West Conference,I,,CA
+118,Basketball,Tyler Murphy,1996.0,M,University of Southern California,University of Southern California,100.0,100.0,Pac-12 Conference,I-FBS,,CA
+119,Basketball,Eric Pescinski,1996.0,M,Colby Sawyer College,Colby-Sawyer College,92.0,92.0,North Atlantic Conference,III,,NH
+120,Basketball,Jamie Baker,1995.0,M,Bentley College,Bentley University,100.0,100.0,Northeast-10 Conference,II,,MA
+121,Basketball,Jon Kunz,1995.0,M,The Citadel,The Citadel,100.0,100.0,Southern Conference,I-FCS,,SC
+122,Basketball,Todd Burgan,1994.0,M,Syracuse University,Syracuse University,100.0,100.0,Atlantic Coast Conference,I-FBS,,NY
+123,Basketball,Avery Curry,1994.0,M,Florida State University,Florida State University,100.0,100.0,Atlantic Coast Conference,I-FBS,,FL
+124,Basketball,Steve Hart,1993.0,M,Indiana University,Indiana State University,70.0,100.0,Missouri Valley Conference,I-FCS,,IN
+125,Basketball,Brian Gilpin,1993.0,M,Dartmouth College,Dartmouth College,100.0,100.0,The Ivy League,I-FCS,,NH
+126,Basketball,Roy Hariston,1992.0,M,Purdue University,Purdue University,100.0,100.0,Big Ten Conference,I-FBS,,IN
+127,Basketball,Roney Eford,1992.0,M,Marquette University,Marquette University,100.0,100.0,Big East Conference,I,,WI
+128,Basketball,Chris Parsons,1992.0,M,Hofstra University,Hofstra University,100.0,100.0,Colonial Athletic Association,I,,NY
+129,Basketball,Lawrence Moten,1991.0,M,"Syracuse University; Vancouver Grizzlies, NBA",Massachusetts College of Liberal Arts,40.0,40.0,Massachusetts State Collegiate Athletic Conference,III,,MA
+130,Basketball,Cuonzo Martin,1991.0,M,Purdue University; Associate Head Coach Purdue University,"Purchase College, State University of New York",43.0,41.0,Skyline Conference,III,,NY
+131,Basketball,Kenya Hunter,1991.0,M,Duquesne University; Assistant Coach Georgetown University,Western State Colorado University,44.0,50.0,Rocky Mountain Athletic Conference,II,,CO
+132,Basketball,Patrick Knight,1990.0,M,Indiana University; Head Coach Texas Tech,Texas Tech University,49.0,100.0,Big 12 Conference,I-FBS,,TX
+133,Basketball,Dan Purdy,1990.0,M,University of Pennsylvania,University of Pennsylvania,100.0,100.0,The Ivy League,I-FCS,,PA
+134,Basketball,Ed Cooley,1989.0,M,Stonehill College; Head Coach Fairfield University,Fairfield University,44.0,100.0,Metro Atlantic Athletic Conference,I,,CT
+135,Basketball,Will McDonough,2003.0,M,Middlebury College,Middlebury College,100.0,100.0,New England Small College Athletic Conference,III,,VT
+136,Cycling,Owen Laurion,2006.0,M,University of Rochester,University of Rochester,100.0,100.0,University Athletic Association,III,,NY
+137,Football,Elias Camacho,2014.0,M,Wesleyan University,Wesley College,86.0,100.0,Capital Athletic Conference Inc.,III,,DE
+138,Football,Eric Lauro,2014.0,M,Union College,Union University,100.0,100.0,Gulf South Conference,II,,TN
+139,Football,Ben Kumph,2014.0,M,Ithaca College,Ithaca College,100.0,100.0,Empire 8,III,,NY
+140,Football,Jeff Peras,2013.0,M,Sacred Heart University,Sacred Heart University,100.0,100.0,Northeast Conference,I-FCS,,CT
+141,Football,Todd Collier,2013.0,M,Hobart William Smith,Hobart and William Smith Colleges,87.0,80.0,Liberty League,III,,NY
+142,Football,Ryder Arsenault,2013.0,M,Colby College,Colby College,100.0,100.0,New England Small College Athletic Conference,III,,ME
+143,Football,Mark Marino,2012.0,M,Hobart William Smith,Hobart and William Smith Colleges,87.0,80.0,Liberty League,III,,NY
+144,Football,Clint Atkinson,2012.0,M,Assumption College,Assumption College,100.0,100.0,Northeast-10 Conference,II,,MA
+145,Football,Javar Coleman,2012.0,M,University of Maine,"University of Maine, Orono",70.0,100.0,America East Conference,I-FCS,,ME
+146,Football,Dane Dudick,2012.0,M,Sacred Heart University,Sacred Heart University,100.0,100.0,Northeast Conference,I-FCS,,CT
+147,Football,John Guy,2012.0,M,University of Pittsburgh,University of Pittsburgh,100.0,100.0,Atlantic Coast Conference,I-FBS,,PA
+148,Football,Jake Kiley,2012.0,M,Penn State University,Kent State University,80.0,80.0,Mid-American Conference,I-FBS,,OH
+149,Football,CJ Dawson,2011.0,M,Univeristy of Maine,Livingstone College,53.0,55.0,Central Intercollegiate Athletic Association,II,,NC
+150,Football,Kevin Messier,2011.0,M,Wagner College,Wagner College,100.0,100.0,Northeast Conference,I-FCS,,NY
+151,Football,Paul Brown,2010.0,M,Hobart & William Smith College,Hobart and William Smith Colleges,88.0,86.0,Liberty League,III,,NY
+152,Football,Jet Kollie,2010.0,M,Lafayette College,Lafayette College,100.0,100.0,Patriot League,I-FCS,,PA
+153,Football,Andrew Lebowitz,2010.0,M,St. Anslem College,Saint Anselm College,73.0,74.0,Northeast-10 Conference,II,,NH
+154,Football,Aaron Lawton,2009.0,M,St. Lawrence University,St. Lawrence University,100.0,100.0,Liberty League,III,,NY
+155,Football,Anthony Smalls,2008.0,M,Merrimack College,Merrimack College,100.0,100.0,Northeast-10 Conference,II,,MA
+156,Football,Tori Gurley,2008.0,M,South Carolina,South Carolina State University,82.0,100.0,Mid-Eastern Athletic Conf.,I-FCS,,SC
+157,Football,Long Ding,2008.0,M,Dean College/Norwich University,Norwich University,70.0,100.0,Great Northeast Athletic Conference,III,,VT
+158,Football,Aaron Lawton,2008.0,M,St. Lawrence University,St. Lawrence University,100.0,100.0,Liberty League,III,,NY
+159,Football,Jared Kellogg,2008.0,M,WPI,Iona College,29.0,33.0,Metro Atlantic Athletic Conference,I,,NY
+160,Football,Patrick Bass,2008.0,M,Dean College/Merrimack College/Framingham State,Framingham State University,65.0,100.0,Massachusetts State Collegiate Athletic Conference,III,,MA
+161,Football,Kevin Lynch,2007.0,M,Southern Connectict State University,Southern Connecticut State University,98.0,96.0,Northeast-10 Conference,II,,CT
+162,Football,Curt Shappy,2007.0,M,Southern Connectict State University,Southern Connecticut State University,98.0,96.0,Northeast-10 Conference,II,,CT
+163,Football,Greg Abelli,2007.0,M,Northeastern/Merrimack,Northeastern University,71.0,100.0,Colonial Athletic Association,I,,MA
+164,Football,Mike Forte,2007.0,M,Georgetown College (NAIA),Georgetown University,71.0,100.0,Big East Conference,I-FCS,,DC
+165,Football,Carl Ojala,2007.0,M,Castelton State,Clayton State University,79.0,83.0,Peach Belt Conference,II,,GA
+166,Football,Matt Dodge,2007.0,M,St. Lawrence Univerity (played soccer at NHS),St. Lawrence University,42.0,100.0,Liberty League,III,,NY
+167,Football,Warren Wilson,2006.0,M,University of Massaachusetts,University of Massachusetts Lowell,80.0,94.0,America East Conference,II,I,MA
+168,Football,Robert McLaughlin,2006.0,M,UMASS,Utah State University,27.0,20.0,Mountain West Conference,I-FBS,,UT
+169,Football,Chris Smalls,2006.0,M,Fordham,Fordham University,100.0,100.0,Atlantic 10 Conference,I-FCS,,NY
+170,Football,Joe Garvey,2006.0,M,Hofstra,Hofstra University,100.0,100.0,Colonial Athletic Association,I,,NY
+171,Football,Sloan Russett,2006.0,M,UMASS,Utah State University,27.0,20.0,Mountain West Conference,I-FBS,,UT
+172,Football,Jan Cocoziello,2005.0,M,Hartwick College (Basketball) *Set scoring record at Hartiwck,State University of New York at Canton,34.0,39.0,,III,,NY
+173,Football,Andrew Murphy,2005.0,M,Hartiwck College,Hartwick College,88.0,88.0,Empire 8,III,,NY
+174,Football,Brendan Smith,2005.0,M,Northwestern University,Northwestern University,100.0,100.0,Big Ten Conference,I-FBS,,IL
+175,Football,Tommy Ames,2004.0,M,Tufts University,Tufts University,100.0,100.0,New England Small College Athletic Conference,III,,MA
+176,Football,Brad Crocker,2004.0,M,St. Lawrence University,St. Lawrence University,100.0,100.0,Liberty League,III,,NY
+177,Football,Connor McQuade,2004.0,M,Northeastern University,Northeastern University,100.0,100.0,Colonial Athletic Association,I,,MA
+178,Football,Brian Smith,2004.0,M,College of Wooster,The College of Wooster,80.0,100.0,North Coast Athletic Conference,III,,OH
+179,Football,Brian Burbank,2003.0,M,Bentley College,Bentley University,100.0,100.0,Northeast-10 Conference,II,,MA
+180,Football,Sean Smith,2003.0,M,Bentley College,Bentley University,100.0,100.0,Northeast-10 Conference,II,,MA
+181,Football,Rodney Ames,2002.0,M,Colby College,Colby College,100.0,100.0,New England Small College Athletic Conference,III,,ME
+182,Football,Mark Barnaby,2002.0,M,Endicott College,Endicott College,100.0,100.0,Commonwealth Coast Conference,III,,MA
+183,Football,David Klapman,2002.0,M,University of New Hampshire,University of New Hampshire,100.0,100.0,America East Conference,I-FCS,,NH
+184,Football,Mike Malvesti,2002.0,M,Bentley College,Bentley University,100.0,100.0,Northeast-10 Conference,II,,MA
+185,Football,Jake Ottolini,2002.0,M,Boston College,Boston College,100.0,100.0,Atlantic Coast Conference,I-FBS,,MA
+186,Football,Mark Germano,2001.0,M,Siena College,Siena College,100.0,100.0,Metro Atlantic Athletic Conference,I,,NY
+187,Football,Garth Glissman,2001.0,M,University of Nebraska,University of Nebraska Omaha,79.0,100.0,The Summit League,I,,NE
+188,Football,John Kydd,2001.0,M,Assumption College,Assumption College,100.0,100.0,Northeast-10 Conference,II,,MA
+189,Football,David Rosen,2001.0,M,Endicott College,Endicott College,100.0,100.0,Commonwealth Coast Conference,III,,MA
+190,Football,Mike Bianchi,2000.0,M,University of Massachusetts,University of Massachusetts Lowell,82.0,100.0,America East Conference,II,I,MA
+191,Football,Jamaal Branch,2000.0,M,"Colgate University; Rhine Fire, NFL Europe; New Orleans Saints, NFL",University of New Orleans,37.0,86.0,Southland Conference,I,,LA
+192,Football,Matt Gulley,2000.0,M,St. Lawrence University,St. Lawrence University,100.0,100.0,Liberty League,III,,NY
+193,Football,J.P. Laguelle,2000.0,M,Merrimack College,Merrimack College,100.0,100.0,Northeast-10 Conference,II,,MA
+194,Football,Seikou Medows,2000.0,M,Norwich University,Norwich University,100.0,100.0,Great Northeast Athletic Conference,III,,VT
+195,Football,Raunny Rosario,2000.0,M,Merrimack College,Merrimack College,100.0,100.0,Northeast-10 Conference,II,,MA
+196,Golf,Rafael Machado,2006.0,M,Reinhardt College,Binghamton University,53.0,56.0,America East Conference,I,,NY
+197,Golf,Mark Baldwin,2002.0,M,Notre Dame University,University of Notre Dame,87.0,100.0,Atlantic Coast Conference,I-FBS,,IN
+198,Hockey,Kyle Valliere,2014.0,M,Southern New Hampshire University,Southern New Hampshire University,100.0,100.0,Northeast-10 Conference,II,,NH
+199,Hockey,Andrew Corapi,2014.0,M,University of Delaware,University of Delaware,100.0,100.0,Colonial Athletic Association,I-FCS,,DE
+200,Hockey,Anthony Maiuri,2013.0,M,St. Michael's College,Saint Michael's College,86.0,88.0,Northeast-10 Conference,II,,VT
+201,Hockey,Malcolm Hayes,2013.0,M,University of Maine,"University of Maine, Orono",70.0,100.0,America East Conference,I-FCS,,ME
+202,Hockey,Mike Durelli,2011.0,M,Southern New Hampshire University,Southern New Hampshire University,100.0,100.0,Northeast-10 Conference,II,,NH
+203,Hockey,TJ Bond,2011.0,M,Southern New Hampshire University,Southern New Hampshire University,100.0,100.0,Northeast-10 Conference,II,,NH
+204,Hockey,John Humphrey -,2011.0,M,Southern New Hampshire University,Southern New Hampshire University,100.0,100.0,Northeast-10 Conference,II,,NH
+205,Hockey,Dane Caracino -,2011.0,M,Southern New Hampshire University,Southern New Hampshire University,100.0,100.0,Northeast-10 Conference,II,,NH
+206,Hockey,Casey Goll -,2011.0,M,Southern New Hampshire University,Southern New Hampshire University,100.0,100.0,Northeast-10 Conference,II,,NH
+207,Hockey,Steven Berry -,2011.0,M,Southern New Hampshire University,Southern New Hampshire University,100.0,100.0,Northeast-10 Conference,II,,NH
+208,Hockey,Ryan Arsenault,2010.0,M,St. Michael's College,Saint Michael's College,86.0,88.0,Northeast-10 Conference,II,,VT
+209,Hockey,Troy Thibodeau,2010.0,M,University of Southern Maine,University of Southern Maine,100.0,100.0,Little East Conference,III,,ME
+210,Hockey,Bryan Rooney,2010.0,M,Stonehill College,Stonehill College,100.0,100.0,Northeast-10 Conference,II,,MA
+211,Hockey,Kyle Zobler,2009.0,M,Assumption College,Assumption College,100.0,100.0,Northeast-10 Conference,II,,MA
+212,Hockey,Joe McCabe,2009.0,M,Trinity College,Trine University,67.0,80.0,Michigan Intercol. Ath. Assn.,III,,IN
+213,Hockey,Joe Gehrig,2009.0,M,St Michaels College,Saint Michael's College,85.0,91.0,Northeast-10 Conference,II,,VT
+214,Hockey,Mike Carr,2009.0,M,Franklin Pierce,Franklin Pierce University,100.0,100.0,Northeast-10 Conference,II,,NH
+215,Hockey,Pat Dunn,2009.0,M,Franklin Pierce,Franklin Pierce University,100.0,100.0,Northeast-10 Conference,II,,NH
+216,Hockey,MIke Tierney,2009.0,M,St. Anselms College,Saint Anselm College,78.0,80.0,Northeast-10 Conference,II,,NH
+217,Hockey,Sean Dunn,2009.0,M,Franklin Pierce,Franklin Pierce University,100.0,100.0,Northeast-10 Conference,II,,NH
+218,Hockey,Andrew Pryor,2008.0,M,Salve Regina,Salve Regina University,100.0,100.0,Commonwealth Coast Conference,III,,RI
+219,Hockey,Kyle Stewardson,2008.0,M,Lebanon Valley College,Lebanon Valley College,100.0,100.0,Middle Atlantic Conference Commonwealth,III,,PA
+220,Hockey,George Jenkins,2008.0,M,University Of New England,University of New England,93.0,93.0,Commonwealth Coast Conference,III,,ME
+221,Hockey,Pat Shortt,2008.0,M,Franklin Pierce,Franklin Pierce University,100.0,100.0,Northeast-10 Conference,II,,NH
+222,Hockey,Ryan Fitzpatrick,2007.0,M,Suffolk,Suffolk University,100.0,100.0,Great Northeast Athletic Conference,III,,MA
+223,Hockey,Joe Trimboli,2007.0,M,Western New England,Western New England University,100.0,100.0,Commonwealth Coast Conference,III,,MA
+224,Hockey,Matt McCarthy,2007.0,M,Franklin Pierce,Franklin Pierce University,100.0,100.0,Northeast-10 Conference,II,,NH
+225,Hockey,Eric Spalt,2007.0,M,Salve Regina,Salve Regina University,100.0,100.0,Commonwealth Coast Conference,III,,RI
+226,Hockey,Kevin Welch,2001.0,M,Babson College,Babson College,100.0,100.0,New England Women's and Men's Athletic Conference,III,,MA
+227,Hockey,Mike Levine,2000.0,M,Utica College,Utica College,100.0,100.0,Empire 8,III,,NY
+228,Hockey,Kevin Cooper,1999.0,M,Middlebury College,Middlebury College,100.0,100.0,New England Small College Athletic Conference,III,,VT
+229,Hockey,Ryan Luczynski,1999.0,M,Plymouth State College,Plymouth State University,100.0,100.0,Little East Conference,III,,NH
+230,Hockey,McGregor Chadwick,1998.0,M,Wentworth Institute of Technology,Wentworth Institute of Technology,100.0,100.0,Commonwealth Coast Conference,III,,MA
+231,Hockey,Ryan Mahady,1998.0,M,Skidmore College,Skidmore College,100.0,100.0,Liberty League,III,,NY
+232,Lacrosse,CJ Santora,2014.0,M,Lynchburg College,Lynchburg College,100.0,100.0,Old Dominion Athletic Conf.,III,,VA
+233,Lacrosse,Joey Russell,2014.0,M,Oberlin College,Oberlin College,100.0,100.0,North Coast Athletic Conference,III,,OH
+234,Lacrosse,Kevin Goshorn,2014.0,M,Haverford College,Haverford College,100.0,100.0,Centennial Conference,III,,PA
+235,Lacrosse,Alex Stanko,2013.0,M,Vermont,University of Vermont,82.0,100.0,America East Conference,I,,VT
+236,Lacrosse,Caleb Kane,2013.0,M,St. Lawrence,St. Lawrence University,100.0,100.0,Liberty League,III,,NY
+237,Lacrosse,Cole Franklin,2013.0,M,Curry College,Curry College,100.0,100.0,Commonwealth Coast Conference,III,,MA
+238,Lacrosse,Jeff Sherman,2012.0,M,Wittenberg University,Wittenberg University,100.0,100.0,North Coast Athletic Conference,III,,OH
+239,Lacrosse,Jeremy Vautour,2012.0,M,St. Lawrence University,St. Lawrence University,100.0,100.0,Liberty League,III,,NY
+240,Lacrosse,Nate Berry,2011.0,M,Siena College,Siena College,100.0,100.0,Metro Atlantic Athletic Conference,I,,NY
+241,Lacrosse,Mike McBournie,2011.0,M,Randolph Macon College,Randolph-Macon College,93.0,93.0,Old Dominion Athletic Conf.,III,,VA
+242,Lacrosse,Marc Perroni,2010.0,M,St. Lawrence University,St. Lawrence University,100.0,100.0,Liberty League,III,,NY
+243,Lacrosse,Kevin Driscoll,2010.0,M,Plymouth State University,Plymouth State University,100.0,100.0,Little East Conference,III,,NH
+244,Lacrosse,Nick Maggio,2008.0,M,Merrimack College & Boston Cannons of MLL,Merrimack College,42.0,100.0,Northeast-10 Conference,II,,MA
+245,Lacrosse,George Jenkins,2008.0,M,Univ of New England,University of New England,85.0,100.0,Commonwealth Coast Conference,III,,ME
+246,Lacrosse,Kyle Stewardson,2008.0,M,Lebanon Valley College,Lebanon Valley College,100.0,100.0,Middle Atlantic Conference Commonwealth,III,,PA
+247,Lacrosse,Clay Dorsett,2003.0,M,University of Vermont,University of Vermont,100.0,100.0,America East Conference,I,,VT
+248,Lacrosse,Carter Torrey,2002.0,M,Manhattan College,Manhattan College,100.0,100.0,Metro Atlantic Athletic Conference,I,,NY
+249,Lacrosse,Mike Gabel,2001.0,M,University of Vermont,University of Vermont,100.0,100.0,America East Conference,I,,VT
+250,Rowing,Kenny Torsey,2006.0,M,Connecticut College,Connecticut College,100.0,100.0,New England Small College Athletic Conference,III,,CT
+251,Skiing,Taber Engelken,2011.0,M,St. Lawrence University,St. Lawrence University,100.0,100.0,Liberty League,III,,NY
+252,Skiing,Matt Dodge,2008.0,M,Saint Lawrence University,St. Lawrence University,85.0,87.0,Liberty League,III,,NY
+253,Skiing,Craig Leaman,2004.0,M,University of Vermont,University of Vermont,100.0,100.0,America East Conference,I,,VT
+254,Skiing,Topher Harlow,2000.0,M,Plymouth State University,Plymouth State University,100.0,100.0,Little East Conference,III,,NH
+255,Skiing,Warner Nickerson,2000.0,M,Colby College; U.S. Ski Team,U.S. Air Force Academy,47.0,48.0,Mountain West Conference,I-FBS,,CO
+256,Soccer,Mark Mannara,2013.0,M,Bard,Bard College,100.0,100.0,Liberty League,III,,NY
+257,Soccer,Pat Bolton,2013.0,M,New Hampshire Tech,University of New Hampshire,76.0,81.0,America East Conference,I-FCS,,NH
+258,Soccer,Eddie Conroy,2013.0,M,St. Anselm,Saint Anselm College,82.0,84.0,Northeast-10 Conference,II,,NH
+259,Soccer,Matt Fay,2012.0,M,St. Michael's College,Saint Michael's College,86.0,88.0,Northeast-10 Conference,II,,VT
+260,Soccer,Ozzy Morales,2012.0,M,St. Lawrence University,St. Lawrence University,100.0,100.0,Liberty League,III,,NY
+261,Soccer,Ben Brewster,2007.0,M,University of Richmond,University of Richmond,100.0,100.0,Atlantic 10 Conference,I-FCS,,VA
+262,Soccer,Drew Kelsey,2005.0,M,Elmira College,Elmira College,100.0,100.0,Empire 8,III,,NY
+263,Basketball,Emily Cuthbertson,2014.0,F,Wheaton College,Barton College,62.0,73.0,Conference Carolinas,II,,NC
+264,Basketball,Shayla Hubbard,2013.0,F,Assumption,Assumption College,100.0,100.0,Northeast-10 Conference,II,,MA
+265,Basketball,Lizzy Ball,2012.0,F,Fairfield University,Fairfield University,100.0,100.0,Metro Atlantic Athletic Conference,I,,CT
+266,Basketball,Maddy Blais,2012.0,F,Marist College,Marist College,100.0,100.0,Metro Atlantic Athletic Conference,I-FCS,,NY
+267,Basketball,Samantha Brenner,2012.0,F,University of Vermont,University of Vermont,100.0,100.0,America East Conference,I,,VT
+268,Basketball,Melissa Frase,2012.0,F,University of Lowell,University of Louisville,64.0,56.0,Atlantic Coast Conference,I-FBS,,KY
+269,Basketball,Molly Devine,2011.0,F,St. Anslem's College,Saint Anselm College,67.0,67.0,Northeast-10 Conference,II,,NH
+270,Basketball,Brittney Gallagher,2011.0,F,Maine Maritime Academy,Maine Maritime Academy,100.0,100.0,North Atlantic Conference,III,,ME
+271,Basketball,Vic Wiseman,2010.0,F,Southern New Hampshire University,Southern New Hampshire University,100.0,100.0,Northeast-10 Conference,II,,NH
+272,Basketball,Justyne Sublett,2010.0,F,North Carolina Central University,North Carolina Central University,100.0,100.0,Mid-Eastern Athletic Conf.,I-FCS,,NC
+273,Basketball,Mariah Wynn,2010.0,F,St. Anslems College,Saint Anselm College,70.0,70.0,Northeast-10 Conference,II,,NH
+274,Basketball,Caitlin O'Connor,2009.0,F,Worcester Poly Technic University,Worcester Polytechnic Institute,75.0,91.0,New England Women's and Men's Athletic Conference,III,,MA
+275,Basketball,Jackie Vienneau,2009.0,F,Suffolk University,Suffolk University,100.0,100.0,Great Northeast Athletic Conference,III,,MA
+276,Basketball,Amanda Bacher,2008.0,F,Keene State University,Keene State College,100.0,100.0,Little East Conference,III,,NH
+277,Basketball,Nicole Cullinane,2008.0,F,Wheaton College,Barton College,62.0,73.0,Conference Carolinas,II,,NC
+278,Basketball,Olivia Norris,2008.0,F,Merchant Marine Academy at Kings Point,U.S. Merchant Marine Academy,70.0,82.0,Landmark Conference,III,,NY
+279,Basketball,Katie Seraikas,2008.0,F,University of Rhode Island,University of Rhode Island,100.0,100.0,Atlantic 10 Conference,I-FCS,,RI
+280,Basketball,Jen Gureckis,2007.0,F,St. Anslems College,Saint Anselm College,70.0,70.0,Northeast-10 Conference,II,,NH
+281,Basketball,Alex Marcell,2007.0,F,Plymouth State University,Plymouth State University,100.0,100.0,Little East Conference,III,,NH
+282,Basketball,Kristin McWhirter,2007.0,F,Stonehill College,Stonehill College,100.0,100.0,Northeast-10 Conference,II,,MA
+283,Basketball,Jaclyn Murray,2007.0,F,Fairmont State University,Fairmont State University,100.0,100.0,Mountain East Conference,II,,WV
+284,Basketball,Rachel Murray,2007.0,F,Fairmont State University,Fairmont State University,100.0,100.0,Mountain East Conference,II,,WV
+285,Basketball,Julia Houghtaling,2006.0,F,Southern New Hampshire University,Southern New Hampshire University,100.0,100.0,Northeast-10 Conference,II,,NH
+286,Basketball,Katie Connolly,2006.0,F,St. Anselm College,Saint Anselm College,82.0,84.0,Northeast-10 Conference,II,,NH
+287,Basketball,Jess Johannesen,2006.0,F,Keene State College,Keene State College,100.0,100.0,Little East Conference,III,,NH
+288,Basketball,Krystin Hickey,2005.0,F,Wheaton College,Barton College,62.0,73.0,Conference Carolinas,II,,NC
+289,Basketball,Kayleigh Scannell,2005.0,F,Niagara University,Niagara University,100.0,100.0,Metro Atlantic Athletic Conference,I,,NY
+290,Basketball,Angela Santa Fe,2004.0,F,Southern Maine University,University of Southern Maine,90.0,100.0,Little East Conference,III,,ME
+291,Basketball,Trisha Sylvain,2004.0,F,Southern Maine University,University of Southern Maine,90.0,100.0,Little East Conference,III,,ME
+292,Basketball,Halary Patch,2001.0,F,ColbySawyer College,Colby-Sawyer College,96.0,91.0,North Atlantic Conference,III,,NH
+293,Basketball,Alicia Burrows,2000.0,F,Colby College,Colby College,100.0,100.0,New England Small College Athletic Conference,III,,ME
+294,Equestrian,Molly Tulley,2011.0,F,University of New Hampshire,University of New Hampshire,100.0,100.0,America East Conference,I-FCS,,NH
+295,Equestrian,Tori Fitzgerald,2014.0,F,Bates College,Bates College,100.0,100.0,New England Small College Athletic Conference,III,,ME
+296,Equestrian,Courtney Moulton,2013.0,F,Salve Regina,Salve Regina University,100.0,100.0,Commonwealth Coast Conference,III,,RI
+297,Equestrian,Mary Penniman,2011.0,F,Bryant University,Bryant University,100.0,100.0,Northeast Conference,I-FCS,,RI
+298,Equestrian,Emma Berry,2010.0,F,St. Lawrence University,St. Lawrence University,100.0,100.0,Liberty League,III,,NY
+299,Equestrian,Kayla Wagner,2010.0,F,Bentley College,Bentley University,100.0,100.0,Northeast-10 Conference,II,,MA
+300,Equestrian,Addie Weeks,2010.0,F,Endicott College,Endicott College,100.0,100.0,Commonwealth Coast Conference,III,,MA
+301,Equestrian,Lindsay Bass,2009.0,F,Roanoke College,Roanoke College,100.0,100.0,Old Dominion Athletic Conf.,III,,VA
+302,Equestrian,Kelsey Berry,2007.0,F,St. Lawrence University,St. Lawrence University,100.0,100.0,Liberty League,III,,NY
+303,Equestrian,Mackenzie Ewing,2004.0,F,St. Lawrence University,St. Lawrence University,100.0,100.0,Liberty League,III,,NY
+304,Equestrian,Lilly Silva,2002.0,F,Plymouth State University,Plymouth State University,100.0,100.0,Little East Conference,III,,NH
+305,Hockey,Dori Craig,2014.0,F,Hobart William Smith,Hobart and William Smith Colleges,87.0,80.0,Liberty League,III,,NY
+306,Hockey,Kelsey Corcoran,2014.0,F,Lake Forest College,Lake Forest College,100.0,100.0,Midwest Conference,III,,IL
+307,Hockey,Johanna Slicklen,2014.0,F,Hobart William Smith,Hobart and William Smith Colleges,87.0,80.0,Liberty League,III,,NY
+308,Hockey,Alisha Gilbert,2014.0,F,St. Thomas Univesity,St. Thomas Aquinas College,68.0,72.0,East Coast Conference,II,,NY
+309,Hockey,Gabby Vautour,2014.0,F,Mount Allison University,Mount Aloysius College,74.0,69.0,Allegheny Mountain Collegiate Conference,III,,PA
+310,Hockey,Abby Rutt,2013.0,F,Wesleyan University,Wesley College,86.0,100.0,Capital Athletic Conference Inc.,III,,DE
+311,Hockey,Caroline Kelly,2013.0,F,University of New England,University of New England,100.0,100.0,Commonwealth Coast Conference,III,,ME
+312,Hockey,Jenny Currie,2012.0,F,U Mass  Boston,University of Massachusetts Boston,65.0,64.0,Little East Conference,III,,MA
+313,Hockey,Nicole Magee,2012.0,F,Sacred Heart University,Sacred Heart University,100.0,100.0,Northeast Conference,I-FCS,,CT
+314,Hockey,Katelyn Ladd,2010.0,F,University of Southern Maine,University of Southern Maine,100.0,100.0,Little East Conference,III,,ME
+315,Hockey,Ally Derthick,2010.0,F,University of Wisconsin  Eau Claire,"University of Wisconsin, Eau Claire",96.0,96.0,Wisconsin Intercollegiate Athletic Conference,III,,WI
+316,Hockey,Whitney Brown,2008.0,F,Norwich University,Norwich University,100.0,100.0,Great Northeast Athletic Conference,III,,VT
+317,Hockey,Sam Hersey,2008.0,F,Lake Forest College,Lake Forest College,100.0,100.0,Midwest Conference,III,,IL
+318,Hockey,Lynny Gonzales,2006.0,F,Utica College,Utica College,100.0,100.0,Empire 8,III,,NY
+319,Hockey,Sam Pinsonneault,2006.0,F,Lake Forest College,Lake Forest College,100.0,100.0,Midwest Conference,III,,IL
+320,Hockey,Jillian Giguere,2005.0,F,Quinnipiac College,Quinnipiac University,100.0,100.0,Metro Atlantic Athletic Conference,I,,CT
+321,Hockey,Zoe Launcelott,2004.0,F,"St. Mary's University, Canada",St. Mary's College of California,73.0,74.0,West Coast Conference,I,,CA
+322,Hockey,Jill Nugent,2003.0,F,Mercyhurst College,Mercyhurst University,100.0,100.0,Pennsylvania State Athletic Conference,II,,PA
+323,Hockey,Nathalie Morgan,2002.0,F,Bowdoin College,Bowdoin College,100.0,100.0,New England Small College Athletic Conference,III,,ME
+324,Hockey,Kelly Williams,2002.0,F,Plymouth State College,Plymouth State University,100.0,100.0,Little East Conference,III,,NH
+325,Hockey,Mary Marren,1999.0,F,University of New Hampshire,University of New Hampshire,100.0,100.0,America East Conference,I-FCS,,NH
+326,Hockey,Mandy Cronin,1998.0,F,"University of Maine; U.S. National Team; Brampton Thunder, NWHL","University of Maine, Farmington",42.0,60.0,North Atlantic Conference,III,,ME
+327,Lacrosse ,Elizabeth Elcock,2012.0,F,"St. Joseph College, Me",Saint Joseph's College (Maine),68.0,73.0,Great Northeast Athletic Conference,III,,ME
+328,Lacrosse ,Anne Marie Fana,2012.0,F,Nichols College,Nichols College,100.0,100.0,Commonwealth Coast Conference,III,,MA
+329,Lacrosse ,Anna Menke,2012.0,F,Princeton University,Princeton University,100.0,100.0,The Ivy League,I-FCS,,NJ
+330,Lacrosse ,Erin Moran,2012.0,F,Conneticut College,Connecticut College,95.0,90.0,New England Small College Athletic Conference,III,,CT
+331,Lacrosse ,Vicki Moore,2011.0,F,Bridgwater State University,Bridgewater State University,97.0,94.0,Massachusetts State Collegiate Athletic Conference,III,,MA
+332,Lacrosse ,Taylor Sirles,2011.0,F,Keene State University,Keene State College,100.0,100.0,Little East Conference,III,,NH
+333,Lacrosse ,Kayla DiBari,2008.0,F,College of the Holy Cross,College of the Holy Cross,100.0,100.0,Patriot League,I-FCS,,MA
+334,Lacrosse ,Sheila Whithey,2007.0,F,St. Anslems College,Saint Anselm College,70.0,70.0,Northeast-10 Conference,II,,NH
+335,Lacrosse ,Lilly Silva,2002.0,F,Plymouth State University,Plymouth State University,100.0,100.0,Little East Conference,III,,NH
+336,Lacrosse ,Lisa Falconi,2001.0,F,ColbySawyer College,Colby-Sawyer College,96.0,91.0,North Atlantic Conference,III,,NH
+337,Skiing,Anna Drew,2011.0,F,University of Maine (Arials),University of Miami (Florida),69.0,65.0,Atlantic Coast Conference,I-FBS,,FL
+338,Skiing,Allison Lee,2008.0,F,United States Olympic Team (Arials),Wayne State College (Nebraska),52.0,48.0,Northern Sun Intercollegiate Conference,II,,NE
+339,Skiing,Lara Mann,2007.0,F,College of Idaho,University of Idaho,100.0,100.0,Big Sky Conference,I-FBS,,ID
+340,Skiing,Lauren D'Allessandro,2006.0,F,ColbySawyer College,Colby-Sawyer College,96.0,91.0,North Atlantic Conference,III,,NH
+341,Skiing,Ashley Ladd,2004.0,F,University of New Hampshire,University of New Hampshire,100.0,100.0,America East Conference,I-FCS,,NH
+342,Skiing,Alex Ray,2005.0,F,University of New Hampshire,University of New Hampshire,100.0,100.0,America East Conference,I-FCS,,NH
+343,Skiing,Euginnia Manseau,2001.0,F,ColbySawyer College,Colby-Sawyer College,96.0,91.0,North Atlantic Conference,III,,NH
+344,Skiing,Alice Milu,1999.0,F,University of New Hampshire,University of New Hampshire,100.0,100.0,America East Conference,I-FCS,,NH
+345,Soccer,Mimi Coppinger,2012.0,F,St. Lawrence University,St. Lawrence University,100.0,100.0,Liberty League,III,,NY
+346,Soccer,Katie Koenig,2012.0,F,Lake Forest University,Lake Forest College,100.0,100.0,Midwest Conference,III,,IL
+347,Soccer,Jackie Mazur,2012.0,F,University of Charleston,Carleton College,76.0,88.0,Minnesota Intercollegiate Athletic Conference,III,,MN
+348,Soccer,Erin Moran,2012.0,F,Connecticut College,Connecticut College,100.0,100.0,New England Small College Athletic Conference,III,,CT
+349,Soccer,Cierra Bean,2011.0,F,Lincoln University,Princeton University,63.0,71.0,The Ivy League,I-FCS,,NJ
+350,Soccer,Alex Marcell,2007.0,F,Plymouth State University,Plymouth State University,100.0,100.0,Little East Conference,III,,NH
+351,Soccer,Jackie Wishoski,2002.0,F,University of New Hampshire,University of New Hampshire,100.0,100.0,America East Conference,I-FCS,,NH
+352,Soccer,Euginnia Manseau,2001.0,F,ColbySawyer College,Colby-Sawyer College,96.0,91.0,North Atlantic Conference,III,,NH
+353,Soccer,Jill Falconi,1998.0,F,Plymouth State College,Plymouth State University,100.0,100.0,Little East Conference,III,,NH
+354,Softball,Tori Fitzgerald,2014.0,F,Bates College,Bates College,100.0,100.0,New England Small College Athletic Conference,III,,ME
+355,Softball,Reiva Keith,2011.0,F,Dickinson College,Dickinson College,100.0,100.0,Centennial Conference,III,,PA
+356,Softball,Vanessa Campbell,2010.0,F,Wheaton College,Barton College,62.0,73.0,Conference Carolinas,II,,NC
+357,Softball,Olivia Norris,2008.0,F,Merchant Marine Academy at Kings Point,U.S. Merchant Marine Academy,70.0,82.0,Landmark Conference,III,,NY
+358,Softball,Katie MacLean,2006.0,F,Elmira College,Elmira College,100.0,100.0,Empire 8,III,,NY
+359,Softball,Sam Pinsonneault,2006.0,F,Lake Forest College,Lake Forest College,100.0,100.0,Midwest Conference,III,,IL
+360,Tennis,Christina Grimm,2005.0,F,Goucher College,Goucher College,100.0,100.0,Landmark Conference,III,,MD
+361,Tennis,Denise Kyte,2003.0,F,St. Lawrence University,St. Lawrence University,100.0,100.0,Liberty League,III,,NY
+362,Tennis,Taryn Bailey,2002.0,F,ColbySawyer College,Colby-Sawyer College,96.0,91.0,North Atlantic Conference,III,,NH
+363,Crew,Alyssa Goley,2010.0,F,University of Rhode Island,University of Rhode Island,100.0,100.0,Atlantic 10 Conference,I-FCS,,RI
+364,Crew,Lydia Gil,2010.0,F,Cornell University,Cornell University,100.0,100.0,The Ivy League,I-FCS,,NY
