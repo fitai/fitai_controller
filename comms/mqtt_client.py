@@ -1,14 +1,25 @@
 import json
 import time
+import sys
+import os
+
 from datetime import datetime as dt
 from urllib2 import urlopen
 
 import paho.mqtt.client as mqtt
 
+try:
+    path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    print 'Adding {} to sys.path'.format(path)
+    sys.path.append(path)
+except NameError:
+    sys.path.append('/Users/kyle/PycharmProjects/fitai_controller')
+    print 'working in Dev mode.'
+
 from databasing.database import push_to_db
-from mqtt.php_process_data import process_data
-from mqtt.util import read_header_mqtt, read_content_mqtt
-from mqtt.ws_publisher import ws_pub
+from comms.php_process_data import process_data
+from processing.util import read_header_mqtt, read_content_mqtt
+from comms.ws_publisher import ws_pub
 
 my_ip = urlopen('http://ip.42.pl/raw').read()
 

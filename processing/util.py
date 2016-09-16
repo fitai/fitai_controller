@@ -1,5 +1,8 @@
 from pandas import DataFrame, Series
 import json
+import sys
+
+from processing.functions import calc_vel2, calc_rms, calc_power
 
 
 def read_header_mqtt(data):
@@ -85,3 +88,35 @@ def extract_sampling_rate(header):
         fs = 20.
 
     return fs
+
+
+# Expects a dataframe with known fields
+# Timepoint, a_x, (a_y, a_z), lift_id
+def process_data(header, content):
+    if not isinstance(content, DataFrame):
+        print 'Content (type {}) is not a dataframe. Will try to convert...'.format(type(content))
+        content = DataFrame(content)
+
+    accel_headers = [x for x in content.columns if x in ['a_x', 'a_y', 'a_z']]
+
+    fs = extract_sampling_rate(header)
+    weight = extract_weight(header)
+
+    if len(accel_headers) == 0:
+        print 'Could not find acceleration field(s). Cannot process'
+        sys.exit(10)
+    elif len(accel_headers) == 1:
+        print 'Found single axis of data'
+
+        vel = calc_vel2(content[accel_headers[0]], fs)
+        pwr = calc_power(content[accel_headers[0]], vel, weight)
+
+        return content[accel_headers[0]], vel, pwr
+    else:
+        print 'Found multiple axes of data. Will combine into RMS.'
+        a_rms = calc_rms(content, accel_headers)
+        v_rms = calc_vel2(a_rms, fs)
+
+        p_rms = calc_power(a_rms, v_rms, weight)
+
+        return a_rms, v_rms, p_rms

@@ -1,4 +1,5 @@
-import sys, os
+import sys
+import os
 import getopt
 import json
 from pandas import DataFrame
@@ -9,40 +10,7 @@ try:
 except NameError:
     print 'working in Dev mode.'
 
-from mqtt.functions import calc_vel2, calc_rms, calc_power
-from mqtt.util import parse_data, extract_weight, extract_sampling_rate
-
-
-# Expects a dataframe with known fields
-# Timepoint, a_x, (a_y, a_z), lift_id
-def process_data(header, content):
-    if not isinstance(content, DataFrame):
-        print 'Content (type {}) is not a dataframe. Will try to convert...'.format(type(content))
-        content = DataFrame(content)
-
-    accel_headers = [x for x in content.columns if x in ['a_x', 'a_y', 'a_z']]
-
-    fs = extract_sampling_rate(header)
-    weight = extract_weight(header)
-
-    if len(accel_headers) == 0:
-        print 'Could not find acceleration field(s). Cannot process'
-        sys.exit(10)
-    elif len(accel_headers) == 1:
-        print 'Found single axis of data'
-
-        vel = calc_vel2(content[accel_headers[0]], fs)
-        pwr = calc_power(content[accel_headers[0]], vel, weight)
-
-        return content[accel_headers[0]], vel, pwr
-    else:
-        print 'Found multiple axes of data. Will combine into RMS.'
-        a_rms = calc_rms(content, accel_headers)
-        v_rms = calc_vel2(a_rms, fs)
-
-        p_rms = calc_power(a_rms, v_rms, weight)
-
-        return a_rms, v_rms, p_rms
+from processing.util import parse_data, process_data
 
 
 # This function should get called by calling the file
