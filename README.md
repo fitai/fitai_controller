@@ -1,8 +1,8 @@
-# mqtt_py
+# fitai_controller
 
 *Server controls*
 
-This repo is located in `/var/opt/python/mqtt_py`. Not sure if we want to keep it there, or in `/opt/python...` 
+This repo is located in `/var/opt/python/fitai_controller/`. Not sure if we want to keep it there, or in `/opt/python...` 
 
 ## Handling Dependencies 
 
@@ -11,7 +11,7 @@ To run the script, the proper virtualenvironment needs to be activated. Unfortun
 *pip* can be used to install all requirements from *requirements.txt*
 
 e.g.
-`cd /var/opt/python/mqtt; pip install -r requirements.txt`
+`cd /var/opt/python/fitai_controller; pip install -r requirements.txt`
 
 If any packages fail, I use `conda` (through anaconda) as a backup. 
 
@@ -25,6 +25,6 @@ As of right now, the script is simple. It listens to the MQTT broker on localhos
 
 As of now, there isn't much to do here
 
-`cd /var/opt/python/mqtt_py; python main.py`
+`cd /var/opt/python/fitai_controller; /home/jbrubaker/anaconda2/envs/fitai/bin/python comms/mqtt_client.py`
 
 The script will print a few messages to console as it receives packets. If any errors occur, they should print to console and be caught by the try/except statements. If this fails, the script will break and have to be restarted.

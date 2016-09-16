@@ -11,8 +11,8 @@ aws_conn = create_engine(aws_conn_string)
 local_conn_string = "postgresql://localhost:5432/fitai"
 local_conn = create_engine(local_conn_string)
 
-# conn = aws_conn
-conn = local_conn
+conn = aws_conn
+#conn = local_conn
 
 # data = pd.read_csv('test_accel_dat.csv')
 # data['lift_id'] = 0
@@ -28,7 +28,7 @@ def push_to_db(header, content):
     if header is not None:
         print 'pushing header to db...'
         try:
-            header.to_sql('athlete_lift', conn, if_exists='fail', index=False, index_label='lift_id')
+            header.to_sql('athlete_lift', conn, if_exists='append', index=False, index_label='lift_id')
         except OperationalError, e:
             print '!!!!!COULD NOT PUSH HEADER TO DATABASE!!!!'
             print 'Likely because PostgreSQL server not running.\n Error: {}'.format(e)
