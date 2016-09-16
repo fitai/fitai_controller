@@ -4,11 +4,11 @@ import getopt
 import json
 from pandas import DataFrame
 
-try:
-    print 'Adding {} to sys.path'.format(os.path.dirname(os.path.abspath(__file__)))
-    sys.path.append(os.path.dirname(os.path.abspath(__file__)))
-except NameError:
-    print 'working in Dev mode.'
+# try:
+#     print 'Adding {} to sys.path'.format(os.path.dirname(os.path.abspath(__file__)))
+#     sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+# except NameError:
+#     print 'working in Dev mode.'
 
 from processing.util import parse_data, process_data
 
@@ -20,7 +20,7 @@ def main(argv):
     try:
         opts, args = getopt.getopt(argv, 'd:h:', 'data=')
     except getopt.GetoptError:
-        print 'test.py -d (--data) <JSON string>'
+        print 'php_process_data.py -d (--data) <JSON string>'
         sys.exit(2)
     for opt, arg in opts:
         if opt == '-h':
