@@ -69,7 +69,8 @@ def on_message(client, userdata, msg):
         _, v, p = process_data(head, accel)
         ws_pub(head, v, p)
 
-        push_to_db(head, accel)
+	# temporarily disabling
+        # push_to_db(head, accel)
 
     except ValueError, e:
         print 'Error processing JSON object. Message: \n{}'.format(str(e))
@@ -83,9 +84,9 @@ client.on_connect = on_connect
 client.on_message = on_message
 
 print 'connecting client...'
-# client.connect("52.204.229.101", 1883, 60)  # AWS IP
+client.connect("52.204.229.101", 1883, 60)  # AWS IP
 # client.connect('72.227.147.224', 1883, 60)
-client.connect('localhost', 1883, 60)
+# client.connect('localhost', 1883, 60)
 client.subscribe(topic='fitai', qos=2)
 
 
