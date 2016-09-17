@@ -3,7 +3,7 @@ from os.path import join
 import matplotlib.pyplot as plt
 import numpy as np
 
-from functions import method1, calc_vel2
+from processing.functions import method1, calc_vel2
 from load_data import load_file
 from processing.filters import simple_highpass
 from test import find_threshold

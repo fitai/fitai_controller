@@ -9,7 +9,7 @@ try:
 except NameError:
     print 'working in Dev mode.'
 
-from functions import calc_vel2, calc_rms, calc_power
+from processing.functions import calc_vel2, calc_rms, calc_power
 from util import parse_data, extract_weight, extract_sampling_rate
 
 

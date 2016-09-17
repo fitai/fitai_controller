@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
-from functions import method1, calc_vel2
+from processing.functions import method1, calc_vel2
 from load_data import load_file
 from predictors import make_predictions
 from processing.filters import simple_highpass

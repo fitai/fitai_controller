@@ -3,9 +3,9 @@ from os.path import join
 import matplotlib.pyplot as plt
 import numpy as np
 
-from load_data import load_file
+from FitAI.load_data import load_file
 from processing.filters import butter_highpass, simple_highpass
-from test import find_threshold
+from FitAI.test import find_threshold
 
 # Should use known weight for demo
 weight = 50.  # kg

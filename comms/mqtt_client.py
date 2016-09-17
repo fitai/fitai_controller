@@ -1,10 +1,8 @@
 import json
 
-from time import sleep
 from sys import argv, path as syspath
 from os.path import dirname, abspath
 from optparse import OptionParser
-from datetime import datetime as dt
 from urllib2 import urlopen
 
 import paho.mqtt.client as mqtt
@@ -15,7 +13,7 @@ try:
     syspath.append(path)
 except NameError:
     syspath.append('/Users/kyle/PycharmProjects/fitai_controller')
-    print 'working in Dev mode.'
+    print 'Working in Dev mode.'
 
 from databasing.database import push_to_db
 from comms.php_process_data import process_data
@@ -30,15 +28,14 @@ def mqtt_on_connect(client, userdata, rc):
     ''' We subscribe on_connect() so that if we lose the connection
         and reconnect, subscriptions will be renewed. '''
 
-    print 'connection successful'
-    client.subscribe("fitai")
-    print 'ready'
+    # client.subscribe('fitai')
+    print 'connected'
 
 
 #: The callback for when a PUBLISH message is received from the broker
 #: There will need to be a lot of logic wrappers here; a lot could go wrong, and it should all be handled
 #: as gracefully as possible
-def mqtt_on_message(lient, userdata, msg):
+def mqtt_on_message(client, userdata, msg):
 
     topic = msg.topic
     print 'Received message from topic "{}"'.format(topic)
@@ -66,15 +63,32 @@ def mqtt_on_message(lient, userdata, msg):
         print 'recieved: {}'.format(msg.payload)
 
 
-# Test script to publish to a broker of choice
-def test_recurring_messages(client):
-    i = 0
-    while i < 5:
-        print 'pushing message {} to broker'.format(i)
-        write_message = '({i}) Message from IP {ip}. \nCurrent time: {t}'.format(i=i, ip=my_ip, t=dt.now())
-        client.publish('fitai', write_message)
-        sleep(5)
-        i += 1
+def establish_client(ip, port, topic):
+    client = mqtt.Client()
+    client.on_connect = mqtt_on_connect
+    client.on_message = mqtt_on_message
+
+    print 'Connecting MQTT client...'
+    client.connect(ip, port, 60)  # AWS IP
+    # print 'Connection successful'
+    # client.connect('72.227.147.224', 1883, 60)
+    # client.connect('localhost', 1883, 60)
+    print 'Subscribing to topic "{}"'.format(topic)
+    client.subscribe(topic=topic, qos=2)
+    print 'MQTT client ready'
+    return client
+
+
+def run_client(client):
+    print 'Looping MQTT client...'
+    client.loop_forever()
+    print 'Done looping??'
+
+
+def kill_client(client):
+    print 'Disconnecting MQTT client...'
+    client.disconnect()
+    print 'Disconnected.'
 
 
 def main(args):
@@ -98,21 +112,13 @@ def main(args):
     if verbose:
         # print 'options (type {t}): {o}'.format(t=type(options), o=options)
         # print 'args: {}'.format(args)
-        print 'received args {}'.format(argv)
+        print 'Received args {}'.format(argv)
         print 'Attempting MQTT connection to {i}:{p} on topic {t}'.format(i=host_ip, p=host_port, t=mqtt_topic)
 
-    mqtt_client = mqtt.Client()
-    mqtt_client.on_connect = mqtt_on_connect
-    mqtt_client.on_message = mqtt_on_message
+    mqtt_client = establish_client(host_ip, host_port, mqtt_topic)
+    run_client(mqtt_client)
+    kill_client(mqtt_client)
 
-    print 'connecting client...'
-    mqtt_client.connect(host_ip, host_port, 60)  # AWS IP
-    # client.connect('72.227.147.224', 1883, 60)
-    # client.connect('localhost', 1883, 60)
-    mqtt_client.subscribe(topic=mqtt_topic, qos=2)
-
-    mqtt_client.loop_forever()
-    mqtt_client.disconnect()
 
 # Receives initial ping to file
 if __name__ == '__main__':
