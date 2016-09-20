@@ -108,14 +108,14 @@ def process_data(header, content):
     elif len(accel_headers) == 1:
         print 'Found single axis of data'
 
-        vel = calc_vel2(content[accel_headers[0]], fs)
+        vel = calc_vel2(content[accel_headers[0]], fs=fs)
         pwr = calc_power(content[accel_headers[0]], vel, weight)
 
         return content[accel_headers[0]], vel, pwr
     else:
         print 'Found multiple axes of data. Will combine into RMS.'
         a_rms = calc_rms(content, accel_headers)
-        v_rms = calc_vel2(a_rms, fs)
+        v_rms = calc_vel2(a_rms, fs=fs)
 
         p_rms = calc_power(a_rms, v_rms, weight)
 
