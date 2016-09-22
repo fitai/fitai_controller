@@ -50,6 +50,7 @@ def mqtt_on_message(client, userdata, msg):
 
         # Before taking the time to push to db, process the acceleration and push to PHP websocket
         _, v, p = process_data(head, accel)
+        # reps = calc_reps(v, p)
         ws_pub(head, v, p)
 
         # temporarily disabling
@@ -91,16 +92,23 @@ def kill_client(client):
     print 'Disconnected.'
 
 
-def main(args):
-    cli_parser = OptionParser()
-    cli_parser.add_option('-p', '--port', dest='host_port', default=1883,
+# Establish default behaviors of command-line call
+def establish_cli_parser():
+    parser = OptionParser()
+    parser.add_option('-p', '--port', dest='host_port', default=1883,
                       help='Port on server hosting MQTT')
-    cli_parser.add_option('-i', '--ip', dest='host_ip', default='52.204.229.101',
+    parser.add_option('-i', '--ip', dest='host_ip', default='52.204.229.101',
                       help='IP address of server hosting MQTT')
-    cli_parser.add_option('-t', '--topic', dest='mqtt_topic', default='fitai',
+    parser.add_option('-t', '--topic', dest='mqtt_topic', default='fitai',
                       help='MQTT topic messages are to be received from')
-    cli_parser.add_option('-v', '--verbose', dest='verbose', default=False, action='store_true',
+    parser.add_option('-v', '--verbose', dest='verbose', default=False, action='store_true',
                       help='Increase console outputs (good for dev purposes)')
+    return parser
+
+
+def main(args):
+
+    cli_parser = establish_cli_parser()
 
     (cli_options, _) = cli_parser.parse_args(args)
 
