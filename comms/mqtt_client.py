@@ -19,8 +19,13 @@ from databasing.database import push_to_db
 from comms.php_process_data import process_data
 from processing.util import read_header_mqtt, read_content_mqtt
 from comms.ws_publisher import ws_pub
+from processing.ml_test import find_threshold, calc_reps
 
 my_ip = urlopen('http://ip.42.pl/raw').read()
+
+reps = 0
+curr_state = 'rest'
+thresh = find_threshold()
 
 
 # The callback for when the client successfully connects to the broker
@@ -50,8 +55,8 @@ def mqtt_on_message(client, userdata, msg):
 
         # Before taking the time to push to db, process the acceleration and push to PHP websocket
         _, v, p = process_data(head, accel)
-        # reps = calc_reps(v, p)
-        ws_pub(head, v, p)
+        reps, curr_state = calc_reps(p, reps, curr_state, thresh)
+        ws_pub(head, v, p, reps)
 
         # temporarily disabling
         push_to_db(head, accel)

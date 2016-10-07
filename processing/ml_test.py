@@ -5,8 +5,8 @@ import numpy as np
 import pandas as pd
 
 from processing.functions import method1, calc_vel2
-from load_data import load_file
-from predictors import make_predictions
+from FitAI.load_data import load_file
+from FitAI.predictors import make_predictions
 from processing.filters import simple_highpass
 
 # Should use known weight for demo
@@ -177,3 +177,43 @@ def try_classifier():
     nn_pred = make_predictions(train=train_storage, train_labels=train_labels, test=test_storage, predictor='neural_net')
     percent_correct = float(np.sum((test_labels == nn_pred)*1))/float(len(test_labels))
     print 'Neural network percent correct classification: {}'.format(percent_correct*100.)
+
+
+# From an input power vector, detect any change in state and increment
+def calc_reps(pwr, n_reps, state='rest', thresh=0.):
+    """
+    Simple - any crossing of the power threshold indicates a change in state. From this, determine where the
+    user was (in the state-space), and adjust accordingly
+
+    :param pwr: list-like power vector. will be converted to pandas Series
+    :param n_reps: number of reps user is at before processing this power vector
+    :param thresh: threshold to apply to power vector
+    :param state: state of user coming into processing step
+    :return:
+    """
+
+    if not isinstance(pwr, pd.Series()):
+        print 'converting power {} to Series...'.format(type(pwr))
+        pwr = pd.Series(pwr)
+    # Better way to do this??
+    N = float(((pwr > thresh) * 1).diff()[1:].abs().sum())
+
+    # np.where() is resource intensive - just map for now
+    # Want to identify any shift in the state of the user
+    if state == 'rest':
+        shift = 0
+    elif state == 'lift':
+        shift = 1
+        # Here the athlete was mid-lift, so any deltas seen should be offset by 1 to acknowledge the athlete
+        # started from 'lift' position
+        N += 1
+    else:
+        print 'Unsure of lift state {}. Will assume "rest"'.format(state)
+
+    # Assume every
+    n_reps += np.floor(N/2.)
+
+    # Update the state
+    state = ['rest', 'lift'][int((shift+(N%2))%2)]
+
+    return n_reps, state
