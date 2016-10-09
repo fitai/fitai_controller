@@ -1,4 +1,4 @@
-from os.path import join
+from os.path import join, realpath, abspath
 
 # import matplotlib.pyplot as plt
 import numpy as np
@@ -15,7 +15,16 @@ fs = 100.  # Sampling rate (default = 100Hz)
 bin_size = 1.  # Number of samples to collect before processing the signal (float)
 
 
-def find_threshold(person_folder=None, filename=None, data_folder='/Users/kyle/PycharmProjects/fitai_controller/FitAI/data_files/', smooth=True):
+def find_threshold(person_folder=None, filename=None, data_folder=None, smooth=True):
+    if not data_folder:
+        try:
+            dir_path = abspath(realpath(__file__))
+            print 'found path {}'.format(dir_path)
+        except NameError:
+            print 'Working in dev mode.'
+            dir_path = '/Users/kyle/PycharmProjects'
+        data_folder = join(dir_path, 'FitAI/data_files/')
+
     if not person_folder:
         person_folder = 'Kyle'
         print 'no person_folder passed. defaulting to {}'.format(person_folder)
