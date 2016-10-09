@@ -1,6 +1,6 @@
 from os.path import join
 
-import matplotlib.pyplot as plt
+# import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
@@ -15,14 +15,14 @@ fs = 100.  # Sampling rate (default = 100Hz)
 bin_size = 1.  # Number of samples to collect before processing the signal (float)
 
 
-def find_threshold(person_folder, filename, data_folder='/Users/kyle/PycharmProjects/FitAI/data_files/', smooth=True):
-    if not bool(person_folder):
-        print 'no person_folder passed. defaulting to Tim'
-        person_folder = 'Tim'
+def find_threshold(person_folder=None, filename=None, data_folder='/Users/kyle/PycharmProjects/fitai_controller/FitAI/data_files/', smooth=True):
+    if not person_folder:
+        person_folder = 'Kyle'
+        print 'no person_folder passed. defaulting to {}'.format(person_folder)
 
-    if not bool(filename):
-        print 'no filename passed. defaulting to OHP_1.csv'
-        filename = 'OHP_1.csv'
+    if not filename:
+        filename = 'OHP_45lb_10rep_1.csv'
+        print 'no filename passed. defaulting to {}'.format(filename)
 
     col_names = ['timestamp', 'x', 'y', 'z']
     data = load_file(join(data_folder, person_folder, filename), names=col_names, skiprows=1)
@@ -55,7 +55,8 @@ def find_threshold(person_folder, filename, data_folder='/Users/kyle/PycharmProj
         true_reps = int([x for x in filename.split('_') if 'rep' in x][0].split('rep')[0])
     except IndexError:
         print 'Couldnt find number of reps in filename {}.\n Cannot learn from this file'.format(filename)
-        return None
+        print 'Defaulting to threshold of 1'
+        return 1.
 
     err = pwr_reps - true_reps
     err_tracking = [err]
@@ -80,30 +81,30 @@ def find_threshold(person_folder, filename, data_folder='/Users/kyle/PycharmProj
         cnt += 1
 
         #: Force break if err can't get to 0
-        if cnt > 100:
+        if cnt > 20:
             print 'Couldnt converge. Breaking..'
             break
 
-    #: Plot learning curves
-    f, axarr = plt.subplots(2, sharex=True)
-    axarr[0].plot(err_tracking)
-    axarr[0].set_title('Error curve (Final Rep Count: {})'.format(pwr_reps))
-    axarr[0].set_xlabel('Iteration')
-    axarr[0].set_ylabel('Estimated - Actual')
-    axarr[1].plot(scales)
-    axarr[1].set_title('Sigma Multiplier (Final Value: {})'.format(scale))
-    axarr[1].set_xlabel('Iteration')
-    axarr[1].set_ylabel('Scale Value')
-
-    #: Attempt at basic learning
-    print 'Final power cutoff: {}'.format(pwr_thresh)
-
-    plt.figure(10)
-    p_color = 'purple'
-    plt.plot(pwr_rms, color=p_color)
-    plt.axhline(y=pwr_thresh, color=p_color, linestyle='--')
-    for x in np.where(pwr_imp > 0)[0]:
-        plt.axvline(x=x, color=p_color, linestyle='-.')
+    # #: Plot learning curves
+    # f, axarr = plt.subplots(2, sharex=True)
+    # axarr[0].plot(err_tracking)
+    # axarr[0].set_title('Error curve (Final Rep Count: {})'.format(pwr_reps))
+    # axarr[0].set_xlabel('Iteration')
+    # axarr[0].set_ylabel('Estimated - Actual')
+    # axarr[1].plot(scales)
+    # axarr[1].set_title('Sigma Multiplier (Final Value: {})'.format(scale))
+    # axarr[1].set_xlabel('Iteration')
+    # axarr[1].set_ylabel('Scale Value')
+    #
+    # #: Attempt at basic learning
+    # print 'Final power cutoff: {}'.format(pwr_thresh)
+    #
+    # plt.figure(10)
+    # p_color = 'purple'
+    # plt.plot(pwr_rms, color=p_color)
+    # plt.axhline(y=pwr_thresh, color=p_color, linestyle='--')
+    # for x in np.where(pwr_imp > 0)[0]:
+    #     plt.axvline(x=x, color=p_color, linestyle='-.')
 
     return pwr_thresh
 
@@ -192,8 +193,8 @@ def calc_reps(pwr, n_reps, state='rest', thresh=0.):
     :return:
     """
 
-    if not isinstance(pwr, pd.Series()):
-        print 'converting power {} to Series...'.format(type(pwr))
+    if not isinstance(pwr, pd.Series):
+        print 'converting power {} to pandas Series...'.format(type(pwr))
         pwr = pd.Series(pwr)
     # Better way to do this??
     N = float(((pwr > thresh) * 1).diff()[1:].abs().sum())
@@ -212,6 +213,7 @@ def calc_reps(pwr, n_reps, state='rest', thresh=0.):
 
     # Assume every
     n_reps += np.floor(N/2.)
+    print 'User at {} reps'.format(n_reps)
 
     # Update the state
     state = ['rest', 'lift'][int((shift+(N%2))%2)]

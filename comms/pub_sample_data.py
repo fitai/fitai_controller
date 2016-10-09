@@ -1,9 +1,12 @@
 import json
 
+from numpy import random
+
 from sys import argv, path as syspath
 from os.path import dirname, abspath
 from optparse import OptionParser
 from urllib2 import urlopen
+from time import sleep
 
 import paho.mqtt.client as mqtt
 
@@ -23,8 +26,11 @@ from processing.ml_test import find_threshold, calc_reps
 
 my_ip = urlopen('http://ip.42.pl/raw').read()
 
-thresh = find_threshold()
-storage = {'reps': 0, 'curr_state': 'rest', 'threshold': thresh, 'curr_lift': None}
+# reps = 0
+# curr_state = 'rest'
+# thresh = find_threshold()
+
+# storage = {'reps': reps, 'curr_state': curr_state, 'threshold': thresh}
 
 
 # The callback for when the client successfully connects to the broker
@@ -52,24 +58,13 @@ def mqtt_on_message(client, userdata, msg):
         print 'reading content...'
         accel = read_content_mqtt(data, head)
 
-        # Check if user has started new lift. If so, reset rep counter
-        if storage['curr_lift']:
-            if not storage['curr_lift'] == head['lift_id']:
-                storage['curr_lift'] = head['lift_id']
-                storage['reps'] = 0
-        else:
-            storage['curr_lift'] = head['lift_id']
-
         # Before taking the time to push to db, process the acceleration and push to PHP websocket
         _, v, p = process_data(head, accel)
         reps, curr_state = calc_reps(p, storage['reps'], storage['curr_state'], storage['threshold'])
-        # update state of user via 'storage' dict
-        storage['reps'] = reps
-        storage['curr_state'] = curr_state
         ws_pub(head, v, p, reps)
 
         # temporarily disabling
-        # push_to_db(head, accel)
+        push_to_db(head, accel)
 
     except ValueError, e:
         print 'Error processing JSON object. Message: \n{}'.format(str(e))
@@ -89,8 +84,8 @@ def establish_client(ip, port, topic):
     # print 'Connection successful'
     # client.connect('72.227.147.224', 1883, 60)
     # client.connect('localhost', 1883, 60)
-    print 'Subscribing to topic "{}"'.format(topic)
-    client.subscribe(topic=topic, qos=2)
+    # print 'Subscribing to topic "{}"'.format(topic)
+    # client.subscribe(topic=topic, qos=2)
     print 'MQTT client ready'
     return client
 
@@ -105,6 +100,11 @@ def kill_client(client):
     print 'Disconnecting MQTT client...'
     client.disconnect()
     print 'Disconnected.'
+
+
+def publish(client, topic='fitai', message='test message'):
+    print 'Publishing to topic {t} message:\n{m}'.format(t=topic, m=message)
+    client.publish(topic=topic, payload=message)
 
 
 # Establish default behaviors of command-line call
@@ -139,7 +139,24 @@ def main(args):
         print 'Attempting MQTT connection to {i}:{p} on topic {t}'.format(i=host_ip, p=host_port, t=mqtt_topic)
 
     mqtt_client = establish_client(host_ip, host_port, mqtt_topic)
-    run_client(mqtt_client)
+
+    lift_id = 0
+    for i in range(100):
+        print 'Loop {}'.format(i)
+        a_test = [random.normal(2, 0.6) for _ in range(30)]
+        if i%10 == 0:
+            lift_id += 1
+
+        header = {"header": {"athlete_id": 0, "lift_id": lift_id, "lift_sampling_rate": 50, "lift_start": "2016-09-01",
+                             "lift_type": "deadlift", "lift_weight": 100, "lift_weight_units": "lbs",
+                             "lift_num_reps": 10}}
+        data = {"content": {"a_x": a_test}}
+        packet = dict(dict(**header), **data)
+
+        publish(mqtt_client, mqtt_topic, message=json.dumps(packet))
+        sleep(1)
+
+    # run_client(mqtt_client)
     kill_client(mqtt_client)
 
 
