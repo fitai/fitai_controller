@@ -1,4 +1,4 @@
-from os.path import join, realpath, abspath
+from os.path import join, dirname, realpath
 
 # import matplotlib.pyplot as plt
 import numpy as np
@@ -18,7 +18,7 @@ bin_size = 1.  # Number of samples to collect before processing the signal (floa
 def find_threshold(person_folder=None, filename=None, data_folder=None, smooth=True):
     if not data_folder:
         try:
-            dir_path = abspath(realpath(__file__))
+            dir_path = dirname(dirname(realpath(__file__)))
             print 'found path {}'.format(dir_path)
         except NameError:
             print 'Working in dev mode.'
