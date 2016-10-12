@@ -18,7 +18,7 @@ except NameError:
     syspath.append('/Users/kyle/PycharmProjects/fitai_controller')
     print 'Working in Dev mode.'
 
-from databasing.database import push_to_db
+# from databasing.database import push_to_db
 from comms.php_process_data import process_data
 from processing.util import read_header_mqtt, read_content_mqtt
 from comms.ws_publisher import ws_pub
