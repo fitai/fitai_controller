@@ -24,7 +24,8 @@ def push_message(ws, msg=None):
     if msg is None:
         print 'No message provided. Skipping message push...'
         return None
-    print 'Sending message {}'.format(msg)
+    # print 'Sending message {}'.format(msg)
+    print 'sending message to websocket..'
     ws.send(msg)
     print 'Message sent'
 
