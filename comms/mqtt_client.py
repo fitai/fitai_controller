@@ -49,6 +49,7 @@ def mqtt_on_message(client, userdata, msg):
 
         print 'reading header...'
         head = read_header_mqtt(data)
+        print 'header contains: \n{}'.format(head)
         print 'reading content...'
         accel = read_content_mqtt(data, head)
 
@@ -63,6 +64,7 @@ def mqtt_on_message(client, userdata, msg):
         # Before taking the time to push to db, process the acceleration and push to PHP websocket
         _, v, p = process_data(head, accel)
         reps, curr_state = calc_reps(p, storage['reps'], storage['curr_state'], storage['threshold'])
+        reps = 0
         # update state of user via 'storage' dict
         storage['reps'] = reps
         storage['curr_state'] = curr_state
