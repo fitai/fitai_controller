@@ -43,7 +43,14 @@ def main(args):
 
     try:
         print 'Found collar_id {}'.format(dat['collar_id'])
+        id = redis_client.get('lift_id')
+        if id is None:
+            print 'No Redis variable "lift_id" found. Will set to 0'
+            id = '0'
+            redis_client.set('lift_id', id)
+        dat['lift_id'] = id
         update_collar_by_id(redis_client, dat, dat['collar_id'], verbose)
+        redis_client.incr('lift_id', 1)
     except KeyError, e:
         print 'Couldnt extract collar_id from json object. Cannot update.'
         if verbose:
