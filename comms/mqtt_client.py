@@ -4,6 +4,7 @@ from sys import argv, path as syspath, exit
 from os.path import dirname, abspath
 from optparse import OptionParser
 from json import loads
+from datetime import datetime as dt
 
 try:
     path = dirname(dirname(abspath(__file__)))
@@ -62,9 +63,13 @@ def mqtt_on_message(client, userdata, msg):
         # The only piece of information from the device not provided by the frontend:
         collar['lift_sampling_rate'] = head['lift_sampling_rate']
 
-        # If collar is newly generated, threshold will be None
-        if collar['threshold'] is None:
+        # NOTE TO SELF: Don't like doing all these checks. Think of a more efficient way...
+        # If collar is newly generated, threshold will be 'None'
+        if collar['threshold'] == 'None':
             collar['threshold'] = thresh
+
+        if collar['lift_start'] == 'None':
+            collar['lift_start'] = dt.strftime(dt.now(), '%Y-%m-%d')
 
         print 'collar contains: \n{}'.format(collar)
 

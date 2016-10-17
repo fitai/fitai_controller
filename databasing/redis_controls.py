@@ -1,6 +1,5 @@
 from redis import Redis
 from json import loads, dumps
-from datetime import datetime as dt
 
 
 def establish_redis_client(hostname='localhost', port=6379, password=None, verbose=False):
@@ -35,13 +34,13 @@ def retrieve_collar_by_id(redis_client=None, collar_id=None, verbose=True):
         collar_obj = {"collar_id": collar_id,
                       "athlete_id": 0,
                       "lift_id": 'None',
-                      "lift_start": dt.strftime(dt.now().date(), '%Y-%m-%d'),
+                      "lift_start": "None",
                       "lift_type": "deadlift",
                       "lift_weight": 100,
                       "lift_weight_units": "lbs",
                       "lift_num_reps": 10,
                       "calc_reps": 0,
-                      "threshold": None,
+                      "threshold": "None",
                       "curr_state": 'rest'
                       }
     return collar_obj
