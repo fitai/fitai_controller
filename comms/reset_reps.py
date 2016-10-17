@@ -58,9 +58,7 @@ if __name__ == '__main__':
 
     mqtt_client = establish_client(host_ip, host_port, mqtt_topic)
 
-    header = {"header": {"athlete_id": -1, "lift_id": -1, "lift_sampling_rate": 50, "lift_start": "2016-09-01",
-                         "lift_type": "deadlift", "lift_weight": 0, "lift_weight_units": "lbs",
-                         "lift_num_reps": 0}}
+    header = {"header": {"lift_id": '-1', "lift_sampling_rate": 50, "collar_id": "-1"}}
     data = {"content": {"a_x": [0, 0, 0, 0, 0, 0, 0]}}
     packet = dict(dict(**header), **data)
 

@@ -1,4 +1,4 @@
-from pandas import DataFrame, Series
+from pandas import DataFrame
 import json
 import sys
 
@@ -7,7 +7,7 @@ from processing.functions import calc_vel2, calc_rms, calc_power
 
 def read_header_mqtt(data):
     try:
-        head = Series(data['header'])
+        head = data['header']
     except AttributeError, e:
         print 'No "header" field. Error: {}'.format(e)
         head = None
@@ -15,7 +15,7 @@ def read_header_mqtt(data):
     return head
 
 
-def read_content_mqtt(data, head):
+def read_content_mqtt(data, collar_obj):
     try:
         accel = DataFrame(data['content'])
         accel = accel.reset_index().rename(columns={'index': 'timepoint'})
@@ -25,14 +25,14 @@ def read_content_mqtt(data, head):
 
     try:
         # Scale timepoint values
-        accel.timepoint = accel.timepoint.astype(float) / float(head.lift_sampling_rate)
-    except IndexError:
+        accel.timepoint = accel.timepoint.astype(float) / float(collar_obj['lift_sampling_rate'])
+    except KeyError:
         print 'Couldnt extract sample rate from header. Defaulting to 20 Hz'
         accel.timepoint = accel.timepoint.astype(float) / 20.
 
     try:
-        accel['lift_id'] = head.lift_id
-    except IndexError:
+        accel['lift_id'] = collar_obj['lift_id']
+    except KeyError:
         print 'Couldnt extract lift_id from header'
         accel['lift_id'] = 0
 
@@ -92,15 +92,15 @@ def extract_sampling_rate(header):
 
 # Expects a dataframe with known fields
 # Timepoint, a_x, (a_y, a_z), lift_id
-def process_data(header, content):
+def process_data(collar_obj, content):
     if not isinstance(content, DataFrame):
         print 'Content (type {}) is not a dataframe. Will try to convert...'.format(type(content))
         content = DataFrame(content)
 
     accel_headers = [x for x in content.columns if x in ['a_x', 'a_y', 'a_z']]
 
-    fs = extract_sampling_rate(header)
-    weight = extract_weight(header)
+    fs = extract_sampling_rate(collar_obj)
+    weight = extract_weight(collar_obj)
 
     if len(accel_headers) == 0:
         print 'Could not find acceleration field(s). Cannot process'

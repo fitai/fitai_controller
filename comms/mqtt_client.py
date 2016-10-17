@@ -1,11 +1,9 @@
-import json
+import paho.mqtt.client as mqtt
 
-from sys import argv, path as syspath
+from sys import argv, path as syspath, exit
 from os.path import dirname, abspath
 from optparse import OptionParser
-from urllib2 import urlopen
-
-import paho.mqtt.client as mqtt
+from json import loads
 
 try:
     path = dirname(dirname(abspath(__file__)))
@@ -16,15 +14,24 @@ except NameError:
     print 'Working in Dev mode.'
 
 from databasing.database import push_to_db
+from databasing.redis_controls import establish_redis_client, retrieve_collar_by_id, update_collar_by_id
 from comms.php_process_data import process_data
 from processing.util import read_header_mqtt, read_content_mqtt
 from comms.ws_publisher import ws_pub
 from processing.ml_test import find_threshold, calc_reps
 
-my_ip = urlopen('http://ip.42.pl/raw').read()
 
 thresh = find_threshold()
-storage = {'reps': 0, 'curr_state': 'rest', 'threshold': thresh, 'curr_lift': None}
+collar_id = 0
+
+# NOTE TO SELF: NEED A BETTER WAY TO MAKE THIS GLOBAL
+# should probably turn the entire script into an object....
+# Attempt to connect to redis server
+redis_client = establish_redis_client(verbose=True)
+# If connection fails, MQTT client will not be able to update collar object, and will be useless. Kill and try again
+if redis_client is None:
+    print 'Couldnt connect to redis. Killing MQTT client.'
+    exit(100)
 
 
 # The callback for when the client successfully connects to the broker
@@ -45,34 +52,49 @@ def mqtt_on_message(client, userdata, msg):
     print 'Received message from topic "{}"'.format(topic)
 
     try:
-        data = json.loads(msg.payload)
+        data = loads(msg.payload)
 
         print 'reading header...'
         head = read_header_mqtt(data)
         print 'header contains: \n{}'.format(head)
-        print 'reading content...'
-        accel = read_content_mqtt(data, head)
 
-        # Check if user has started new lift. If so, reset rep counter
-        if storage['curr_lift']:
-            if not storage['curr_lift'] == head['lift_id']:
-                storage['curr_lift'] = head['lift_id']
-                storage['reps'] = 0
-        else:
-            storage['curr_lift'] = head['lift_id']
+        collar = retrieve_collar_by_id(redis_client, head['collar_id'])
+        # The only piece of information from the device not provided by the frontend:
+        collar['lift_sampling_rate'] = head['lift_sampling_rate']
+
+        # If collar is newly generated, threshold will be None
+        if collar['threshold'] is None:
+            collar['threshold'] = thresh
+
+        print 'collar contains: \n{}'.format(collar)
+
+        print 'reading content...'
+        accel = read_content_mqtt(data, collar)
+
+        # This will ONLY happen if reset_reps.py is triggered, which means the only action that needs to be taken
+        # is to zero out the reps
+        if head['lift_id'] != 'None':
+            print 'resetting reps'
+            collar['calc_reps'] = 0
 
         # Before taking the time to push to db, process the acceleration and push to PHP websocket
-        _, v, p = process_data(head, accel)
-        reps, curr_state = calc_reps(p, storage['reps'], storage['curr_state'], storage['threshold'])
-        reps = 0
-        # update state of user via 'storage' dict
-        storage['reps'] = reps
-        storage['curr_state'] = curr_state
-        ws_pub(head, v, p, reps)
+        _, v, p = process_data(collar, accel)
+        reps, curr_state = calc_reps(p, collar['calc_reps'], collar['curr_state'], collar['threshold'])
+        # reps = 0
+        # update state of user via 'collar' dict
+        collar['calc_reps'] = reps
+        collar['curr_state'] = curr_state
+        ws_pub(collar, v, p, reps)
+
+        update_collar_by_id(redis_client, collar, collar['collar_id'], verbose=True)
 
         # temporarily disabling
         # push_to_db(head, accel)
 
+    except KeyError, e:
+        print 'Key not found in data header. ' \
+              'Cannot retrieve relevant information and update redis object.'
+        print 'Error message: \n{}'.format(e)
     except ValueError, e:
         print 'Error processing JSON object. Message: \n{}'.format(str(e))
         print 'received: {}'.format(str(msg.payload))
@@ -81,7 +103,7 @@ def mqtt_on_message(client, userdata, msg):
         print 'recieved: {}'.format(msg.payload)
 
 
-def establish_client(ip, port, topic):
+def establish_mqtt_client(ip, port, topic):
     client = mqtt.Client()
     client.on_connect = mqtt_on_connect
     client.on_message = mqtt_on_message
@@ -140,7 +162,7 @@ def main(args):
         print 'Received args {}'.format(argv)
         print 'Attempting MQTT connection to {i}:{p} on topic {t}'.format(i=host_ip, p=host_port, t=mqtt_topic)
 
-    mqtt_client = establish_client(host_ip, host_port, mqtt_topic)
+    mqtt_client = establish_mqtt_client(host_ip, host_port, mqtt_topic)
     run_client(mqtt_client)
     kill_client(mqtt_client)
 
@@ -148,7 +170,3 @@ def main(args):
 # Receives initial ping to file
 if __name__ == '__main__':
     main(argv[1:])
-
-# Sample message:
-# "{'header': {'athlete_id': 0, 'lift_id': 0, 'lift_sampling_rate': 50, 'lift_start': '2016-09-01', 'lift_type': 'deadlift', 'lift_weight': 100, 'lift_weight_units': 'lbs', 'lift_num_reps': 10 }, 'content': 'a_x': [0, 1, 2, 1, 3, 2, 1, 3, 4]}"
-# '{"header": {"athlete_id": 0, "lift_id": 10, "lift_sampling_rate": 50, "lift_start": "2016-09-01", "lift_type": "deadlift", "lift_weight": 100, "lift_weight_units": "lbs", "lift_num_reps": 10 }, "content": {"a_x": [0, 1, 2, 1, 3, 2, 1, 3, 4]} }'
