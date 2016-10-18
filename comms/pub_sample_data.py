@@ -96,13 +96,14 @@ def main(args):
 
     mu = 2
     var = 0.75
+    sleep_time = 0.05
     if verbose:
         print 'Publishing data with mean {} and variance {}'.format(mu, var)
 
-    for i in range(100):
+    for i in range(int(100./sleep_time)):
         print 'Loop {}'.format(i)
         a_test = [random.normal(mu, var) for _ in range(30)]
-        if i % 10 == 0:
+        if i % (10./sleep_time) == 0:
             header = {"header": {"lift_id": '-1', "lift_sampling_rate": 50, "collar_id": "-1"}}
             data = {"content": {"a_x": [0, 0, 0, 0]}}
         else:
@@ -112,7 +113,7 @@ def main(args):
         packet = dict(dict(**header), **data)
 
         publish(mqtt_client, mqtt_topic, message=json.dumps(packet))
-        sleep(1)
+        sleep(sleep_time)
 
     kill_client(mqtt_client)
 
