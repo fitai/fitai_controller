@@ -5,6 +5,7 @@ from os.path import dirname, abspath
 from optparse import OptionParser
 from json import loads
 from datetime import datetime as dt
+from pandas import Series
 
 try:
     path = dirname(dirname(abspath(__file__)))
@@ -94,7 +95,11 @@ def mqtt_on_message(client, userdata, msg):
         update_collar_by_id(redis_client, collar, collar['collar_id'], verbose=True)
 
         # temporarily disabling
-        # push_to_db(head, accel)
+        if collar['active']:
+            header = Series(data=collar)
+            push_to_db(header, accel)
+        else:
+            print 'Received and processed data for collar {}, but collar is not active...'.format(collar['collar_id'])
 
     except KeyError, e:
         print 'Key not found in data header. ' \
