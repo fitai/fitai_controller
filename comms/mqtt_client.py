@@ -90,6 +90,11 @@ def mqtt_on_message(client, userdata, msg):
         # update state of user via 'collar' dict
         collar['calc_reps'] = reps
         collar['curr_state'] = curr_state
+
+        if 'active' not in collar.keys():
+            print 'collar {} has no Active field set. Will create and set to False'.format(collar['collar_id'])
+            collar['active'] = False
+
         ws_pub(collar, v, p, reps)
 
         update_collar_by_id(redis_client, collar, collar['collar_id'], verbose=True)

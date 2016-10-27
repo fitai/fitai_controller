@@ -74,6 +74,8 @@ def establish_cli_parser():
                       help='MQTT topic messages are to be received from')
     parser.add_option('-v', '--verbose', dest='verbose', default=False, action='store_true',
                       help='Increase console outputs (good for dev purposes)')
+    parser.add_option('-n', '--num_packets', default=None,
+                      help='Specify a number of packets. If not specified, sends 100/sleep_time (2000) packets.')
     return parser
 
 
@@ -87,6 +89,7 @@ def main(args):
     host_port = cli_options.host_port
     mqtt_topic = cli_options.mqtt_topic
     verbose = cli_options.verbose
+    N = cli_options.num_packets
 
     if verbose:
         print 'Received args {}'.format(argv)
@@ -100,7 +103,12 @@ def main(args):
     if verbose:
         print 'Publishing data with mean {} and variance {}'.format(mu, var)
 
-    for i in range(int(100./sleep_time)):
+    if N is None:
+        N = int(100./sleep_time)
+    else:
+        N = int(N)
+
+    for i in range(N):
         print 'Loop {}'.format(i)
         a_test = [random.normal(mu, var) for _ in range(30)]
         if i % (10./sleep_time) == 0:
