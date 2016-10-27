@@ -64,7 +64,7 @@ def mqtt_on_message(client, userdata, msg):
         # The only piece of information from the device not provided by the frontend:
         collar['lift_sampling_rate'] = head['lift_sampling_rate']
 
-        # NOTE TO SELF: Don't like doing all these checks. Think of a more efficient way...
+        # TODO: Don't like doing all these checks. Think of a more efficient way...
         # If collar is newly generated, threshold will be 'None'
         if collar['threshold'] == 'None':
             collar['threshold'] = thresh
