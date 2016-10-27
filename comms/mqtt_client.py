@@ -96,10 +96,12 @@ def mqtt_on_message(client, userdata, msg):
 
         # temporarily disabling
         if collar['active']:
-            header = Series(data=collar)
-            push_to_db(header, accel)
+            print 'TEST: would push to db'
+            # header = Series(data=collar)
+            # push_to_db(header, accel)
         else:
-            print 'Received and processed data for collar {}, but collar is not active...'.format(collar['collar_id'])
+            print 'TEST: would NOT push to db'
+            # print 'Received and processed data for collar {}, but collar is not active...'.format(collar['collar_id'])
 
     except KeyError, e:
         print 'Key not found in data header. ' \
