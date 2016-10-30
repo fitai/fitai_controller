@@ -1,4 +1,4 @@
-import json
+from json import loads
 from optparse import OptionParser
 from sys import argv, path as syspath, exit
 from os.path import dirname, abspath
@@ -29,7 +29,7 @@ def main(args):
 
     (cli_options, _) = cli_parser.parse_args(args)
 
-    dat = json.loads(cli_options.json_str)
+    dat = loads(cli_options.json_str)
     verbose = cli_options.verbose
 
     if verbose:
@@ -42,8 +42,9 @@ def main(args):
         exit(200)
 
     try:
-        print 'Found collar_id {}'.format(dat['collar_id'])
-        collar = redis_client.get(dat['collar_id'])
+        if verbose:
+            print 'Found collar_id {}'.format(dat['collar_id'])
+        collar = loads(redis_client.get(dat['collar_id']))
 
         next_lift_id = redis_client.get('lift_id')
         if next_lift_id is None:
