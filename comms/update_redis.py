@@ -35,7 +35,7 @@ def main(args):
     if verbose:
         print 'Received json: {}'.format(dat)
 
-    redis_client = establish_redis_client(verbose=verbose)
+    redis_client = establish_redis_client(hostname='52.204.229.101', verbose=verbose)
 
     if redis_client is None:
         print 'Unsuccessful attempt to launch redis client. Cannot update.'
@@ -76,9 +76,9 @@ def main(args):
             print 'Redis object updated properly. Will increment lift_id'
             # lift_id was 'None', and the redis collar object was successfully updated
             redis_client.incr('lift_id', 1)
-        elif ~response:
+        elif not response:
             print 'Redis object not updated properly. Will not increment lift_id.'
-        elif ~update_lift_id:
+        elif not update_lift_id:
             print 'JSON object did not include lift_id. Should be a trigger to end lift and stop pushing to db'
         else:
             print 'SHOULDNT SEE THIS!?!'
