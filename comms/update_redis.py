@@ -56,14 +56,12 @@ def main(args):
         if 'lift_id' not in dat.keys():
             # No lift_id field occurs when End Lift button is pressed, and we want to stop pushing data to db
             # In this case, just update collar object with new values and push to redis. DO NOT iterate lift_id
-            print 'triggered end of lift'
             update_lift_id = False
             for key in dat.keys():
                 collar[key] = dat[key]
         elif dat['lift_id'] == 'None':
             # lift_id = 'None' is sent to trigger new workout, which means lift_id needs to be updated.
             # DO iterate lift_id in this case
-            print 'triggered new lift'
             update_lift_id = True
             for key in dat.keys():
                 collar[key] = dat[key]
@@ -71,9 +69,10 @@ def main(args):
         else:
             print 'sent update explicitly for lift_id {}, which is not currently handled.'.format(dat['lift_id'])
 
-        response = update_collar_by_id(redis_client, dat, dat['collar_id'], verbose)
+        response = update_collar_by_id(redis_client, collar, collar['collar_id'], verbose)
 
         if response & update_lift_id:
+            print 'Redis object updated properly. Will increment lift_id'
             # lift_id was 'None', and the redis collar object was successfully updated
             redis_client.incr('lift_id', 1)
         elif ~response:
