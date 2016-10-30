@@ -1,16 +1,10 @@
 from sqlalchemy import create_engine
 import pandas as pd
 
-# NOTE TO SELF - update this so that your password doesn't show!
-aws_conn_string = "postgresql://db_user:dbuserpassword@test-db-instance.cls1x0o0bifh.us-east-1.rds.amazonaws.com:5432/fitai"
-aws_conn = create_engine(aws_conn_string)
+from db_conn_strings import aws_conn_string
 
-local_conn_string = "postgresql://kyle:Seda2012@localhost:5432"
-local_conn = create_engine(local_conn_string)
 
-# Switch between conns here
-# conn = aws_conn
-conn = local_conn
+conn = create_engine(aws_conn_string)
 
 query = '''
 SELECT
