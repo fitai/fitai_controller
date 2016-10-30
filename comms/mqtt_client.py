@@ -16,7 +16,7 @@ except NameError:
     print 'Working in Dev mode.'
 
 from databasing.database import push_to_db
-from databasing.redis_controls import establish_redis_client, retrieve_collar_by_id, update_collar_by_id
+from databasing.redis_controls import establish_redis_client, retrieve_collar_by_id, update_collar_by_id, get_default_collar
 from comms.php_process_data import process_data
 from processing.util import read_header_mqtt, read_content_mqtt
 from comms.ws_publisher import ws_pub
@@ -60,7 +60,15 @@ def mqtt_on_message(client, userdata, msg):
         head = read_header_mqtt(data)
         print 'header contains: \n{}'.format(head)
 
+        # TODO: If collar returns without all necessary fields, what should happen??
         collar = retrieve_collar_by_id(redis_client, head['collar_id'])
+        # Quick check that at least one expected field is in collar object
+        if 'threshold' not in collar.keys():
+            print 'Redis collar object {} appears broken. Will replace with default and update as needed.'.format(collar['collar_id'])
+            collar_tmp = collar.copy()
+            collar = get_default_collar()
+            collar.update(collar_tmp)
+
         # The only piece of information from the device not provided by the frontend:
         collar['lift_sampling_rate'] = head['lift_sampling_rate']
 

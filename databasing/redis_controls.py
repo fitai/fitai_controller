@@ -2,6 +2,21 @@ from redis import Redis
 from json import loads, dumps
 
 
+def get_default_collar():
+    return {"collar_id": 'None',
+            "athlete_id": 0,
+            "lift_id": 'None',
+            "lift_start": "None",
+            "lift_type": "deadlift",
+            "lift_weight": 100,
+            "lift_weight_units": "lbs",
+            "lift_num_reps": 10,
+            "calc_reps": 0,
+            "threshold": "None",
+            "curr_state": 'rest'
+            }
+
+
 def establish_redis_client(hostname='localhost', port=6379, password=None, verbose=False):
     r = Redis(host=hostname, port=port, password=password)
     if r is not None:
@@ -31,18 +46,20 @@ def retrieve_collar_by_id(redis_client=None, collar_id=None, verbose=True):
             print 'Collar {} not found in Redis. Will create new'.format(collar_id)
         # For wahtever reason, I am making all this the default collar values
         # Should only occur for DEV purposes
-        collar_obj = {"collar_id": collar_id,
-                      "athlete_id": 0,
-                      "lift_id": 'None',
-                      "lift_start": "None",
-                      "lift_type": "deadlift",
-                      "lift_weight": 100,
-                      "lift_weight_units": "lbs",
-                      "lift_num_reps": 10,
-                      "calc_reps": 0,
-                      "threshold": "None",
-                      "curr_state": 'rest'
-                      }
+        collar_obj = get_default_collar()
+        collar_obj['collar_id'] = collar_id
+        # collar_obj = {"collar_id": collar_id,
+        #               "athlete_id": 0,
+        #               "lift_id": 'None',
+        #               "lift_start": "None",
+        #               "lift_type": "deadlift",
+        #               "lift_weight": 100,
+        #               "lift_weight_units": "lbs",
+        #               "lift_num_reps": 10,
+        #               "calc_reps": 0,
+        #               "threshold": "None",
+        #               "curr_state": 'rest'
+        #               }
     return collar_obj
 
 
