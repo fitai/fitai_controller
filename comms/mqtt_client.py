@@ -97,7 +97,7 @@ def mqtt_on_message(client, userdata, msg):
 
         ws_pub(collar, v, p, reps)
 
-        update_collar_by_id(redis_client, collar, collar['collar_id'], verbose=True)
+        _ = update_collar_by_id(redis_client, collar, collar['collar_id'], verbose=True)
 
         # temporarily disabling
         if collar['active']:

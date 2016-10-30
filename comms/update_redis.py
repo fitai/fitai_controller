@@ -43,14 +43,42 @@ def main(args):
 
     try:
         print 'Found collar_id {}'.format(dat['collar_id'])
-        id = redis_client.get('lift_id')
-        if id is None:
+        collar = redis_client.get(dat['collar_id'])
+
+        next_lift_id = redis_client.get('lift_id')
+        if next_lift_id is None:
+            # TODO: pull max lift_id from athlete_lift table instead of defaulting to 0
+            # Want to be really careful here; could reset all lift_ids and throw everything off
             print 'No Redis variable "lift_id" found. Will set to 0'
-            id = '0'
-            redis_client.set('lift_id', id)
-        dat['lift_id'] = id
-        update_collar_by_id(redis_client, dat, dat['collar_id'], verbose)
-        redis_client.incr('lift_id', 1)
+            next_lift_id = '0'
+            redis_client.set('lift_id', next_lift_id)
+
+        if dat['lift_id'] == 'None':
+            # lift_id = 'None' is sent to trigger new workout, which means lift_id needs to be updated.
+            # DO iterate lift_id in this case
+            update_lift_id = True
+            for key in dat.keys():
+                collar[key] = dat[key]
+            collar['lift_id'] = next_lift_id
+        else:
+            # No lift_id field occurs when End Lift button is pressed, and we want to stop pushing data to db
+            # In this case, just update collar object with new values and push to redis. DO NOT iterate lift_id
+            update_lift_id = False
+            for key in dat.keys():
+                collar[key] = dat[key]
+
+        response = update_collar_by_id(redis_client, dat, dat['collar_id'], verbose)
+
+        if response & update_lift_id:
+            # lift_id was 'None', and the redis collar object was successfully updated
+            redis_client.incr('lift_id', 1)
+        elif ~response:
+            print 'Redis object not updated properly. Will not increment lift_id.'
+        elif ~update_lift_id:
+            print 'JSON object did not include lift_id. Should be a trigger to end lift and stop pushing to db'
+        else:
+            print 'SHOULDNT SEE THIS!?!'
+
     except KeyError, e:
         print 'Couldnt extract collar_id from json object. Cannot update.'
         if verbose:

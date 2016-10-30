@@ -66,6 +66,7 @@ def update_collar_by_id(redis_client=None, dat=None, collar_id=None, verbose=Tru
         print 'Trouble saving collar {} variable to redis server. Not sure what to do'.format(collar_id)
 
     # update_collars(redis_client, collars, verbose)
+    return response
 
 
 # def update_collars(redis_client=None, collars=None, verbose=True):
