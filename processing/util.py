@@ -65,13 +65,13 @@ def parse_data(json_string):
 def extract_weight(header):
     try:
         if header['lift_weight_units'] == 'lbs':
-            weight = header['lift_weight'] * (1./2.5)
+            weight = int(header['lift_weight']) * (1./2.5)
             print 'Converted weight from lbs ({w1}) to kg ({w2})'.format(w1=header['lift_weight'], w2=weight)
         elif header['lift_weight_units'] == 'kg':
-            weight = header['lift_weight']
+            weight = int(header['lift_weight'])
         else:
             print 'Unexpected weight unit type {un}. Will leave weight as {w}'.format(un=header['lift_weight_units'], w=header['lift_weight'])
-            weight = header['lift_weight']
+            weight = int(header['lift_weight'])
     except KeyError, e:
         print 'Error finding weight - {}. Will default to 22.5kg'.format(e)
         weight = 22.5

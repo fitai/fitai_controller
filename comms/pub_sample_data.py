@@ -43,11 +43,6 @@ def establish_client(ip, port, topic):
 
     print 'Connecting MQTT client...'
     client.connect(ip, port, 60)  # AWS IP
-    # print 'Connection successful'
-    # client.connect('72.227.147.224', 1883, 60)
-    # client.connect('localhost', 1883, 60)
-    # print 'Subscribing to topic "{}"'.format(topic)
-    # client.subscribe(topic=topic, qos=2)
     print 'MQTT client ready'
     return client
 
@@ -111,11 +106,11 @@ def main(args):
     for i in range(N):
         print 'Loop {}'.format(i)
         a_test = [random.normal(mu, var) for _ in range(30)]
-        if i % (10./sleep_time) == 0:
-            header = {"header": {"lift_id": '-1', "lift_sampling_rate": 50, "collar_id": "-1"}}
+        if (i % (10./sleep_time) == 0) & (N > 1):
+            header = {"header": {"lift_id": '-1', "lift_sampling_rate": 50, "collar_id": "555"}}
             data = {"content": {"a_x": [0, 0, 0, 0]}}
         else:
-            header = {"header": {"lift_id": "None", "lift_sampling_rate": 50, "collar_id": "-1"}}
+            header = {"header": {"lift_id": "None", "lift_sampling_rate": 50, "collar_id": "555"}}
             data = {"content": {"a_x": a_test}}
 
         packet = dict(dict(**header), **data)

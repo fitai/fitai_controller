@@ -22,14 +22,14 @@ from processing.util import read_header_mqtt, read_content_mqtt
 from comms.ws_publisher import ws_pub
 from processing.ml_test import find_threshold, calc_reps
 
-
+# TODO: Move this in to relevant functions
 thresh = find_threshold()
 collar_id = 0
 
 # NOTE TO SELF: NEED A BETTER WAY TO MAKE THIS GLOBAL
 # should probably turn the entire script into an object....
 # Attempt to connect to redis server
-redis_client = establish_redis_client(verbose=True)
+redis_client = establish_redis_client(hostname='52.204.229.101', verbose=True)
 # If connection fails, MQTT client will not be able to update collar object, and will be useless. Kill and try again
 if redis_client is None:
     print 'Couldnt connect to redis. Killing MQTT client.'
@@ -117,7 +117,7 @@ def mqtt_on_message(client, userdata, msg):
         print 'received: {}'.format(str(msg.payload))
     except TypeError, e:
         print 'Error processing string input. Message: \n{}'.format(str(e))
-        print 'recieved: {}'.format(msg.payload)
+        print 'received: {}'.format(msg.payload)
 
 
 def establish_mqtt_client(ip, port, topic):
@@ -127,9 +127,6 @@ def establish_mqtt_client(ip, port, topic):
 
     print 'Connecting MQTT client...'
     client.connect(ip, port, 60)  # AWS IP
-    # print 'Connection successful'
-    # client.connect('72.227.147.224', 1883, 60)
-    # client.connect('localhost', 1883, 60)
     print 'Subscribing to topic "{}"'.format(topic)
     client.subscribe(topic=topic, qos=2)
     print 'MQTT client ready'
@@ -174,8 +171,6 @@ def main(args):
     verbose = cli_options.verbose
 
     if verbose:
-        # print 'options (type {t}): {o}'.format(t=type(cli_options), o=cli_options)
-        # print 'args: {}'.format(args)
         print 'Received args {}'.format(argv)
         print 'Attempting MQTT connection to {i}:{p} on topic {t}'.format(i=host_ip, p=host_port, t=mqtt_topic)
 

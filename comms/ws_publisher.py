@@ -41,6 +41,7 @@ def ws_pub(collar_obj, vel, pwr, reps=0):
     # msg = '{"header": { "u_id": 0, "lift_id": 1}, "content": {"v_rms": [0, 1, 2, 3, 4], "p_rms": [5, 6, 7, 8, 9] }}'
     msg_dict = {"header": collar_obj, "rep_count": reps, "content": {"v_rms": list(vel), "p_rms": list(pwr)}}
     msg = json.dumps(msg_dict)
+    print 'message to websocket: \n{}'.format(msg)
     ws = establish_connection()
     if ws is not None:
         push_message(ws, msg)
