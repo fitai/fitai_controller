@@ -60,6 +60,7 @@ def main(args):
             update_lift_id = False
             for key in dat.keys():
                 collar[key] = dat[key]
+            collar['athlete_id'] = 'None'
         elif dat['lift_id'] == 'None':
             # lift_id = 'None' is sent to trigger new workout, which means lift_id needs to be updated.
             # DO iterate lift_id in this case
@@ -80,6 +81,7 @@ def main(args):
             print 'Redis object not updated properly. Will not increment lift_id.'
         elif not update_lift_id:
             print 'JSON object did not include lift_id. Should be a trigger to end lift and stop pushing to db'
+            print '{key1: val1, key2:val2}'
         else:
             print 'SHOULDNT SEE THIS!?!'
 
