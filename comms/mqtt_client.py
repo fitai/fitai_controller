@@ -17,8 +17,8 @@ except NameError:
 
 from databasing.database import push_to_db
 from databasing.redis_controls import establish_redis_client, retrieve_collar_by_id, update_collar_by_id, get_default_collar
-from comms.php_process_data import process_data
-from processing.util import read_header_mqtt, read_content_mqtt
+# from comms.php_process_data import process_data
+from processing.util import read_header_mqtt, read_content_mqtt, process_data
 from comms.ws_publisher import ws_pub
 from processing.ml_test import find_threshold, calc_reps
 
