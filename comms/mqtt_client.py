@@ -29,7 +29,7 @@ collar_id = 0
 # NOTE TO SELF: NEED A BETTER WAY TO MAKE THIS GLOBAL
 # should probably turn the entire script into an object....
 # Attempt to connect to redis server
-redis_client = establish_redis_client(hostname='52.204.229.101', verbose=True)
+redis_client = establish_redis_client(hostname='localhost', verbose=True)
 # If connection fails, MQTT client will not be able to update collar object, and will be useless. Kill and try again
 if redis_client is None:
     print 'Couldnt connect to redis. Killing MQTT client.'

@@ -35,7 +35,7 @@ def main(args):
     if verbose:
         print 'Received json: {}'.format(dat)
 
-    redis_client = establish_redis_client(hostname='52.204.229.101', verbose=verbose)
+    redis_client = establish_redis_client(hostname='localhost', verbose=verbose)
 
     if redis_client is None:
         print 'Unsuccessful attempt to launch redis client. Cannot update.'
