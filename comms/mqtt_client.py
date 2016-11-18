@@ -78,7 +78,7 @@ def mqtt_on_message(client, userdata, msg):
             collar['threshold'] = thresh
 
         if collar['lift_start'] == 'None':
-            collar['lift_start'] = dt.strftime(dt.now(), '%Y-%m-%d')
+            collar['lift_start'] = dt.now()
 
         print 'collar contains: \n{}'.format(collar)
 
@@ -125,8 +125,8 @@ def mqtt_on_message(client, userdata, msg):
         print 'Error processing JSON object. Message: \n{}'.format(str(e))
         print 'received: {}'.format(str(msg.payload))
     except TypeError, e:
-        print 'Error processing string input. Message: \n{}'.format(str(e))
         print 'received: {}'.format(msg.payload)
+        print 'Error processing string input. Message: \n{}'.format(str(e))
 
 
 def establish_mqtt_client(ip, port, topic):
