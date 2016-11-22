@@ -2,6 +2,10 @@ from json import loads
 from optparse import OptionParser
 from sys import argv, path as syspath, exit
 from os.path import dirname, abspath
+from pandas import DataFrame
+
+from databasing.database_pull import pull_data_by_lift
+from processing.util import process_data
 
 try:
     path = dirname(dirname(abspath(__file__)))
@@ -22,6 +26,20 @@ def establish_cli_parser():
     parser.add_option('-v', '--verbose', dest='verbose', default=False, action='store_true',
                       help='Increase console outputs (good for dev purposes)')
     return parser
+
+
+def results_to_json(collar):
+    # Retrieve data from last lift, process into vel and power, push to frontend
+    a, v, p = process_data(collar, pull_data_by_lift(collar['lift_id']))
+
+    data_out = DataFrame(data={'a_rms': a,
+                               'v_rms': v,
+                               'p_rms': p},
+                         index=a.index)
+
+    # print 'Processed headers into:\n{}'.format(json.dumps(list(data_out.columns)))
+    # print 'Processed data into:\n{}'.format(data_out.head().to_json(orient='values'))
+    return data_out.to_json(orient='values')
 
 
 def main(args):
@@ -81,7 +99,7 @@ def main(args):
             print 'Redis object not updated properly. Will not increment lift_id.'
         elif not update_lift_id:
             print 'JSON object did not include lift_id. Should be a trigger to end lift and stop pushing to db'
-            print '{key1: val1, key2:val2}'
+            print results_to_json(collar)
         else:
             print 'SHOULDNT SEE THIS!?!'
 
