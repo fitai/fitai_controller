@@ -5,7 +5,7 @@ from os.path import dirname, abspath
 from optparse import OptionParser
 from json import loads
 from datetime import datetime as dt
-from pandas import Series
+from pandas import Series, DataFrame
 
 try:
     path = dirname(dirname(abspath(__file__)))
@@ -78,7 +78,7 @@ def mqtt_on_message(client, userdata, msg):
             collar['threshold'] = thresh
 
         if collar['lift_start'] == 'None':
-            collar['lift_start'] = dt.strftime(dt.now(), '%Y-%m-%d')
+            collar['lift_start'] = dt.now()
 
         print 'collar contains: \n{}'.format(collar)
 
@@ -109,12 +109,13 @@ def mqtt_on_message(client, userdata, msg):
 
         # temporarily disabling
         if collar['active']:
-            print 'TEST: would push to db'
-            # header = Series(data=collar)
-            # push_to_db(header, accel)
+            # print 'TEST: would push to db'
+            header = DataFrame(data=collar, index=[0]).drop(['active', 'calc_reps', 'collar_id', 'curr_state', 'threshold'], axis=1)
+            print 'header has: \n{}'.format(header)
+            push_to_db(header, accel)
         else:
-            print 'TEST: would NOT push to db'
-            # print 'Received and processed data for collar {}, but collar is not active...'.format(collar['collar_id'])
+            # print 'TEST: would NOT push to db'
+            print 'Received and processed data for collar {}, but collar is not active...'.format(collar['collar_id'])
 
     except KeyError, e:
         print 'Key not found in data header. ' \
@@ -124,8 +125,8 @@ def mqtt_on_message(client, userdata, msg):
         print 'Error processing JSON object. Message: \n{}'.format(str(e))
         print 'received: {}'.format(str(msg.payload))
     except TypeError, e:
-        print 'Error processing string input. Message: \n{}'.format(str(e))
         print 'received: {}'.format(msg.payload)
+        print 'Error processing string input. Message: \n{}'.format(str(e))
 
 
 def establish_mqtt_client(ip, port, topic):

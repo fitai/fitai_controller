@@ -42,7 +42,7 @@ def mqtt_on_message(client, userdata, msg):
         print 'header contains: \n{}'.format(head)
         print 'reading content...'
         accel = read_content_mqtt(data, head)
-        print 'acceleration values: {}'.format(accel.head())
+        print 'acceleration values: \n{}'.format(accel.head())
 
     except ValueError, e:
         print 'Error processing JSON object. Message: \n{}'.format(str(e))
