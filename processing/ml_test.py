@@ -1,71 +1,111 @@
-from os.path import join, dirname, realpath
+from os.path import join
 
-# import matplotlib.pyplot as plt
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+
+from pandas import DataFrame
 
 from processing.functions import method1, calc_vel2
 from FitAI.load_data import load_file
 from FitAI.predictors import make_predictions
 from processing.filters import simple_highpass
+from processing.util import process_data, extract_weight, extract_sampling_rate
+from databasing.database_pull import pull_data_by_lift, pull_lift_ids
 
-# Should use known weight for demo
-weight = 50  # kg
-fs = 100.  # Sampling rate (default = 100Hz)
+
 bin_size = 1.  # Number of samples to collect before processing the signal (float)
 
 
-def find_threshold(person_folder=None, filename=None, data_folder=None, smooth=True):
-    if not data_folder:
-        try:
-            dir_path = dirname(dirname(realpath(__file__)))
-            print 'found path {}'.format(dir_path)
-        except NameError:
-            print 'Working in dev mode.'
-            dir_path = '/Users/kyle/PycharmProjects'
-        data_folder = join(dir_path, 'FitAI/data_files/')
+def find_threshold(smooth=True, plot=False, verbose=False):
 
-    if not person_folder:
-        person_folder = 'Kyle'
-        print 'no person_folder passed. defaulting to {}'.format(person_folder)
+    # Each lift_type will have multiple lift_ids associated with it
+    # Learn on each lift_type separately, and average resultant thresholds FOR NOW! (12/9/16)
+    lift_ids = pull_lift_ids().set_index('lift_type')
 
-    if not filename:
-        filename = 'OHP_45lb_10rep_1.csv'
-        print 'no filename passed. defaulting to {}'.format(filename)
+    train_dict = {}
 
-    col_names = ['timestamp', 'x', 'y', 'z']
-    data = load_file(join(data_folder, person_folder, filename), names=col_names, skiprows=1)
-    # dat = data[['x', 'y', 'z']].iloc[0:250]
-    dat = data[['x', 'y', 'z']]
+    if lift_ids is not None:
+        for lift_type in list(lift_ids.index):
+            ids = lift_ids.ix[lift_type]['lift_ids']
+            type_dict = {}
+            for i, lift_id in enumerate(ids):
+                type_dict[i] = learn_on_lift_id(int(lift_id), smooth, plot, verbose)
 
-    rms_raw = [np.sqrt(np.mean(dat.iloc[i].x**2 + dat.iloc[i].y**2 + dat.iloc[i].z**2)) for i, _ in enumerate(tuple(dat.x))]
+            errs = [d['error'] for _, d in type_dict.iteritems()]
+            thresholds = [d['thresh'] for _, d in type_dict.iteritems()]
 
-    a_rms = list()
-    #: Implement the simple high pass filter
-    for i in range(len(rms_raw)):
-        if i > 0:
-            rms_raw[i] = 0.66*rms_raw[i] + 0.33*rms_raw[i-1]
-            a = simple_highpass(rms_raw[i], rms_raw[i-1], a_rms[-1], fc=1., fs=fs)
-        else:
-            a = 0
-        a_rms.append(a)
+            if any([e > 0 for e in errs]):
+                max_err = max(errs)
+                # 1. - abs(err)/max_err
+                # will eliminate observation with max error, and will vary directly with distance from max_err
+                w = [1. - np.abs(err)/max_err for err in errs]
+                thresh = np.sum(w*thresholds)
+            else:
+                # No info on error, or all errors are the same - weight equally
+                thresh = np.sum(thresholds)/len(thresholds)
 
-    a_rms = np.array(a_rms)
-    v_euler = calc_vel2(a_rms, scale=bin_size, fs=fs)
-    pwr_rms = a_rms * weight * v_euler
+            train_dict.update({lift_type: thresh})
+    else:
+        print 'Unable to retrieve lift_ids from database. Cannot learn.'
+        return None
+
+    if verbose:
+        print 'Found thresholds for the following lift_types:\n{}'.format(train_dict.keys())
+
+    return train_dict
+
+
+def learn_on_lift_id(lift_id, smooth, plot, verbose):
+    header, data = pull_data_by_lift(lift_id)
+    header = header.ix[0].to_dict()
+    a, v, p = process_data((header, data), verbose)
+
+    data = DataFrame(data={'a_rms': a,
+                           'v_rms': v,
+                           'p_rms': p},
+                     index=a.index)
+
+    if smooth:
+        # Needed to scale signal and run calcs
+        fs = extract_sampling_rate(header)
+        weight = extract_weight(header, verbose)
+
+        # re-calculate everything from smoothed acceleration signal
+        rms_raw = data['a_rms']
+        a_rms = list()
+        #: Implement the simple high pass filter
+        for i in range(len(rms_raw)):
+            if i > 0:
+                rms_raw[i] = 0.66*rms_raw[i] + 0.33*rms_raw[i-1]
+                a = simple_highpass(rms_raw[i], rms_raw[i-1], a_rms[-1], fc=1., fs=fs)
+            else:
+                a = 0
+            a_rms.append(a)
+
+        a_rms = np.array(a_rms)
+        v_euler = calc_vel2(a_rms, scale=bin_size, fs=fs)
+        pwr_rms = a_rms * weight * v_euler
+    else:
+        # Don't smooth; use calculated power
+        pwr_rms = data['p_rms']
+
+    # plt.figure()
+    # plt.plot(tmp['a_rms'], color='black')
+
+    try:
+        # true_reps = int([x for x in filename.split('_') if 'rep' in x][0].split('rep')[0])
+        true_reps = header['lift_num_reps']
+    except IndexError:
+        print 'Couldnt find number of reps in header from lift_id {}.\n Cannot learn from this file'
+        print 'Defaulting to threshold of 1'
+        return {'thresh': 1., 'error': None}
 
     #: For use in learning - number of signal points to exclude from calculation of standard deviation
-    offset = 50
+    offset = 0
     scale = 0.
 
     pwr_imp, pwr_thresh, pwr_reps = method1(pwr_rms, calc_offset=offset, scale=scale)
-
-    try:
-        true_reps = int([x for x in filename.split('_') if 'rep' in x][0].split('rep')[0])
-    except IndexError:
-        print 'Couldnt find number of reps in filename {}.\n Cannot learn from this file'.format(filename)
-        print 'Defaulting to threshold of 1'
-        return 1.
 
     err = pwr_reps - true_reps
     err_tracking = [err]
@@ -74,10 +114,10 @@ def find_threshold(person_folder=None, filename=None, data_folder=None, smooth=T
     while np.abs(err) > 0:
         #: Increasing scale increases the value of the threshold, thereby making the classifier LESS sensitive
         #: Decreasing scale makes classifier MORE sensitive
-        if err > 0:
+        if (err > 0) | (pwr_thresh == 0):
             scale += 0.1
         elif err < 0:
-            scale -= 0.1
+            scale *= 0.9
         else:
             print 'Shouldnt reach this'
 
@@ -86,36 +126,25 @@ def find_threshold(person_folder=None, filename=None, data_folder=None, smooth=T
         err = pwr_reps - true_reps
         err_tracking.append(err)
         scales.append(scale)
-        print 'iteration {c}: error of {e} reps'.format(c=cnt, e=err)
+        if verbose:
+            print 'iteration {c}: error of {e} reps'.format(c=cnt, e=err)
         cnt += 1
 
         #: Force break if err can't get to 0
-        if cnt > 20:
+        if cnt > 100:
             print 'Couldnt converge. Breaking..'
             break
 
-    # #: Plot learning curves
-    # f, axarr = plt.subplots(2, sharex=True)
-    # axarr[0].plot(err_tracking)
-    # axarr[0].set_title('Error curve (Final Rep Count: {})'.format(pwr_reps))
-    # axarr[0].set_xlabel('Iteration')
-    # axarr[0].set_ylabel('Estimated - Actual')
-    # axarr[1].plot(scales)
-    # axarr[1].set_title('Sigma Multiplier (Final Value: {})'.format(scale))
-    # axarr[1].set_xlabel('Iteration')
-    # axarr[1].set_ylabel('Scale Value')
-    #
-    # #: Attempt at basic learning
-    # print 'Final power cutoff: {}'.format(pwr_thresh)
-    #
-    # plt.figure(10)
-    # p_color = 'purple'
-    # plt.plot(pwr_rms, color=p_color)
-    # plt.axhline(y=pwr_thresh, color=p_color, linestyle='--')
-    # for x in np.where(pwr_imp > 0)[0]:
-    #     plt.axvline(x=x, color=p_color, linestyle='-.')
+    if plot:
+        #: Plot learning curves
+        plot_learning(err_tracking, scales)
+        plot_cutoffs(pwr_rms, pwr_imp, pwr_thresh)
 
-    return pwr_thresh
+    #: Attempt at basic learning
+    if verbose:
+        print 'Final power cutoff: {}'.format(pwr_thresh)
+
+    return {'thresh': pwr_thresh, 'error': err}
 
 
 def try_classifier():
@@ -228,3 +257,24 @@ def calc_reps(pwr, n_reps, state='rest', thresh=0.):
     state = ['rest', 'lift'][int((shift+(N%2))%2)]
 
     return n_reps, state
+
+
+def plot_learning(err_tracking, scales):
+    f, axarr = plt.subplots(2, sharex=True)
+    axarr[0].plot(err_tracking)
+    axarr[0].set_title('Error curve (Final Rep Count: {})'.format(pwr_reps))
+    axarr[0].set_xlabel('Iteration')
+    axarr[0].set_ylabel('Estimated - Actual')
+    axarr[1].plot(scales)
+    axarr[1].set_title('Sigma Multiplier (Final Value: {})'.format(scale))
+    axarr[1].set_xlabel('Iteration')
+    axarr[1].set_ylabel('Scale Value')
+
+
+def plot_cutoffs(pwr_rms, pwr_imp, pwr_thresh):
+    plt.figure(10)
+    p_color = 'purple'
+    plt.plot(pwr_rms, color=p_color)
+    plt.axhline(y=pwr_thresh, color=p_color, linestyle='--')
+    for x in np.where(pwr_imp > 0)[0]:
+        plt.axvline(x=x, color=p_color, linestyle='-.')

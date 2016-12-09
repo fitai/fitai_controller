@@ -23,7 +23,7 @@ from comms.ws_publisher import ws_pub
 from processing.ml_test import find_threshold, calc_reps
 
 # TODO: Move this in to relevant functions
-thresh = find_threshold()
+thresh_dict = find_threshold(smooth=True, plot=False, verbose=False)
 collar_id = 0
 
 # NOTE TO SELF: NEED A BETTER WAY TO MAKE THIS GLOBAL
@@ -75,7 +75,12 @@ def mqtt_on_message(client, userdata, msg):
         # TODO: Don't like doing all these checks. Think of a more efficient way...
         # If collar is newly generated, threshold will be 'None'
         if collar['threshold'] == 'None':
-            collar['threshold'] = thresh
+            try:
+                # try to extract lift_type
+                collar['threshold'] = thresh_dict[collar['lift_type']]
+            except KeyError:
+                print 'Couldnt find threshold for lift_type {}. Defaulting to 1.'.format(collar['lift_type'])
+                collar['threshold'] = None
 
         if collar['lift_start'] == 'None':
             collar['lift_start'] = dt.now()

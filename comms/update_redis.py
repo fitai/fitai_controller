@@ -30,7 +30,7 @@ def establish_cli_parser():
 
 def results_to_json(collar):
     # Retrieve data from last lift, process into vel and power, push to frontend
-    a, v, p = process_data(collar, pull_data_by_lift(collar['lift_id']))
+    a, v, p = process_data(pull_data_by_lift(collar['lift_id']))
 
     data_out = DataFrame(data={'a_rms': a,
                                'v_rms': v,
@@ -39,7 +39,8 @@ def results_to_json(collar):
 
     # print 'Processed headers into:\n{}'.format(json.dumps(list(data_out.columns)))
     # print 'Processed data into:\n{}'.format(data_out.head().to_json(orient='values'))
-    return data_out.to_json(orient='values')
+    # return data_out.to_json(orient='values')
+    data_out.head().to_json(orient='split')
 
 
 def main(args):
