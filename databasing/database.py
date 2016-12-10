@@ -46,9 +46,7 @@ def push_to_db(header, content):
             max_t = 0.
             delta_t = 0.
 
-        # print 'lift_id exists with max time point {}'.format(max_t)
         content.timepoint += (max_t + delta_t)  # Have to step up from max_t because timepoint[0] = 0
-        # print 'New content values: \n{}'.format(content.head())
         print 'pushing new content values to db...'
         content.to_sql('lift_data', conn, if_exists='append', index=False, index_label=['lift_id', 'timepoint'])
         print 'done'

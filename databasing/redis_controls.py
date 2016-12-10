@@ -44,22 +44,11 @@ def retrieve_collar_by_id(redis_client=None, collar_id=None, verbose=True):
     except TypeError:
         if verbose:
             print 'Collar {} not found in Redis. Will create new'.format(collar_id)
-        # For wahtever reason, I am making all this the default collar values
+        # For whatever reason, I am making all this the default collar values
         # Should only occur for DEV purposes
         collar_obj = get_default_collar()
         collar_obj['collar_id'] = collar_id
-        # collar_obj = {"collar_id": collar_id,
-        #               "athlete_id": 0,
-        #               "lift_id": 'None',
-        #               "lift_start": "None",
-        #               "lift_type": "deadlift",
-        #               "lift_weight": 100,
-        #               "lift_weight_units": "lbs",
-        #               "lift_num_reps": 10,
-        #               "calc_reps": 0,
-        #               "threshold": "None",
-        #               "curr_state": 'rest'
-        #               }
+
     return collar_obj
 
 
@@ -84,19 +73,3 @@ def update_collar_by_id(redis_client=None, dat=None, collar_id=None, verbose=Tru
 
     # update_collars(redis_client, collars, verbose)
     return response
-
-
-# def update_collars(redis_client=None, collars=None, verbose=True):
-#     if redis_client is None:
-#         print 'No redis client passed??'
-#         return None
-#     if collars is None:
-#         print 'No collars object provided??'
-#         return None
-#
-#     # update local storage
-#     response = redis_client.set('collars', dumps(collars))
-#     if response & verbose:
-#         print 'Successfully updated "collars" redis object.'
-#     if not response:
-#         print 'Trouble saving "collars" variable to redis server. Not sure what to do'

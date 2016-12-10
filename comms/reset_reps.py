@@ -29,11 +29,6 @@ def establish_client(ip, port, topic):
 
     print 'Connecting MQTT client...'
     client.connect(ip, port, 60)  # AWS IP
-    # print 'Connection successful'
-    # client.connect('72.227.147.224', 1883, 60)
-    # client.connect('localhost', 1883, 60)
-    # print 'Subscribing to topic "{}"'.format(topic)
-    # client.subscribe(topic=topic, qos=2)
     print 'MQTT client ready'
     return client
 

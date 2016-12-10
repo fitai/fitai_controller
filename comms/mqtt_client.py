@@ -17,7 +17,6 @@ except NameError:
 
 from databasing.database import push_to_db
 from databasing.redis_controls import establish_redis_client, retrieve_collar_by_id, update_collar_by_id, get_default_collar
-# from comms.php_process_data import process_data
 from processing.util import read_header_mqtt, read_content_mqtt, process_data
 from comms.ws_publisher import ws_pub
 from processing.ml_test import find_threshold, calc_reps
@@ -112,14 +111,11 @@ def mqtt_on_message(client, userdata, msg):
 
         _ = update_collar_by_id(redis_client, collar, collar['collar_id'], verbose=True)
 
-        # temporarily disabling
         if collar['active']:
-            # print 'TEST: would push to db'
             header = DataFrame(data=collar, index=[0]).drop(['active', 'calc_reps', 'collar_id', 'curr_state', 'threshold'], axis=1)
             print 'header has: \n{}'.format(header)
             push_to_db(header, accel)
         else:
-            # print 'TEST: would NOT push to db'
             print 'Received and processed data for collar {}, but collar is not active...'.format(collar['collar_id'])
 
     except KeyError, e:

@@ -40,7 +40,7 @@ def results_to_json(collar):
     # print 'Processed headers into:\n{}'.format(json.dumps(list(data_out.columns)))
     # print 'Processed data into:\n{}'.format(data_out.head().to_json(orient='values'))
     # return data_out.to_json(orient='values')
-    data_out.head().to_json(orient='split')
+    return data_out.to_json(orient='split')
 
 
 def main(args):

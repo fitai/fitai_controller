@@ -106,8 +106,6 @@ def main(args):
     verbose = cli_options.verbose
 
     if verbose:
-        # print 'options (type {t}): {o}'.format(t=type(cli_options), o=cli_options)
-        # print 'args: {}'.format(args)
         print 'Received args {}'.format(argv)
         print 'Attempting MQTT connection to {i}:{p} on topic {t}'.format(i=host_ip, p=host_port, t=mqtt_topic)
 
@@ -119,7 +117,3 @@ def main(args):
 # Receives initial ping to file
 if __name__ == '__main__':
     main(argv[1:])
-
-# Sample message:
-# "{'header': {'athlete_id': 0, 'lift_id': 0, 'lift_sampling_rate': 50, 'lift_start': '2016-09-01', 'lift_type': 'deadlift', 'lift_weight': 100, 'lift_weight_units': 'lbs', 'lift_num_reps': 10 }, 'content': 'a_x': [0, 1, 2, 1, 3, 2, 1, 3, 4]}"
-# '{"header": {"athlete_id": 0, "lift_id": 10, "lift_sampling_rate": 50, "lift_start": "2016-09-01", "lift_type": "deadlift", "lift_weight": 100, "lift_weight_units": "lbs", "lift_num_reps": 10 }, "content": {"a_x": [0, 1, 2, 1, 3, 2, 1, 3, 4]} }'

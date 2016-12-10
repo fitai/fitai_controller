@@ -1,6 +1,5 @@
 from sqlalchemy import create_engine
 from pandas import read_sql
-# from numpy import abs, round
 from sqlalchemy.exc import OperationalError
 
 from databasing.db_conn_strings import aws_conn_string

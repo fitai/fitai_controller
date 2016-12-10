@@ -90,9 +90,6 @@ def learn_on_lift_id(lift_id, smooth, plot, verbose):
         # Don't smooth; use calculated power
         pwr_rms = data['p_rms']
 
-    # plt.figure()
-    # plt.plot(tmp['a_rms'], color='black')
-
     try:
         # true_reps = int([x for x in filename.split('_') if 'rep' in x][0].split('rep')[0])
         true_reps = header['lift_num_reps']

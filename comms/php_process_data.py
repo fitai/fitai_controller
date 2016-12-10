@@ -1,5 +1,4 @@
 import sys
-import os
 import getopt
 import json
 from pandas import DataFrame
