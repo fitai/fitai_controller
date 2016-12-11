@@ -1,4 +1,4 @@
-from pandas import DataFrame, Series
+from pandas import DataFrame
 import json
 import sys
 
@@ -7,7 +7,7 @@ from processing.functions import calc_vel2, calc_rms, calc_power
 
 def read_header_mqtt(data):
     try:
-        head = Series(data['header'])
+        head = data['header']
     except AttributeError, e:
         print 'No "header" field. Error: {}'.format(e)
         head = None
@@ -15,7 +15,7 @@ def read_header_mqtt(data):
     return head
 
 
-def read_content_mqtt(data, head):
+def read_content_mqtt(data, collar_obj):
     try:
         accel = DataFrame(data['content'])
         accel = accel.reset_index().rename(columns={'index': 'timepoint'})
@@ -25,14 +25,14 @@ def read_content_mqtt(data, head):
 
     try:
         # Scale timepoint values
-        accel.timepoint = accel.timepoint.astype(float) / float(head.lift_sampling_rate)
-    except IndexError:
+        accel.timepoint = accel.timepoint.astype(float) / float(collar_obj['lift_sampling_rate'])
+    except KeyError:
         print 'Couldnt extract sample rate from header. Defaulting to 20 Hz'
         accel.timepoint = accel.timepoint.astype(float) / 20.
 
     try:
-        accel['lift_id'] = head.lift_id
-    except IndexError:
+        accel['lift_id'] = collar_obj['lift_id']
+    except KeyError:
         print 'Couldnt extract lift_id from header'
         accel['lift_id'] = 0
 
@@ -62,16 +62,18 @@ def parse_data(json_string):
     return header, content
 
 
-def extract_weight(header):
+def extract_weight(header, verbose):
     try:
         if header['lift_weight_units'] == 'lbs':
-            weight = header['lift_weight'] * (1./2.5)
-            print 'Converted weight from lbs ({w1}) to kg ({w2})'.format(w1=header['lift_weight'], w2=weight)
+            weight = int(header['lift_weight']) * (1./2.5)
+            if verbose:
+                print 'Converted weight from lbs ({w1}) to kg ({w2})'.format(w1=header['lift_weight'], w2=weight)
         elif header['lift_weight_units'] == 'kg':
-            weight = header['lift_weight']
+            weight = int(header['lift_weight'])
         else:
-            print 'Unexpected weight unit type {un}. Will leave weight as {w}'.format(un=header['lift_weight_units'], w=header['lift_weight'])
-            weight = header['lift_weight']
+            if verbose:
+                print 'Unexpected weight unit type {un}. Will leave weight as {w}'.format(un=header['lift_weight_units'], w=header['lift_weight'])
+            weight = int(header['lift_weight'])
     except KeyError, e:
         print 'Error finding weight - {}. Will default to 22.5kg'.format(e)
         weight = 22.5
@@ -92,28 +94,35 @@ def extract_sampling_rate(header):
 
 # Expects a dataframe with known fields
 # Timepoint, a_x, (a_y, a_z), lift_id
-def process_data(header, content):
+def process_data( (collar_obj, content), verbose=False ):
     if not isinstance(content, DataFrame):
-        print 'Content (type {}) is not a dataframe. Will try to convert...'.format(type(content))
+        if verbose:
+            print 'Content (type {}) is not a dataframe. Will try to convert...'.format(type(content))
         content = DataFrame(content)
+
+    if isinstance(collar_obj, DataFrame):
+        collar_obj = collar_obj.drop_duplicates().to_dict(orient='index')[0]
 
     accel_headers = [x for x in content.columns if x in ['a_x', 'a_y', 'a_z']]
 
-    fs = extract_sampling_rate(header)
-    weight = extract_weight(header)
+    fs = extract_sampling_rate(collar_obj)
+    weight = extract_weight(collar_obj, verbose)
 
     if len(accel_headers) == 0:
-        print 'Could not find acceleration field(s). Cannot process'
+        if verbose:
+            print 'Could not find acceleration field(s). Cannot process'
         sys.exit(10)
     elif len(accel_headers) == 1:
-        print 'Found single axis of data'
+        if verbose:
+            print 'Found single axis of data'
 
         vel = calc_vel2(content[accel_headers[0]], fs=fs)
         pwr = calc_power(content[accel_headers[0]], vel, weight)
 
         return content[accel_headers[0]], vel, pwr
     else:
-        print 'Found multiple axes of data. Will combine into RMS.'
+        if verbose:
+            print 'Found multiple axes of data. Will combine into RMS.'
         a_rms = calc_rms(content, accel_headers)
         v_rms = calc_vel2(a_rms, fs=fs)
 

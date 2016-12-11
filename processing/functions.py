@@ -8,7 +8,6 @@ def method1(signal, calc_offset=0, scale=3.):
     sigma = np.std(signal[calc_offset:])
     thresh = scale * sigma
     mask = (signal > thresh) * 1  # Convert boolean to binary
-    # imp = mask[1:] - mask[:-1]
     imp = np.diff(mask)
     reps = np.sum(imp > 0)
     return imp, thresh, reps
@@ -54,7 +53,6 @@ def calc_derivative(signal, scale, fs):
 #: Returns Series
 def calc_rms(df, columns):
     rms = Series(df[columns].apply(lambda x: (x**2)).sum(axis=1).apply(lambda x: np.sqrt(x)), name='a_rms')
-    # rms = np.sqrt(np.mean(dat.x**2 + dat.y**2 + dat.z**2))
     return rms
 
 

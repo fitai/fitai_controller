@@ -16,6 +16,7 @@ python-dateutil==2.5.1
 python-Levenshtein==0.11.2
 pytz==2016.2
 PyYAML==3.11
+redis==2.10.5
 requests==2.9.1
 scikit-learn==0.17.1
 scikit-neuralnetwork==0.7

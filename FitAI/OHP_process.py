@@ -6,7 +6,7 @@ import numpy as np
 from processing.functions import method1, calc_vel2
 from load_data import load_file
 from processing.filters import simple_highpass
-from test import find_threshold
+from processing.ml_test import find_threshold
 
 # Should use known weight for demo
 weight = 50  # kg

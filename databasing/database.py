@@ -3,28 +3,29 @@ import pandas as pd
 from numpy import abs, round
 from sqlalchemy.exc import ProgrammingError, OperationalError, IntegrityError
 
-from db_conn_strings import conn_string
+from db_conn_strings import aws_conn_string
 
+# TODO: move this in to the proper functions
 # Global for now. Should be fixed..
-conn = create_engine(conn_string)
+conn = create_engine(aws_conn_string)
 
 
 def push_to_db(header, content):
     if header is not None:
-        print 'pushing header to db...'
+        print 'pushing collar metadata to db...'
         try:
-            pd.DataFrame([header]).to_sql('athlete_lift', conn, if_exists='append', index=False, index_label='lift_id')
+            header.to_sql('athlete_lift', conn, if_exists='append', index=False, index_label='lift_id')
         except OperationalError, e:
-            print '!!!!!COULD NOT PUSH HEADER TO DATABASE!!!!'
+            print '!!!!!Could not push collar metadata to database!!!!'
             print 'Likely because PostgreSQL server not running.\nError message: {}'.format(e)
             print 'skipping push to athlete_lift and resuming MQTT listening'
             return None
         except IntegrityError, e:
-            print '!!!!! Could not push header to database !!!!!'
+            print '!!!!! Could not push collar metadata to database !!!!!'
             print 'Likely because lift_id already exists in athlete_lift. \nError message: {}'.format(e)
             print 'Moving forward without pushing header into athlete_lift...'
         else:
-            print 'header push successful. moving on to pushing content...'
+            print 'collar metadata push successful. moving on to pushing content...'
 
     if content is not None:
         lift_id = content.lift_id.unique()[0]
@@ -45,9 +46,7 @@ def push_to_db(header, content):
             max_t = 0.
             delta_t = 0.
 
-        # print 'lift_id exists with max time point {}'.format(max_t)
         content.timepoint += (max_t + delta_t)  # Have to step up from max_t because timepoint[0] = 0
-        # print 'New content values: \n{}'.format(content.head())
         print 'pushing new content values to db...'
         content.to_sql('lift_data', conn, if_exists='append', index=False, index_label=['lift_id', 'timepoint'])
         print 'done'
