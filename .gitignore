@@ -12,3 +12,6 @@ databasing/db_conn_strings.py
 
 # any logging
 *.log
+
+# Any temporary visualizations
+*.html
