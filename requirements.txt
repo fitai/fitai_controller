@@ -1,5 +1,6 @@
 # anaconda-client==1.4.0
 beautifulsoup4==4.4.1
+bokeh>=0.12
 clyent==1.2.1
 cycler==0.10.0
 fuzzywuzzy==0.8.2
