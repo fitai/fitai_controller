@@ -9,9 +9,23 @@ from databasing.database_pull import pull_data_by_lift
 
 conn = create_engine(aws_conn_string)
 
-lift_id = 1
-header, data = pull_data_by_lift(lift_id)
 
+query = '''
+SELECT
+    al.lift_id,
+    al.lift_type,
+    ai.athlete_last_name || ', ' || ai.athlete_first_name AS athlete_name,
+    ai.athlete_id
+FROM athlete_lift AS al
+INNER JOIN athlete_info AS ai
+    ON al.athlete_id = ai.athlete_id
+ORDER BY al.lift_type, al.lift_id DESC
+'''
+
+available_lifts = read_sql(query, conn)
+
+lift_id = available_lifts['lift_id'].ix[0]
+header, data = pull_data_by_lift(lift_id)
 
 from bokeh.plotting import figure, output_file, show
 
@@ -28,3 +42,4 @@ p.line(data['timepoint'], data['a_x'], line_width=1)
 
 # Forces bokeh to load up plot in browser
 show(p)
+
