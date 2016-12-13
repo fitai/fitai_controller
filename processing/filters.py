@@ -1,6 +1,6 @@
 from scipy.signal import butter, lfilter
 import numpy as np
-import matplotlib.pyplot as plt
+# import matplotlib.pyplot as plt
 from scipy.signal import freqz
 
 
@@ -63,17 +63,17 @@ def filter_signal(signal, filter_type='bandpass', f_low=1.0, f_high=40., fs=100.
 
 
 #: Will want to look in to the specifics of scipy.freqz so that we can recreate this, if need be, in the app
-def plot_frequency_response(b, a, cutoff, fs):
-    # Plot the frequency response.
-    w, h = freqz(b, a, worN=8000)
-    # plt.subplot(2, 1, 1)
-    plt.plot(0.5*fs*w/np.pi, np.abs(h), 'b')
-    plt.plot(cutoff, 0.5*np.sqrt(2), 'ko')
-    plt.axvline(cutoff, color='k')
-    plt.xlim(0, 0.5*fs)
-    plt.title("Lowpass Filter Frequency Response")
-    plt.xlabel('Frequency [Hz]')
-    plt.grid()
+# def plot_frequency_response(b, a, cutoff, fs):
+#     # Plot the frequency response.
+#     w, h = freqz(b, a, worN=8000)
+#     # plt.subplot(2, 1, 1)
+#     plt.plot(0.5*fs*w/np.pi, np.abs(h), 'b')
+#     plt.plot(cutoff, 0.5*np.sqrt(2), 'ko')
+#     plt.axvline(cutoff, color='k')
+#     plt.xlim(0, 0.5*fs)
+#     plt.title("Lowpass Filter Frequency Response")
+#     plt.xlabel('Frequency [Hz]')
+#     plt.grid()
 
 
 def running_mean(x, n):
