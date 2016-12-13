@@ -1,6 +1,6 @@
 from os.path import join
 
-import matplotlib.pyplot as plt
+# import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
@@ -132,10 +132,10 @@ def learn_on_lift_id(lift_id, smooth, plot, verbose):
             print 'Couldnt converge. Breaking..'
             break
 
-    if plot:
-        #: Plot learning curves
-        plot_learning(err_tracking, scales)
-        plot_cutoffs(pwr_rms, pwr_imp, pwr_thresh)
+    # if plot:
+    #     #: Plot learning curves
+    #     plot_learning(err_tracking, scales)
+    #     plot_cutoffs(pwr_rms, pwr_imp, pwr_thresh)
 
     #: Attempt at basic learning
     if verbose:
@@ -256,22 +256,22 @@ def calc_reps(pwr, n_reps, state='rest', thresh=0.):
     return n_reps, state
 
 
-def plot_learning(err_tracking, scales):
-    f, axarr = plt.subplots(2, sharex=True)
-    axarr[0].plot(err_tracking)
-    axarr[0].set_title('Error curve (Final Rep Count: {})'.format(pwr_reps))
-    axarr[0].set_xlabel('Iteration')
-    axarr[0].set_ylabel('Estimated - Actual')
-    axarr[1].plot(scales)
-    axarr[1].set_title('Sigma Multiplier (Final Value: {})'.format(scale))
-    axarr[1].set_xlabel('Iteration')
-    axarr[1].set_ylabel('Scale Value')
-
-
-def plot_cutoffs(pwr_rms, pwr_imp, pwr_thresh):
-    plt.figure(10)
-    p_color = 'purple'
-    plt.plot(pwr_rms, color=p_color)
-    plt.axhline(y=pwr_thresh, color=p_color, linestyle='--')
-    for x in np.where(pwr_imp > 0)[0]:
-        plt.axvline(x=x, color=p_color, linestyle='-.')
+# def plot_learning(err_tracking, scales):
+#     f, axarr = plt.subplots(2, sharex=True)
+#     axarr[0].plot(err_tracking)
+#     axarr[0].set_title('Error curve (Final Rep Count: {})'.format(pwr_reps))
+#     axarr[0].set_xlabel('Iteration')
+#     axarr[0].set_ylabel('Estimated - Actual')
+#     axarr[1].plot(scales)
+#     axarr[1].set_title('Sigma Multiplier (Final Value: {})'.format(scale))
+#     axarr[1].set_xlabel('Iteration')
+#     axarr[1].set_ylabel('Scale Value')
+#
+#
+# def plot_cutoffs(pwr_rms, pwr_imp, pwr_thresh):
+#     plt.figure(10)
+#     p_color = 'purple'
+#     plt.plot(pwr_rms, color=p_color)
+#     plt.axhline(y=pwr_thresh, color=p_color, linestyle='--')
+#     for x in np.where(pwr_imp > 0)[0]:
+#         plt.axvline(x=x, color=p_color, linestyle='-.')
