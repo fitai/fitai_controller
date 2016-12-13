@@ -28,7 +28,7 @@ def lift_to_json(lift_id):
                                'v_rms': v,
                                'p_rms': p,
                                'timepoint': data['timepoint']},
-                         index=a.index).set_index('timepoint')
+                         index=a.index)
 
     # print 'Processed headers into:\n{}'.format(json.dumps(list(data_out.columns)))
     # print 'Processed data into:\n{}'.format(data_out.head().to_json(orient='values'))

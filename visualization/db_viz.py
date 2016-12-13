@@ -9,7 +9,8 @@ from databasing.database_pull import pull_data_by_lift
 
 conn = create_engine(aws_conn_string)
 
-header, data = pull_data_by_lift(1)
+lift_id = 1
+header, data = pull_data_by_lift(lift_id)
 
 
 from bokeh.plotting import figure, output_file, show
@@ -19,13 +20,11 @@ output_file('test.html')
 
 TOOLS = 'hover,box_zoom,box_select,reset,crosshair,pan'
 # Any figure specifications go here
-p = figure(plot_width=1000, plot_height=600, title='Test Plot', toolbar_location='right', tools=TOOLS)
+p = figure(plot_width=1000, plot_height=600, title='Test Plot: Lift {}'.format(lift_id), toolbar_location='right', tools=TOOLS)
 
 # simple
 # p.line([1, 2, 3, 4, 5], [6, 7, 2, 4, 5], line_width=2)
 p.line(data['timepoint'], data['a_x'], line_width=1)
-
-# p.circle([1, 2, 3, 4, 5], [2, 5, 8, 2, 7], size=10)
 
 # Forces bokeh to load up plot in browser
 show(p)
