@@ -10,7 +10,7 @@ from db_conn_strings import aws_conn_string
 conn = create_engine(aws_conn_string)
 
 
-def push_to_db(header, content):
+def push_to_db(header, content, crossings):
     if header is not None:
         print 'pushing collar metadata to db...'
         try:
@@ -30,7 +30,8 @@ def push_to_db(header, content):
     if content is not None:
         lift_id = content.lift_id.unique()[0]
         try:
-            ts = pd.read_sql('SELECT timepoint::DOUBLE PRECISION FROM lift_data WHERE lift_id = {id} ORDER BY timepoint DESC LIMIT 2'.format(id=lift_id), conn)['timepoint']
+            ts = pd.read_sql(
+                'SELECT timepoint::DOUBLE PRECISION FROM lift_data WHERE lift_id = {id} ORDER BY timepoint DESC LIMIT 2'.format(id=lift_id), conn)['timepoint']
             # NOTE: Console prints max_t = 19.89999999999999 - will this cause a rounding error??
             if len(ts) > 1:
                 max_t = float(round(max(ts), 2))
@@ -47,6 +48,34 @@ def push_to_db(header, content):
             delta_t = 0.
 
         content.timepoint += (max_t + delta_t)  # Have to step up from max_t because timepoint[0] = 0
-        print 'pushing new content values to db...'
-        content.to_sql('lift_data', conn, if_exists='append', index=False, index_label=['lift_id', 'timepoint'])
-        print 'done'
+        print 'Pushing new content values to db...'
+        try:
+            content.to_sql('lift_data', conn, if_exists='append', index=False, index_label=['lift_id', 'timepoint'])
+        except OperationalError, e:
+            print '!!!!!Count not push content data to database!!!!!'
+            print ':\'-('
+            print 'Error: {}'.format(e)
+        except IntegrityError, e:
+            print '!!!!! Could not push content data to database!!!!!'
+            print 'Potential primary key overlap on (lift_id, timepoint)'
+            print 'Error: {}'.format(e)
+        else:
+            print 'Done'
+
+    if crossings is not None:
+        print 'Pushing crossings to database...'
+        try:
+            crossings[['lift_id', 'timepoint', 'action']].to_sql(
+                'lift_event', conn, if_exists='append', index=False, index_label=['lift_id', 'timepoint'])
+        except OperationalError, e:
+            print '!!!!!Could not push crossings data to database!!!!'
+            print 'Likely because PostgreSQL server not running.\nError message: {}'.format(e)
+            print 'skipping push to lift_event and resuming MQTT listening'
+            return None
+        except IntegrityError, e:
+            print '!!!!! Could not push crossings to database !!!!!'
+            print 'Likely because (lift_id, timepoint) combo already exists in lift_event. ' \
+                  '\nError message: {}'.format(e)
+            print 'Moving forward without pushing crossings into lift_event...'
+        else:
+            print 'Done'

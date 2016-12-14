@@ -216,7 +216,7 @@ def try_classifier():
 
 
 # From an input power vector, detect any change in state and increment
-def calc_reps(pwr, n_reps, state='rest', thresh=0.):
+def calc_reps(pwr, n_reps, state, thresh=0.):
     """
     Simple - any crossing of the power threshold indicates a change in state. From this, determine where the
     user was (in the state-space), and adjust accordingly
@@ -231,8 +231,15 @@ def calc_reps(pwr, n_reps, state='rest', thresh=0.):
     if not isinstance(pwr, pd.Series):
         print 'converting power {} to pandas Series...'.format(type(pwr))
         pwr = pd.Series(pwr)
-    # Better way to do this??
-    N = float(((pwr > thresh) * 1).diff()[1:].abs().sum())
+
+    # Want to keep track of timepoints too
+    diff_signal = ((pwr > thresh) * 1).diff()[1:].abs().diff()[1:]
+
+    # Drops two points off front, but forces signal to stay above/below threshold for at least
+    # 1 point to be considered a change in state - better than considering any noise around threshold
+    # as a change in state. Compare this to how it was before:
+    # N = float( ((pwr > thresh) * 1).diff()[1:].abs().sum() )
+    N = float( diff_signal.sum() )
 
     # np.where() is resource intensive - just map for now
     # Want to identify any shift in the state of the user
@@ -246,14 +253,36 @@ def calc_reps(pwr, n_reps, state='rest', thresh=0.):
     else:
         print 'Unsure of lift state {}. Will assume "rest"'.format(state)
 
-    # Assume every
-    n_reps += np.floor(N/2.)
+    # N = number of threshold crossings (absolute value)
+    # So, if user is at rest, it will take 2 crossings to count as a full rep
+    # If user is mid-rep, then it will only take 1 crossing (the downswing) to complete a rep
+    n_reps += np.floor( (shift+N)/2.)
     print 'User at {} reps'.format(n_reps)
 
     # Update the state
-    state = ['rest', 'lift'][int((shift+(N%2))%2)]
+    # Based on number of state changes, find new state of object
+    # new_state = ['rest', 'lift'][int((shift+(N % 2)) % 2)]
 
-    return n_reps, state
+    # Find AND TRACK all crossings IF THERE ARE ANY
+    # Assign rep action based on direction of diff (+ = start, - = stop)
+    crossings = diff_signal[diff_signal != 0].to_frame('diff')
+
+    if crossings.shape[0] > 0:
+        crossings['action'] = 'start_rep'
+        crossings.loc[crossings['diff'] < 0, 'action'] = 'stop_rep'
+
+        # Update state of object
+        if diff_signal[crossings.index[-1]] > 0:
+            new_state = 'lift'
+        else:
+            new_state = 'rest'
+
+    # If there aren't any crossings, then just return whatever came in
+    else:
+        new_state = state
+        crossings = None
+
+    return n_reps, new_state, crossings
 
 
 # def plot_learning(err_tracking, scales):

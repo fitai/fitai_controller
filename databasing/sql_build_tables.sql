@@ -6,6 +6,7 @@
 -- NOTE:                                  --
 -- Table names should be self-explanatory --
 
+-- Client metadata
 CREATE TABLE client_info (
     client_id       BIGINT PRIMARY KEY,
     client_name     VARCHAR(20),
@@ -15,6 +16,7 @@ CREATE TABLE client_info (
 );
 -- INSERT INTO client_info (client_id, client_name, client_signon) VALUES (0, 'NYU_soccer_mens', CURRENT_DATE);
 
+-- Athelte metadata
 CREATE TABLE athlete_info (
     client_id       BIGINT,
     athlete_id      BIGINT PRIMARY KEY,
@@ -26,6 +28,7 @@ CREATE TABLE athlete_info (
 -- INSERT INTO athlete_info (client_id, athlete_id, athlete_name, athlete_age, athlete_gender)
 --     VALUES (0, 0, 'Kyle Brubaker', 28, 'M');
 
+-- Primary storage for lift_data metadata; athlete_id doing lift, lift_type, weight, etc.
 CREATE TABLE athlete_lift (
     athlete_id          BIGINT,
     lift_id             BIGINT PRIMARY KEY,
@@ -41,24 +44,28 @@ CREATE TABLE athlete_lift (
 --     VALUES (0, 0, 50, CURRENT_TIMESTAMP, 'OHP', 50, 'lbs', 10);
 
 
+-- Primary storage for incoming acceleration values
 CREATE TABLE lift_data (
     lift_id     BIGINT,
     a_x         DOUBLE PRECISION,
     a_y         DOUBLE PRECISION,
     a_z         DOUBLE PRECISION,
     timepoint   DOUBLE PRECISION,
-    CONSTRAINT series_id PRIMARY KEY(lift_id, timepoint)
+    CONSTRAINT  series_id PRIMARY KEY(lift_id, timepoint)
 );
 
+-- Just in case...
 CREATE TABLE lift_data_backup (
     lift_id     BIGINT,
     a_x         DOUBLE PRECISION,
     a_y         DOUBLE PRECISION,
     a_z         DOUBLE PRECISION,
     timepoint   DOUBLE PRECISION,
-    CONSTRAINT series_id PRIMARY KEY(lift_id, timepoint)
+    CONSTRAINT  backup_series_id PRIMARY KEY(lift_id, timepoint)
 );
 
+-- Will use to store aggregated lift_data values
+-- Want to keep lift_data table size in check
 CREATE TABLE lift_data_storage (
     lift_id     BIGINT PRIMARY KEY,
     a_x         FLOAT[],
@@ -67,4 +74,13 @@ CREATE TABLE lift_data_storage (
     timepoint   FLOAT[]
 );
 
-insert into lift_data_backup(lift_id,a_x,timepoint) select lift_id,a_x,timepoint from lift_data;
+-- Used to track events within a lift, say rep start or stop
+CREATE TABLE lift_event (
+    lift_id     BIGINT,
+    timepoint   DOUBLE PRECISION,
+    event       VARCHAR(20),
+    CONSTRAINT  event_id PRIMARY KEY(lift_id, timepoint)
+);
+
+-- insert into lift_data_backup(lift_id,a_x,timepoint) select lift_id,a_x,timepoint from lift_data;
+

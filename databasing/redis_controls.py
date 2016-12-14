@@ -13,7 +13,8 @@ def get_default_collar():
             "lift_num_reps": 10,
             "calc_reps": 0,
             "threshold": "None",
-            "curr_state": 'rest'
+            "curr_state": 'rest',
+            "max_t": 0.
             }
 
 

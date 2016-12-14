@@ -63,7 +63,8 @@ def mqtt_on_message(client, userdata, msg):
         collar = retrieve_collar_by_id(redis_client, head['collar_id'])
         # Quick check that at least one expected field is in collar object
         if 'threshold' not in collar.keys():
-            print 'Redis collar object {} appears broken. Will replace with default and update as needed.'.format(collar['collar_id'])
+            print 'Redis collar object {} appears broken. ' \
+                  'Will replace with default and update as needed.'.format(collar['collar_id'])
             collar_tmp = collar.copy()
             collar = get_default_collar()
             collar.update(collar_tmp)
@@ -97,11 +98,18 @@ def mqtt_on_message(client, userdata, msg):
 
         # Before taking the time to push to db, process the acceleration and push to PHP websocket
         _, v, p = process_data(collar, accel)
-        reps, curr_state = calc_reps(p, collar['calc_reps'], collar['curr_state'], collar['threshold'])
+        reps, curr_state, crossings = calc_reps(p, collar['calc_reps'], collar['curr_state'], collar['threshold'])
+
+        # Assign timepoints to crossings, if there are any
+        if crossings.shape[0] > 0:
+            crossings['timepoint'] = (collar['max_t'] + crossings.index*(1./collar['lift_sampling_rate'])).values
+            crossings['lift_id'] = collar['lift_id']
+
         # reps = 0
         # update state of user via 'collar' dict
         collar['calc_reps'] = reps
         collar['curr_state'] = curr_state
+        collar['max_t'] += len(accel) * 1./collar['lift_sampling_rate']  # track the last timepoint
 
         if 'active' not in collar.keys():
             print 'collar {} has no Active field set. Will create and set to False'.format(collar['collar_id'])
@@ -112,9 +120,10 @@ def mqtt_on_message(client, userdata, msg):
         _ = update_collar_by_id(redis_client, collar, collar['collar_id'], verbose=True)
 
         if collar['active']:
-            header = DataFrame(data=collar, index=[0]).drop(['active', 'calc_reps', 'collar_id', 'curr_state', 'threshold'], axis=1)
+            header = DataFrame(data=collar, index=[0]).drop(
+                ['active', 'calc_reps', 'collar_id', 'curr_state', 'threshold'], axis=1)
             print 'header has: \n{}'.format(header)
-            push_to_db(header, accel)
+            push_to_db(header, accel, crossings)
         else:
             print 'Received and processed data for collar {}, but collar is not active...'.format(collar['collar_id'])
 
