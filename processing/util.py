@@ -2,7 +2,7 @@ from pandas import DataFrame
 import json
 import sys
 
-from processing.functions import calc_vel2, calc_rms, calc_power
+from processing.functions import calc_integral, calc_rms, calc_power
 
 
 def read_header_mqtt(data):
@@ -94,7 +94,7 @@ def extract_sampling_rate(header):
 
 # Expects a dataframe with known fields
 # Timepoint, a_x, (a_y, a_z), lift_id
-def process_data( (collar_obj, content), verbose=False ):
+def process_data(collar_obj, content, verbose=False):
     if not isinstance(content, DataFrame):
         if verbose:
             print 'Content (type {}) is not a dataframe. Will try to convert...'.format(type(content))
@@ -116,7 +116,7 @@ def process_data( (collar_obj, content), verbose=False ):
         if verbose:
             print 'Found single axis of data'
 
-        vel = calc_vel2(content[accel_headers[0]], fs=fs)
+        vel = calc_integral(content[accel_headers[0]], scale=1., fs=fs)
         pwr = calc_power(content[accel_headers[0]], vel, weight)
 
         return content[accel_headers[0]], vel, pwr
@@ -124,7 +124,16 @@ def process_data( (collar_obj, content), verbose=False ):
         if verbose:
             print 'Found multiple axes of data. Will combine into RMS.'
         a_rms = calc_rms(content, accel_headers)
-        v_rms = calc_vel2(a_rms, fs=fs)
+
+        # Can't calculate integral on rectified signal - will result in a monotonically increasing output
+        # Have to leave acceleration split into constituent dimensions, calculate velocity along each,
+        # then combine into RMS signal
+        vel_headers = ['v_'+x.split('_')[-1] for x in accel_headers]
+        vel = DataFrame(columns=vel_headers)
+        for i, header in enumerate(accel_headers):
+            vel[vel_headers[i]] = calc_integral(content[header], scale=1., fs=fs)
+
+        v_rms = calc_rms(vel, vel_headers)
 
         p_rms = calc_power(a_rms, v_rms, weight)
 

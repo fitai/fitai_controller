@@ -1,44 +1,44 @@
-import numpy as np
-import scipy as sp
-
+from numpy import std, cumsum, diff, sum, sqrt
+from scipy.integrate import cumtrapz
 from pandas import Series
 
 
 def method1(signal, calc_offset=0, scale=3.):
-    sigma = np.std(signal[calc_offset:])
+    sigma = std(signal[calc_offset:])
     thresh = scale * sigma
     mask = (signal > thresh) * 1  # Convert boolean to binary
-    imp = np.diff(mask)
-    reps = np.sum(imp > 0)
+    imp = diff(mask)
+    reps = sum(imp > 0)
     return imp, thresh, reps
 
 
 #: Trapezoid method
 def calc_vel1(signal, scale, fs):
     delta_t = scale / fs
-    integral = np.cumsum((signal[1:] + np.diff(signal) / 2.) * delta_t)
+    integral = cumsum((signal[1:] + diff(signal) / 2.) * delta_t)
     return integral
 
 
 #: Euler method
 #: Accepts single dimension of values (e.g. series or array)
 #: Returns pandas Series
-def calc_vel2(signal, scale=1, fs=20):
+def calc_integral(signal, scale=1., fs=20):
     delta_t = scale / fs
-    integral = np.cumsum(signal * delta_t)
-    return Series(integral, name='v_rms')
+    integral = cumsum(signal * delta_t)
+    return Series(integral, name='integral')
 
 
 def calc_pos(signal, scale, fs):
     delta_t = scale / fs
-    integral = np.cumsum(0.5 * (signal[1:] + np.diff(signal) / 2.) * (delta_t**2))
+    integral = cumsum(0.5 * (signal[1:] + diff(signal) / 2.) * (delta_t**2))
     return integral
 
 
 #: Scipy's trapezoid method
-def calc_integral(signal, scale, fs):
+def calc_integral_sp(signal, scale, fs):
     delta_t = scale / fs
-    integral = sp.integrate.cumtrapz(signal, dx=delta_t)
+    integral = cumtrapz(signal, dx=delta_t)
+
     return integral
 
 
@@ -52,7 +52,7 @@ def calc_derivative(signal, scale, fs):
 #: Blends accel dimensions into 1D RMS signal.
 #: Returns Series
 def calc_rms(df, columns):
-    rms = Series(df[columns].apply(lambda x: (x**2)).sum(axis=1).apply(lambda x: np.sqrt(x)), name='a_rms')
+    rms = Series(df[columns].apply(lambda x: (x**2)).sum(axis=1).apply(lambda x: sqrt(x)), name='a_rms')
     return rms
 
 

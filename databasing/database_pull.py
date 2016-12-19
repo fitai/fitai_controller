@@ -21,7 +21,7 @@ conn = create_engine(aws_conn_string)
 def lift_to_json(lift_id):
     # Retrieve data from last lift, process into vel and power, push to frontend
     header, data = pull_data_by_lift(lift_id)
-    a, v, p = process_data((header, data))
+    a, v, p = process_data(header, data)
 
     #: TODO: adding in timepoint as column, then setting as index seems circuitous. Figure this out later.
     data_out = DataFrame(data={'a_rms': a,
