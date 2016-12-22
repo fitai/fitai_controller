@@ -25,7 +25,7 @@ def calc_vel1(signal, scale, fs):
 def calc_integral(signal, scale=1., fs=20):
     delta_t = scale / fs
     integral = cumsum(signal * delta_t)
-    return Series(integral, name='integral')
+    return Series(data=integral, name='integral')
 
 
 def calc_pos(signal, scale, fs):
@@ -52,7 +52,7 @@ def calc_derivative(signal, scale, fs):
 #: Blends accel dimensions into 1D RMS signal.
 #: Returns Series
 def calc_rms(df, columns):
-    rms = Series(df[columns].apply(lambda x: (x**2)).sum(axis=1).apply(lambda x: sqrt(x)), name='a_rms')
+    rms = Series(df[columns].apply(lambda x: (x**2)).sum(axis=1).apply(lambda x: sqrt(x)), name='rms')
     return rms
 
 
@@ -61,6 +61,6 @@ def calc_rms(df, columns):
 #: 1D accel fed from device/db (or a_rms calculated prior)
 #: v_rms calculated from that a_rms/1D accel
 #: lift weight (in pounds??)
-def calc_power(a_rms, v_rms, weight):
-    pwr = weight * a_rms * v_rms
-    return Series(pwr, name='p_rms')
+def calc_power(a, v, weight):
+    pwr = weight * a * v
+    return Series(pwr, name='power')

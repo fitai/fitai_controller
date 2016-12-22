@@ -3,7 +3,7 @@ from optparse import OptionParser
 from sys import argv, path as syspath, exit
 from os.path import dirname, abspath
 
-from databasing.database_pull import lift_to_json
+from databasing.database_pull import lift_to_json, pull_max_lift_id
 
 try:
     path = dirname(dirname(abspath(__file__)))
@@ -49,11 +49,11 @@ def main(args):
         collar = loads(redis_client.get(dat['collar_id']))
 
         next_lift_id = redis_client.get('lift_id')
+        # In case redis can't be reached, can move forward assuming that the content of athlete_lift table
+        # is reliable
         if next_lift_id is None:
-            # TODO: pull max lift_id from athlete_lift table instead of defaulting to 0
-            # Want to be really careful here; could reset all lift_ids and throw everything off
-            print 'No Redis variable "lift_id" found. Will set to 0'
-            next_lift_id = '0'
+            next_lift_id = pull_max_lift_id() + 1
+            print 'No Redis variable "lift_id" found. Will set to {} (from athlete_lift)'.format(next_lift_id)
             redis_client.set('lift_id', next_lift_id)
 
         if 'lift_id' not in dat.keys():
@@ -72,6 +72,7 @@ def main(args):
             collar['lift_id'] = next_lift_id
         else:
             print 'sent update explicitly for lift_id {}, which is not currently handled.'.format(dat['lift_id'])
+            update_lift_id = False
 
         response = update_collar_by_id(redis_client, collar, collar['collar_id'], verbose)
 

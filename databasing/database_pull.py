@@ -6,11 +6,19 @@ from optparse import OptionParser
 
 from sqlalchemy.exc import OperationalError
 
-from db_conn_strings import aws_conn_string
+# from db_conn_strings import aws_conn_string
+from db_conn_strings import local_conn_string as aws_conn_string
 
 # TODO: move this in to the proper functions
 # Global for now. Should be fixed..
 conn = create_engine(aws_conn_string)
+
+
+# Utility function for other functions. Won't be seen by anything in database_pull.py
+def pull_max_lift_id():
+    query = 'SELECT MAX(lift_id) FROM athlete_lift'
+    lift_id = read_sql(query, conn).iloc[0][0]
+    return lift_id
 
 
 #: Accepts lift_id, queries database for all data associated with that lift
@@ -23,16 +31,12 @@ def lift_to_json(lift_id):
     header, data = pull_data_by_lift(lift_id)
     a, v, p = process_data(header, data)
 
-    #: TODO: adding in timepoint as column, then setting as index seems circuitous. Figure this out later.
     data_out = DataFrame(data={'a_rms': a,
                                'v_rms': v,
                                'p_rms': p,
                                'timepoint': data['timepoint']},
                          index=a.index)
 
-    # print 'Processed headers into:\n{}'.format(json.dumps(list(data_out.columns)))
-    # print 'Processed data into:\n{}'.format(data_out.head().to_json(orient='values'))
-    # return data_out.to_json(orient='values')
     return data_out.to_json(orient='split')
 
 
@@ -128,7 +132,6 @@ def main(args):
             # temp_df = temp_df.append(pull_data_by_lift(lift_id), ignore_index=True)
             print lift_to_json(lift_id)
 
-        # MAY NOT BE NECESSARY@!#!@$
         # TODO: Figure out how to format this so that PHP can accept it
         # print temp_df.to_json(orient='split')
 
