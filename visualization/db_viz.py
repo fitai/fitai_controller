@@ -30,19 +30,16 @@ storage = dict()
 
 class LiftPlot(object):
 
+    plot_width = 800
+    plot_height = 600
+
     def __init__(self, connection_string, verbose=True):
 
         self.connection_string = connection_string
         self.verbose = verbose
 
-        # Elements of the bokeh app that will have to be laid out later
-        lift_options = [str(x) for x in sorted(self.get_data('lift_options')['lift_id'].unique())]
-
         self.plot_source = ColumnDataSource()
         self.plot_alphas = ColumnDataSource()
-
-        self.rms_plot = Plot()
-        self.raw_plot = Plot()
 
         self.raw_dims = list()
 
@@ -58,6 +55,24 @@ class LiftPlot(object):
         self.active_signals = list()  # to be filled in each time update_datasource() is called
 
         # ###
+        # TODO: Consider rearranging order of element creation and layout of app
+
+        self._establish_inputs()
+
+        self._establish_outputs()  # in case I want to add more later; make generalized function for it
+
+        self.rms_plot = Plot()
+        self.raw_plot = Plot()
+
+        # Fill the layout with content (e.g. data)
+        self._load_content()
+
+        # Specifies what goes where in the app
+        self._create_layout()
+
+    def _establish_inputs(self):
+        # Elements of the bokeh app that will have to be laid out later
+        lift_options = [str(x) for x in sorted(self.get_data('lift_options')['lift_id'].unique())]
 
         #: TODO Move these inputs out of the __init__ method
         self.lift_select = Select(name='lift_id',
@@ -69,47 +84,46 @@ class LiftPlot(object):
         self.lift_select.on_change('value', self._on_lift_change)
 
         self.signal_select = CheckboxGroup(name='signal_select',
-                                         width=70,
-                                         labels=['a', 'v', 'p'],
-                                         active=[1, 1, 0])
+                                           width=100,
+                                           labels=['a', 'v', 'p'],
+                                           active=[1, 1, 0])
         self.signal_select.on_change('active', self._on_lift_change)
 
+    def _establish_outputs(self):
         # Has to be initialized before I can set the text.
-        # TODO: Consider rearranging order of element creation and layout of app
-        self.info = Div(width=500, height=100)
-
-        # Specifies what goes where in the app
-        self._load_content()
-        self._create_layout()
+        self.lift_info = Div(width=300, height=100)
 
     def _create_layout(self):
 
-        self.plot_header = Row(width=950, height=100)
-        self.plot_header.children = [self.lift_select, self.signal_select, self.info]
+        self.plot_header = Row(width=self.plot_width, height=100)
+        self.plot_header.children = [self.lift_select, self.signal_select, self.lift_info]
 
-        ## RMS PLOT ##
+        # ## RMS PLOT ##
 
         # Box that contains the RMS plot (Box may be unnecessary)
-        self.rms_panel_box = Column(width=900, height=600)
+        self.rms_panel_box = Column(width=self.plot_width, height=self.plot_height)
         self.rms_panel_box.children = [self.rms_plot]
 
         # Panel that contains the RMS box
         self.panel_rms = Panel(
-            child=self.rms_plot, title='RMS Plot', closable=False, width=900, height=600)
+            child=self.rms_plot, title='RMS Plot', closable=False, width=self.plot_width, height=self.plot_height)
 
-        ## RAW PLOT ##
-        self.raw_panel_box = Column(width=900, height=600)
+        # ## RAW PLOT ##
+
+        self.raw_panel_box = Column(width=self.plot_width, height=self.plot_height)
         self.raw_panel_box.children = [self.raw_plot]
 
         self.panel_raw = Panel(
-            child=self.raw_plot, title='Raw Plot', closable=False, width=900, height=600)
+            child=self.raw_plot, title='Raw Plot', closable=False, width=self.plot_width, height=self.plot_height)
+
+        # ##
 
         # Contains ALL panels
-        self.panel_parent = Tabs(width=950, height=600, active=1)
+        self.panel_parent = Tabs(width=self.plot_width+50, height=self.plot_height, active=0)
 
         self.panel_parent.tabs = [self.panel_rms, self.panel_raw]
 
-        self.layout = Row(children=[self.plot_header, self.panel_parent], width=950, height=500)
+        self.layout = Column(children=[self.plot_header, self.panel_parent], width=self.plot_width+50, height=self.plot_height)
 
     def _load_content(self):
         self.update_datasource()
@@ -117,17 +131,19 @@ class LiftPlot(object):
         self.raw_plot = self.make_raw_plot(self.plot_source)
 
     def _on_lift_change(self, attr, old, new):
-        print attr
-        # if attr['name'] == 'lift_id':
-        #     print 'Updating plot with lift_id {}'.format(new)
-        self.update_datasource()
+        col_flag = True  # checkboxbuttongroup options DO NOT reset between udpates by default.
+        if attr == 'value':
+            print 'Updating plot with lift_id: {}'.format(new)
+        else:
+            print 'Received updated cols to plot: {}'.format(new)
+        self.update_datasource(col_flag)
 
-    def update_datasource(self):
+    def update_datasource(self, col_flag=False):
 
         header, data = self.get_data('lift_data')
 
         # Lift metadata to display
-        self.info.text = str(header.ix[0].to_json())
+        self.lift_info.text = str(header.ix[0].to_json())
 
         # It's unknown ahead of time which raw dimensions will be present in each lift, so we need to find
         # them all dynamically. We known RMS will be present for a, v, p.
@@ -135,8 +151,18 @@ class LiftPlot(object):
         self.raw_dims = list(set(raw_headers))  # remove duplicates
 
         # Leaving separated for readability
-        y = np_where([x == 1 for x in self.signal_select.active])[0]
-        cols = [self.signal_select.labels[x].split('_')[0] for x in y]  # Extract all labels that are active
+        # NOTE: When the CheckboxGroup is FIRST set, it returns checkboxgroup.active as a list of ints
+        # representing which of the options are active, e.g. [0, 1, 0].
+        # After an update is received, such as from a callback, it APPEARS that checkboxgroup.active
+        # returns a list with the indices of the active options.
+        # REALLY STRANGE BEHAVIOR!@$!
+        print 'signal_select.active: {}'.format(self.signal_select.active)
+
+        if col_flag:
+            cols = [self.signal_select.labels[x] for x in self.signal_select.active]
+        else:
+            y = np_where([x == 1 for x in self.signal_select.active])[0]
+            cols = [self.signal_select.labels[x].split('_')[0] for x in y]  # Extract all labels that are active
 
         print 'active columns: {}'.format(cols)
 
@@ -144,15 +170,22 @@ class LiftPlot(object):
         dims = self.raw_dims + ['rms']
         selected = [x+'_'+y for (x, y) in zip(repeat(cols, len(dims)), tile(dims, len(cols)))]
 
+        print 'active signals: {}'.format(selected)
         self.active_signals = selected
 
-        alphas_dict = {k: 0 for k in self.all_signals}
-        alphas_update = {k: 1 for k in selected}
-        alphas_dict.update(alphas_update)
+        # alphas_dict = {k: 0 for k in self.al``l_signals}
+        # alphas_update = {k: 1 for k in selected}
+        # alphas_dict.update(alphas_update)
 
-        for col in alphas_dict:
-            col_name = str(col) + '_alpha'
-            data[col_name] = [alphas_dict[col]] * data.shape[0]
+        # Instead of adjusting the alpha of each signal, I will collapse the signal to 0 if
+        # it is not present in cols
+        for col in data.columns:
+            if (col == 'timepoint') or ('raw' in col):
+                continue
+
+            elif col not in self.active_signals:
+                print 'collapsing {} to zero'.format(col)
+                data[col] = [0] * data.shape[0]
 
         #: TODO work in the alphas such that the lines actually disappear
 
@@ -164,25 +197,21 @@ class LiftPlot(object):
         self.plot_source.data = ColumnDataSource(data).data
         self.plot_source.column_names = self.plot_source.data.keys()
 
-        # self.plot_alphas.data = ColumnDataSource(DataFrame(data=alphas_dict, index=[0])).data
-        # self.plot_alphas.column_names = self.plot_alphas.data.keys()
-
-        self.rms_plot = self.make_raw_plot(self.plot_source)
         print 'done updating plot datasource'
 
     def make_RMS_plot(self, source):
         tooltips = '''<div><span style="font-size: 12px;"> <b>time:</b> @timepoint s</span></div>
-                      <div><span style="font-size: 12px;"> <b>accel:</b> @a_rms m/s^2</span></div>
-                      <div><span style="font-size: 12px;"> <b>vel:</b> @v_rms m/s</span></div>
-                      <div><span style="font-size: 12px;"> <b>pwr:</b> @p_rms W</span></div>'''
+                      <div><span style="font-size: 12px;"> <b>accel:</b> @a_rms_raw m/s^2</span></div>
+                      <div><span style="font-size: 12px;"> <b>vel:</b> @v_rms_raw m/s</span></div>
+                      <div><span style="font-size: 12px;"> <b>pwr:</b> @p_rms_raw W</span></div>'''
 
         plot = Plot(
             title=None,
             x_range=Range1d(min(source.data['x_axis']), max(source.data['x_axis'])),
             # y_range=Range1d(min(self.plot_source.data['a_rms']), max(self.plot_source.data['a_rms'])),
             y_range=Range1d(0, 1),
-            plot_width=1000,
-            plot_height=600,
+            plot_width=self.plot_width,
+            plot_height=self.plot_height,
             h_symmetry=False,
             v_symmetry=False,
             min_border=0,
@@ -192,7 +221,6 @@ class LiftPlot(object):
 
         rends = list()
         for y_val in [x for x in self.all_signals if 'rms' in x]:
-            y_alpha = y_val + '_alpha'
 
             if 'a' in y_val:
                 c = 'black'
@@ -203,9 +231,7 @@ class LiftPlot(object):
             else:
                 c = 'red'
 
-            print 'building line glyph for signal {s} (alpha={a})'.format(s=y_val, a=max(source.data[y_alpha]))
-
-            l = Line(x='x_axis', y=y_val, name=y_val, line_color=c, line_alpha=max(source.data[y_alpha]))
+            l = Line(x='x_axis', y=y_val, name=y_val, line_color=c, line_alpha=1)
             rends.append(GlyphRenderer(data_source=source, glyph=l, name=y_val))
 
         # axis_theme = dict(
@@ -215,16 +241,6 @@ class LiftPlot(object):
         #
         # plot.add_layout(LinearAxis(**axis_theme), 'left')
         # plot.add_layout(LinearAxis(**axis_theme), 'below')
-
-        # Note: ColumnDataSource.data[key[0]] returns a list. Want the value in that list (there should be only 1)
-        # a_line = Line(x='x_axis', y='a_rms', name='accel', line_color='black', line_alpha=1)
-        # a_line_renderer = GlyphRenderer(data_source=source, glyph=a_line, name='accel_rend')
-        #
-        # v_line = Line(x='x_axis', y='v_rms', name='vel', line_color='blue', line_alpha=1)
-        # v_line_renderer = GlyphRenderer(data_source=source, glyph=v_line, name='vel_rend')
-        #
-        # p_line = Line(x='x_axis', y='p_rms', name='pwr', line_color='purple', line_alpha=0)
-        # p_line_renderer = GlyphRenderer(data_source=source, glyph=p_line, name='pwr_rend')
 
         hover = HoverTool(renderers=rends, tooltips=tooltips, point_policy='follow_mouse')
         zoom = BoxZoomTool()
@@ -240,17 +256,17 @@ class LiftPlot(object):
 
     def make_raw_plot(self, source):
         tooltips = '''<div><span style="font-size: 12px;"> <b>time:</b> @timepoint s</span></div>
-                      <div><span style="font-size: 12px;"> <b>accel:</b> @a_x m/s^2</span></div>
-                      <div><span style="font-size: 12px;"> <b>vel:</b> @v_x m/s</span></div>
-                      <div><span style="font-size: 12px;"> <b>pwr:</b> @p_x W</span></div>'''
+                      <div><span style="font-size: 12px;"> <b>accel:</b> @a_x_raw m/s^2</span></div>
+                      <div><span style="font-size: 12px;"> <b>vel:</b> @v_x_raw m/s</span></div>
+                      <div><span style="font-size: 12px;"> <b>pwr:</b> @p_x_raw W</span></div>'''
 
         plot = Plot(
             title=None,
             x_range=Range1d(min(source.data['x_axis']), max(source.data['x_axis'])),
             # y_range=Range1d(min(self.plot_source.data['a_rms']), max(self.plot_source.data['a_rms'])),
             y_range=Range1d(min(source.data['a_x']), max(source.data['a_x'])),
-            plot_width=1000,
-            plot_height=600,
+            plot_width=self.plot_width,
+            plot_height=self.plot_height,
             h_symmetry=False,
             v_symmetry=False,
             min_border=0,
@@ -271,7 +287,6 @@ class LiftPlot(object):
         rends = list()
 
         for y_val in ['a_x', 'v_x', 'p_x']:
-            y_alpha = y_val + '_alpha'
 
             if 'a' in y_val:
                 c = 'black'
@@ -282,26 +297,13 @@ class LiftPlot(object):
             else:
                 c = 'red'
 
-            print 'building line glyph for signal {s} (alpha={a})'.format(s=y_val, a=max(source.data[y_alpha]))
-
-            l = Line(x='x_axis', y=y_val, name=y_val, line_color=c, line_alpha=max(source.data[y_alpha]))
+            l = Line(x='x_axis', y=y_val, name=y_val, line_color=c, line_alpha=1)
             rends.append(GlyphRenderer(data_source=source, glyph=l, name=y_val))
-            # plot.renderers.extend([GlyphRenderer(data_source=source, glyph=l, name=y_val)])
 
-        # a_line = Line(x='timepoint', y='a_x', name='accel', line_color='black', line_alpha=1)
-        # a_line_renderer = GlyphRenderer(data_source=source, glyph=a_line, name='accel_rend')
-        #
-        # v_line = Line(x='timepoint', y='v_x', name='vel', line_color='blue', line_alpha=1)
-        # v_line_renderer = GlyphRenderer(data_source=source, glyph=v_line, name='vel_rend')
-        #
-        # p_line = Line(x='timepoint', y='p_x', name='pwr', line_color='purple', line_alpha=0)
-        # p_line_renderer = GlyphRenderer(data_source=source, glyph=p_line, name='pwr_rend')
-        #
         zero_line = Line(x='x_axis', y='zero', name='zero', line_color='red', line_dash='dashed', line_alpha=1)
         zero_line_renderer = GlyphRenderer(data_source=source, glyph=zero_line, name='zero_rend')
 
         rends.append(zero_line_renderer)
-        # plot.renderers.extend([zero_line_renderer])
 
         hover = HoverTool(
             renderers=rends,
@@ -350,9 +352,28 @@ class LiftPlot(object):
                 header, data = pull_data_by_lift(int(self.lift_select.value))
                 a_rms, v_rms, p_rms = process_data(header, data, RMS=True)
                 accel, vel, pwr = process_data(header, data, RMS=False)
+
+                for col in accel.columns:
+                    raw_col = str(col) + '_raw'
+                    accel[raw_col] = accel[col]
+                    accel[col] = self.max_min_scale(accel[col])
+
+                for col in vel.columns:
+                    raw_col = str(col) + '_raw'
+                    vel[raw_col] = vel[col]
+                    vel[col] = self.max_min_scale(vel[col])
+
+                for col in pwr.columns:
+                    raw_col = str(col) + '_raw'
+                    pwr[raw_col] = pwr[col]
+                    pwr[col] = self.max_min_scale(pwr[col])
+
                 dat = DataFrame(data={'a_rms': self.max_min_scale(a_rms),
+                                      'a_rms_raw': a_rms,
                                       'v_rms': self.max_min_scale(v_rms),
+                                      'v_rms_raw': v_rms,
                                       'p_rms': self.max_min_scale(p_rms),
+                                      'p_rms_raw': p_rms,
                                       'timepoint': data['timepoint']},
                                 index=a_rms.index).join(accel).join(vel).join(pwr)
                 storage[(int(self.lift_select.value), 'data')] = dat
