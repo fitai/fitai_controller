@@ -145,13 +145,8 @@ class LiftPlot(object):
 
     #: Controls behavior of dropdown Select tool
     def _on_lift_change(self, attr, old, new):
-        col_flag = True  # checkboxbuttongroup options DO NOT reset between udpates by default.
-        if attr == 'value':
-            print 'Updating plot with lift_id: {}'.format(new)
-        else:
-            print 'Received updated cols to plot: {}'.format(new)
-
-        self.update_datasource(col_flag)
+        print 'Updating plot with lift_id: {}'.format(new)
+        self.update_datasource()
 
     def update_datasource(self):
 
