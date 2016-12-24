@@ -20,7 +20,7 @@ from bokeh.models.widgets.inputs import Select
 from bokeh.models.widgets.markups import Div
 from bokeh.plotting import curdoc
 
-from databasing.db_conn_strings import local_conn_string as aws_conn_string
+from databasing.db_conn_strings import conn_string
 from databasing.database_pull import pull_data_by_lift
 from processing.util import process_data
 
@@ -31,7 +31,7 @@ storage = dict()
 class LiftPlot(object):
 
     plot_width = 900
-    plot_height = 600
+    plot_height = 500
 
     def __init__(self, connection_string, verbose=True):
 
@@ -98,7 +98,7 @@ class LiftPlot(object):
 
     def _create_layout(self):
 
-        self.plot_header = Row(width=self.plot_width, height=100)
+        self.plot_header = Row(width=self.plot_width, height=70)
         self.plot_header.children = [self.lift_select, self.signal_select, self.lift_info]
 
         # ## RMS PLOT ##
@@ -359,5 +359,5 @@ class LiftPlot(object):
     def max_min_scale(x):
         return (x - min(x))/(max(x) - min(x))
 
-app = LiftPlot(aws_conn_string, verbose=True)
+app = LiftPlot(conn_string, verbose=True)
 curdoc().add_root(app.layout)

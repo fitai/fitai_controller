@@ -6,12 +6,11 @@ from optparse import OptionParser
 
 from sqlalchemy.exc import OperationalError
 
-# from db_conn_strings import aws_conn_string
-from db_conn_strings import local_conn_string as aws_conn_string
+from db_conn_strings import conn_string
 
 # TODO: move this in to the proper functions
 # Global for now. Should be fixed..
-conn = create_engine(aws_conn_string)
+conn = create_engine(conn_string)
 
 
 # Utility function for other functions. Won't be seen by anything in database_pull.py
