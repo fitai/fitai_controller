@@ -1,8 +1,9 @@
 from sqlalchemy import create_engine
-from pandas import read_sql, DataFrame
+from pandas import read_sql, DataFrame, Series
 from numpy import where as np_where, tile, repeat
 from os.path import dirname, abspath
 from sys import path as sys_path
+from json import dumps
 
 try:
     sys_path.append(dirname(dirname(abspath(__file__))))
@@ -157,7 +158,8 @@ class LiftPlot(object):
         header, data = self.get_data('lift_data')
 
         # Lift metadata to display
-        self.lift_info.text = str(header.ix[0].to_json())
+        header['lift_start'] = header['lift_start'].strftime('%Y-%m-%d')
+        self.lift_info.text = dumps(header)
 
         # It's unknown ahead of time which raw dimensions will be present in each lift, so we need to find
         # them all dynamically. We known RMS will be present for a, v, p.
