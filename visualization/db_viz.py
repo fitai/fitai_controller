@@ -30,7 +30,7 @@ storage = dict()
 
 class LiftPlot(object):
 
-    plot_width = 800
+    plot_width = 900
     plot_height = 600
 
     def __init__(self, connection_string, verbose=True):
@@ -39,7 +39,6 @@ class LiftPlot(object):
         self.verbose = verbose
 
         self.plot_source = ColumnDataSource()
-        self.plot_alphas = ColumnDataSource()
 
         self.raw_dims = list()
 
@@ -47,6 +46,7 @@ class LiftPlot(object):
         #: By default, all signals must be plotted because I only want to update the ColumnDataSource, not
         #: rebuild the plot N times. To accommodate this, I will just update the alpha of the lines.
         #: Start by defaulting all lines to alpha = 0
+        # TODO Confirm that app works when all_dims actually contains all possible dimensions
         # all_dims = ['x', 'y', 'z', 'rms']
         all_dims = ['x', 'rms']
         all_cols = ['a', 'v', 'p']
@@ -86,8 +86,8 @@ class LiftPlot(object):
         self.signal_select = CheckboxGroup(name='signal_select',
                                            width=100,
                                            labels=['a', 'v', 'p'],
-                                           active=[1, 1, 0])
-        self.signal_select.on_change('active', self._on_lift_change)
+                                           active=[0, 1, 2])
+        self.signal_select.on_change('active', self._on_signal_change)
 
     def _establish_outputs(self):
         # Has to be initialized before I can set the text.
@@ -119,16 +119,25 @@ class LiftPlot(object):
         # ##
 
         # Contains ALL panels
-        self.panel_parent = Tabs(width=self.plot_width+50, height=self.plot_height, active=0)
+        self.panel_parent = Tabs(width=self.plot_width+10, height=self.plot_height, active=0)
 
         self.panel_parent.tabs = [self.panel_rms, self.panel_raw]
 
-        self.layout = Column(children=[self.plot_header, self.panel_parent], width=self.plot_width+50, height=self.plot_height)
+        self.layout = Column(children=[self.plot_header, self.panel_parent], width=self.plot_width+20, height=self.plot_height)
 
     def _load_content(self):
         self.update_datasource()
         self.rms_plot = self.make_RMS_plot(self.plot_source)
         self.raw_plot = self.make_raw_plot(self.plot_source)
+
+    def _on_signal_change(self, attr, old, new):
+
+        for i in range(len(self.signal_select.labels)):
+            print 'setting renderer {i} to {tf}'.format(
+                i=self.signal_select.labels[i], tf=i in self.signal_select.active)
+            # self.rms_plot.renderers[i].visible = i in self.signal_select.active
+            self.rms_plot.renderers[i].visible = i in self.signal_select.active
+            self.raw_plot.renderers[i].visible = i in self.signal_select.active
 
     def _on_lift_change(self, attr, old, new):
         col_flag = True  # checkboxbuttongroup options DO NOT reset between udpates by default.
@@ -136,6 +145,7 @@ class LiftPlot(object):
             print 'Updating plot with lift_id: {}'.format(new)
         else:
             print 'Received updated cols to plot: {}'.format(new)
+
         self.update_datasource(col_flag)
 
     def update_datasource(self, col_flag=False):
@@ -150,46 +160,6 @@ class LiftPlot(object):
         raw_headers = [x.split('_')[-1] for x in data.columns if ('rms' not in x) and ('time' not in x)]
         self.raw_dims = list(set(raw_headers))  # remove duplicates
 
-        # Leaving separated for readability
-        # NOTE: When the CheckboxGroup is FIRST set, it returns checkboxgroup.active as a list of ints
-        # representing which of the options are active, e.g. [0, 1, 0].
-        # After an update is received, such as from a callback, it APPEARS that checkboxgroup.active
-        # returns a list with the indices of the active options.
-        # REALLY STRANGE BEHAVIOR!@$!
-        print 'signal_select.active: {}'.format(self.signal_select.active)
-
-        if col_flag:
-            cols = [self.signal_select.labels[x] for x in self.signal_select.active]
-        else:
-            y = np_where([x == 1 for x in self.signal_select.active])[0]
-            cols = [self.signal_select.labels[x].split('_')[0] for x in y]  # Extract all labels that are active
-
-        print 'active columns: {}'.format(cols)
-
-        #: Change whichever columns have been selected (along appropriate dimensions) to alpha = 1
-        dims = self.raw_dims + ['rms']
-        selected = [x+'_'+y for (x, y) in zip(repeat(cols, len(dims)), tile(dims, len(cols)))]
-
-        print 'active signals: {}'.format(selected)
-        self.active_signals = selected
-
-        # alphas_dict = {k: 0 for k in self.al``l_signals}
-        # alphas_update = {k: 1 for k in selected}
-        # alphas_dict.update(alphas_update)
-
-        # Instead of adjusting the alpha of each signal, I will collapse the signal to 0 if
-        # it is not present in cols
-        for col in data.columns:
-            if (col == 'timepoint') or ('raw' in col):
-                continue
-
-            elif col not in self.active_signals:
-                print 'collapsing {} to zero'.format(col)
-                data[col] = [0] * data.shape[0]
-
-        #: TODO work in the alphas such that the lines actually disappear
-
-        # To draw on y=0; just for now (probably)
         data['zero'] = 0.
         data['x_axis'] = data['timepoint']/max(data['timepoint'])  # scale x axis to be (0, 1)
 
@@ -220,7 +190,8 @@ class LiftPlot(object):
         )
 
         rends = list()
-        for y_val in [x for x in self.all_signals if 'rms' in x]:
+        # for y_val in [x for x in self.all_signals if 'rms' in x]:
+        for y_val in ['a_rms', 'v_rms', 'p_rms']:
 
             if 'a' in y_val:
                 c = 'black'

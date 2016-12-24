@@ -3,6 +3,7 @@ import json
 import sys
 
 from processing.functions import calc_integral, calc_rms, calc_power
+from processing.filters import filter_signal
 
 
 def read_header_mqtt(data):
@@ -112,6 +113,10 @@ def process_data(collar_obj, content, RMS=True, verbose=False):
     accel_headers = [x for x in content.columns if x in ['a_x', 'a_y', 'a_z']]
     vel_headers = ['v_' + x.split('_')[-1] for x in accel_headers]
     pwr_headers = ['p_' + x.split('_')[-1] for x in accel_headers]
+
+    # Try to impose high pass on acceleration - see if it will fix the velocity drift
+    for col in accel_headers:
+        content[col] = filter_signal(content[col], filter_type='highpass', f_low=0.1, fs=collar_obj['lift_sampling_rate'])
 
     fs = extract_sampling_rate(collar_obj)
     weight = extract_weight(collar_obj, verbose)
