@@ -95,7 +95,7 @@ class LiftPlot(object):
 
     def _establish_outputs(self):
         # Has to be initialized before I can set the text.
-        self.lift_info = Div(width=300, height=100)
+        self.lift_info = Div(width=500, height=100)
 
     def _create_layout(self):
 
