@@ -354,7 +354,8 @@ class LiftPlot(object):
 
     @staticmethod
     def max_min_scale(x):
-        return (x - min(x))/(max(x) - min(x))
+        # return (x - min(x))/(max(x) - min(x))
+        return x/(max(x) - min(x))
 
 app = LiftPlot(conn_string, verbose=True)
 curdoc().add_root(app.layout)
