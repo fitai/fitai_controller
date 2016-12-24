@@ -57,7 +57,9 @@ def pull_data_by_lift(lift_id):
     '''.format(lift_id)
     try:
         dat = read_sql(dat_query, conn)
-        header = read_sql(header_query, conn)
+        # header returns as a dataframe, but want a dict. this converts.
+        header = read_sql(header_query, conn).drop_duplicates().to_dict(orient='index')[0]
+
     except OperationalError, e:
         print 'Unable to connect to database. Check firewall settings?'
         print e

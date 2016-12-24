@@ -58,8 +58,7 @@ def find_threshold(smooth=False, plot=False, verbose=False):
 
 def learn_on_lift_id(lift_id, smooth, plot, verbose):
     header, data = pull_data_by_lift(lift_id)
-    header = header.ix[0].to_dict()
-    a, v, p = process_data(header, data, verbose)
+    a, v, p = process_data(header, data, RMS=True, verbose=verbose)
 
     data = DataFrame(data={'a_rms': a,
                            'v_rms': v,

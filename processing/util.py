@@ -102,8 +102,8 @@ def process_data(collar_obj, content, RMS=True, verbose=False):
             print 'Content (type {}) is not a dataframe. Will try to convert...'.format(type(content))
         content = DataFrame(content)
 
-    if isinstance(collar_obj, DataFrame):
-        collar_obj = collar_obj.drop_duplicates().to_dict(orient='index')[0]
+    # if isinstance(collar_obj, DataFrame):
+    #     collar_obj = collar_obj.drop_duplicates().to_dict(orient='index')[0]
 
     # Drop columns that contain more than 10% missing values
     x = content.isnull().sum(axis=0) > 0.1*content.shape[0]

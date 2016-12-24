@@ -98,7 +98,7 @@ class LiftPlot(object):
 
     def _create_layout(self):
 
-        self.plot_header = Row(width=self.plot_width, height=70)
+        self.plot_header = Row(width=self.plot_width, height=80)
         self.plot_header.children = [self.lift_select, self.signal_select, self.lift_info]
 
         # ## RMS PLOT ##
