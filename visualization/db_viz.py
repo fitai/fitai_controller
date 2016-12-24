@@ -67,6 +67,9 @@ class LiftPlot(object):
         # Fill the layout with content (e.g. data)
         self._load_content()
 
+        # Show/Hide signals
+        self._on_signal_change(None, None, None)
+
         # Specifies what goes where in the app
         self._create_layout()
 
@@ -86,7 +89,7 @@ class LiftPlot(object):
         self.signal_select = CheckboxGroup(name='signal_select',
                                            width=100,
                                            labels=['a', 'v', 'p'],
-                                           active=[0, 1, 2])
+                                           active=[0])
         self.signal_select.on_change('active', self._on_signal_change)
 
     def _establish_outputs(self):
@@ -130,15 +133,16 @@ class LiftPlot(object):
         self.rms_plot = self.make_RMS_plot(self.plot_source)
         self.raw_plot = self.make_raw_plot(self.plot_source)
 
+    #: Controls behavior of Checkboxgroup Selection tool
     def _on_signal_change(self, attr, old, new):
-
         for i in range(len(self.signal_select.labels)):
             print 'setting renderer {i} to {tf}'.format(
                 i=self.signal_select.labels[i], tf=i in self.signal_select.active)
-            # self.rms_plot.renderers[i].visible = i in self.signal_select.active
+
             self.rms_plot.renderers[i].visible = i in self.signal_select.active
             self.raw_plot.renderers[i].visible = i in self.signal_select.active
 
+    #: Controls behavior of dropdown Select tool
     def _on_lift_change(self, attr, old, new):
         col_flag = True  # checkboxbuttongroup options DO NOT reset between udpates by default.
         if attr == 'value':
@@ -148,7 +152,7 @@ class LiftPlot(object):
 
         self.update_datasource(col_flag)
 
-    def update_datasource(self, col_flag=False):
+    def update_datasource(self):
 
         header, data = self.get_data('lift_data')
 
