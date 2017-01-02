@@ -106,9 +106,10 @@ def mqtt_on_message(client, userdata, msg):
             if crossings.shape[0] > 0:
                 crossings['timepoint'] = (collar['max_t'] + crossings.index*(1./collar['lift_sampling_rate'])).values
                 crossings['lift_id'] = collar['lift_id']
-        except NameError, e:
+        except AttributeError, e:
             print 'Crossings does not exist'
             print e
+
 
         # reps = 0
         # update state of user via 'collar' dict
