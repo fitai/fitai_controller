@@ -72,6 +72,7 @@ def main(args):
         else:
             print 'sent update explicitly for lift_id {}, which is not currently handled.'.format(dat['lift_id'])
             update_lift_id = False
+            collar = dat
 
         response = update_collar_by_id(redis_client, collar, collar['collar_id'], verbose)
 

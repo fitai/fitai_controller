@@ -120,7 +120,6 @@ def mqtt_on_message(client, userdata, msg):
             print 'collar {} has no Active field set. Will create and set to False'.format(collar['collar_id'])
             collar['active'] = False
 
-        # collar['lift_start'] = dt.strftime(collar['lift_start'], '%Y-%m-%d %H:%M:%S')
         ws_pub(collar, v, p, reps)
 
         _ = update_collar_by_id(redis_client, collar, collar['collar_id'], verbose=True)
