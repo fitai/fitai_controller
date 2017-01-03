@@ -3,8 +3,6 @@ from optparse import OptionParser
 from sys import argv, path as syspath, exit
 from os.path import dirname, abspath
 
-from databasing.database_pull import lift_to_json, pull_max_lift_id
-
 try:
     path = dirname(dirname(abspath(__file__)))
     print 'Adding {} to sys.path'.format(path)
@@ -13,6 +11,7 @@ except NameError:
     syspath.append('/Users/kyle/PycharmProjects/fitai_controller')
     print 'Working in Dev mode.'
 
+from databasing.database_pull import lift_to_json, pull_max_lift_id
 from databasing.redis_controls import establish_redis_client, update_collar_by_id
 
 

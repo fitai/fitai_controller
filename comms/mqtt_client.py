@@ -200,7 +200,6 @@ def main(args):
         print 'Attempting MQTT connection to {i}:{p} on topic {t}'.format(i=host_ip, p=host_port, t=mqtt_topic)
 
     mqtt_client = establish_mqtt_client(host_ip, host_port, mqtt_topic)
-    print 'mqtt client ready'
     run_client(mqtt_client)
     kill_client(mqtt_client)
 
