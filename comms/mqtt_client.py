@@ -126,7 +126,7 @@ def mqtt_on_message(client, userdata, msg):
 
         if collar['active']:
             header = DataFrame(data=collar, index=[0]).drop(
-                ['active', 'calc_reps', 'collar_id', 'curr_state', 'threshold'], axis=1)
+                ['active', 'calc_reps', 'collar_id', 'curr_state', 'threshold', 'max_t'], axis=1)
             print 'header has: \n{}'.format(header)
             push_to_db(header, accel, crossings)
         else:
