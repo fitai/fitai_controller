@@ -62,20 +62,23 @@ def push_to_db(header, content, crossings):
         else:
             print 'Done'
 
-    if (crossings is not None) & (crossings.shape[0] > 0):
-        print 'Pushing crossings to database...'
-        try:
-            crossings[['lift_id', 'timepoint', 'action']].to_sql(
-                'lift_event', conn, if_exists='append', index=False, index_label=['lift_id', 'timepoint'])
-        except OperationalError, e:
-            print '!!!!!Could not push crossings data to database!!!!'
-            print 'Likely because PostgreSQL server not running.\nError message: {}'.format(e)
-            print 'skipping push to lift_event and resuming MQTT listening'
-            return None
-        except IntegrityError, e:
-            print '!!!!! Could not push crossings to database !!!!!'
-            print 'Likely because (lift_id, timepoint) combo already exists in lift_event. ' \
-                  '\nError message: {}'.format(e)
-            print 'Moving forward without pushing crossings into lift_event...'
-        else:
-            print 'Done'
+    try:
+        if (crossings is not None) & (crossings.shape[0] > 0):
+            print 'Pushing crossings to database...'
+            try:
+                crossings[['lift_id', 'timepoint', 'action']].to_sql(
+                    'lift_event', conn, if_exists='append', index=False, index_label=['lift_id', 'timepoint'])
+            except OperationalError, e:
+                print '!!!!!Could not push crossings data to database!!!!'
+                print 'Likely because PostgreSQL server not running.\nError message: {}'.format(e)
+                print 'skipping push to lift_event and resuming MQTT listening'
+                return None
+            except IntegrityError, e:
+                print '!!!!! Could not push crossings to database !!!!!'
+                print 'Likely because (lift_id, timepoint) combo already exists in lift_event. ' \
+                      '\nError message: {}'.format(e)
+                print 'Moving forward without pushing crossings into lift_event...'
+            else:
+                print 'Done'
+    except AttributeError:
+        print 'cant push crossings to db.'
