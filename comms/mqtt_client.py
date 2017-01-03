@@ -121,6 +121,7 @@ def mqtt_on_message(client, userdata, msg):
             print 'collar {} has no Active field set. Will create and set to False'.format(collar['collar_id'])
             collar['active'] = False
 
+        collar['lift_start'] = dt.strftime(collar['lift_start'], '%Y-%m-%d %H:%M:%S')
         ws_pub(collar, v, p, reps)
 
         _ = update_collar_by_id(redis_client, collar, collar['collar_id'], verbose=True)
@@ -200,6 +201,7 @@ def main(args):
         print 'Attempting MQTT connection to {i}:{p} on topic {t}'.format(i=host_ip, p=host_port, t=mqtt_topic)
 
     mqtt_client = establish_mqtt_client(host_ip, host_port, mqtt_topic)
+    print 'mqtt client ready'
     run_client(mqtt_client)
     kill_client(mqtt_client)
 
