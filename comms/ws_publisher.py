@@ -39,7 +39,8 @@ def close_connection(ws):
 
 # Publish the given header, velocity, and power lists to the PHP websocket server
 def ws_pub(collar_obj, vel, pwr, reps=0):
-    collar_obj['lift_start'] = dt.strftime(collar_obj['lift_start'], '%Y-%m-%d %H:%M:%S')
+    if isinstance(collar_obj['lift_start'], type(dt.now())):
+        collar_obj['lift_start'] = dt.strftime(collar_obj['lift_start'], '%Y-%m-%d %H:%M:%S')
     msg_dict = {"header": collar_obj, "rep_count": reps, "content": {"v_rms": list(vel), "p_rms": list(pwr)}}
     msg = json.dumps(msg_dict)
     print 'message to websocket: \n{}'.format(msg)
