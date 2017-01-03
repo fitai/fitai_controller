@@ -62,7 +62,7 @@ def push_to_db(header, content, crossings):
         else:
             print 'Done'
 
-    if crossings is not None:
+    if (crossings is not None) & (crossings.shape[0] > 0):
         print 'Pushing crossings to database...'
         try:
             crossings[['lift_id', 'timepoint', 'action']].to_sql(
