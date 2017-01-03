@@ -84,6 +84,7 @@ def main(args):
             print 'Redis object not updated properly. Will not increment lift_id.'
         elif not update_lift_id:
             print 'JSON object did not include lift_id. Should be a trigger to end lift and stop pushing to db'
+            print 'found lift_id: {}'.format(collar['lift_id'])
             print lift_to_json(collar['lift_id'])
         else:
             print 'SHOULDNT SEE THIS!?!'
