@@ -267,7 +267,7 @@ def calc_reps(pwr, n_reps, state, thresh=0.):
     crossings = diff_signal[diff_signal != 0].to_frame('diff')
 
     if crossings.shape[0] > 0:
-        crossings['action'] = 'start_rep'
+        crossings['event'] = 'start_rep'
         crossings.loc[crossings['diff'] < 0, 'action'] = 'stop_rep'
 
         # Update state of object
