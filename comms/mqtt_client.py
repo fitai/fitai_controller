@@ -80,7 +80,7 @@ def mqtt_on_message(client, userdata, msg):
                 collar['threshold'] = thresh_dict[collar['lift_type']]
             except KeyError:
                 print 'Couldnt find threshold for lift_type {}. Defaulting to 1.'.format(collar['lift_type'])
-                collar['threshold'] = None
+                collar['threshold'] = 1.
 
         if collar['lift_start'] == 'None':
             collar['lift_start'] = dt.now()
@@ -101,7 +101,6 @@ def mqtt_on_message(client, userdata, msg):
         reps, curr_state, crossings = calc_reps(p, collar['calc_reps'], collar['curr_state'], collar['threshold'])
 
         # Assign timepoints to crossings, if there are any
-
         try:
             if crossings.shape[0] > 0:
                 crossings['timepoint'] = (collar['max_t'] + crossings.index*(1./collar['lift_sampling_rate'])).values
