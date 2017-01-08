@@ -66,7 +66,7 @@ def push_to_db(header, content, crossings):
         if (crossings is not None) & (crossings.shape[0] > 0):
             print 'Pushing crossings to database...'
             try:
-                crossings[['lift_id', 'timepoint', 'action']].to_sql(
+                crossings[['lift_id', 'timepoint', 'event']].to_sql(
                     'lift_event', conn, if_exists='append', index=False, index_label=['lift_id', 'timepoint'])
             except OperationalError, e:
                 print '!!!!!Could not push crossings data to database!!!!'
