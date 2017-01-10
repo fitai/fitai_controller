@@ -21,7 +21,8 @@ from processing.util import read_header_mqtt, read_content_mqtt, process_data
 from comms.ws_publisher import ws_pub
 from processing.ml_test import find_threshold, calc_reps
 
-# TODO: Move this in to relevant functions
+# TODO: Turn this entire file into a class. Will allow us to use objects like the redis_client
+# as class attributes instead of forcing us to keep them global
 thresh_dict = find_threshold(smooth=True, plot=False, verbose=False)
 collar_id = 0
 
@@ -29,6 +30,7 @@ collar_id = 0
 # should probably turn the entire script into an object....
 # Attempt to connect to redis server
 redis_client = establish_redis_client(hostname='localhost', verbose=True)
+
 # If connection fails, MQTT client will not be able to update collar object, and will be useless. Kill and try again
 if redis_client is None:
     print 'Couldnt connect to redis. Killing MQTT client.'
@@ -62,7 +64,7 @@ def mqtt_on_message(client, userdata, msg):
         # TODO: If collar returns without all necessary fields, what should happen??
         collar = retrieve_collar_by_id(redis_client, head['collar_id'])
         # Quick check that at least one expected field is in collar object
-        if 'threshold' not in collar.keys():
+        if 'p_thresh' not in collar.keys():
             print 'Redis collar object {} appears broken. ' \
                   'Will replace with default and update as needed.'.format(collar['collar_id'])
             collar_tmp = collar.copy()
@@ -74,13 +76,13 @@ def mqtt_on_message(client, userdata, msg):
 
         # TODO: Don't like doing all these checks. Think of a more efficient way...
         # If collar is newly generated, threshold will be 'None'
-        if collar['threshold'] == 'None':
+        if collar['p_thresh'] == 'None':
             try:
                 # try to extract lift_type
-                collar['threshold'] = thresh_dict[collar['lift_type']]
+                collar['a_thresh'], collar['v_thresh'], collar['p_thresh'] = thresh_dict[collar['lift_type']]
             except KeyError:
-                print 'Couldnt find threshold for lift_type {}. Defaulting to 1.'.format(collar['lift_type'])
-                collar['threshold'] = 1.
+                print 'Couldnt find any thresholds for lift_type {}. Defaulting to 1.'.format(collar['lift_type'])
+                collar['a_thresh'], collar['v_thresh'], collar['p_thresh'] = 1., 1., 1.
 
         if collar['lift_start'] == 'None':
             collar['lift_start'] = dt.now()
@@ -98,7 +100,9 @@ def mqtt_on_message(client, userdata, msg):
 
         # Before taking the time to push to db, process the acceleration and push to PHP websocket
         _, v, p = process_data(collar, accel)
-        reps, curr_state, crossings = calc_reps(p, collar['calc_reps'], collar['curr_state'], collar['threshold'])
+        reps, curr_state, crossings = calc_reps(
+            accel, v, p, collar['calc_reps'], collar['curr_state'],
+            collar['a_thresh'], collar['v_thresh'], collar['p_thresh'])
 
         # Assign timepoints to crossings, if there are any
         try:
@@ -125,7 +129,8 @@ def mqtt_on_message(client, userdata, msg):
 
         if collar['active']:
             header = DataFrame(data=collar, index=[0]).drop(
-                ['active', 'calc_reps', 'collar_id', 'curr_state', 'threshold', 'max_t'], axis=1)
+                ['active', 'calc_reps', 'collar_id', 'curr_state',
+                 'a_thresh', 'v_thresh', 'p_thresh', 'max_t'], axis=1)
             print 'header has: \n{}'.format(header)
             push_to_db(header, accel, crossings)
         else:

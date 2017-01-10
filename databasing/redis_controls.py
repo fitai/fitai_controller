@@ -12,7 +12,9 @@ def get_default_collar():
             "lift_weight_units": "lbs",
             "lift_num_reps": 10,
             "calc_reps": 0,
-            "threshold": "None",
+            "a_thresh": "None",
+            "v_thresh": "None",
+            "p_thresh": "None",
             "curr_state": 'rest',
             "max_t": 0.
             }

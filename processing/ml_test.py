@@ -17,6 +17,9 @@ from databasing.database_pull import pull_data_by_lift, pull_lift_ids
 bin_size = 1.  # Number of samples to collect before processing the signal (float)
 
 
+#: Returns dict of lift_type: adjusted_thresholds
+#: Where adjusted_thresholds is a dict of a/v/p_thresh: threshold_value
+#: So, per lift type, this function should return a dict of 3 threshold values, one for each signal type
 def find_threshold(smooth=False, plot=False, verbose=False):
 
     # Each lift_type will have multiple lift_ids associated with it
@@ -24,7 +27,7 @@ def find_threshold(smooth=False, plot=False, verbose=False):
     lift_ids = pull_lift_ids().set_index('lift_type')
 
     train_dict = {}
-
+    adj_thresh = {}
     if lift_ids is not None:
         for lift_type in list(lift_ids.index):
             ids = lift_ids.ix[lift_type]['lift_ids']
@@ -32,20 +35,24 @@ def find_threshold(smooth=False, plot=False, verbose=False):
             for i, lift_id in enumerate(ids):
                 type_dict[i] = learn_on_lift_id(int(lift_id), smooth, plot, verbose)
 
-            errs = [d['error'] for _, d in type_dict.iteritems()]
-            thresholds = [d['thresh'] for _, d in type_dict.iteritems()]
+            for label in ['a', 'v', 'p']:
 
-            if any([e > 0 for e in errs]):
-                max_err = max(errs)
-                # 1. - abs(err)/max_err
-                # will eliminate observation with max error, and will vary directly with distance from max_err
-                w = [1. - np.abs(err)/max_err for err in errs]
-                thresh = np.sum(w*thresholds)
-            else:
-                # No info on error, or all errors are the same - weight equally
-                thresh = np.sum(thresholds)/len(thresholds)
+                errs = [d[label[0]+'_error'] for _, d in type_dict.iteritems()]
+                thresholds = [d[label[0]+'_thresh'] for _, d in type_dict.iteritems()]
 
-            train_dict.update({lift_type: thresh})
+                if any([e > 0 for e in errs]):
+                    max_err = max(errs)
+                    # 1. - abs(err)/max_err
+                    # will eliminate observation with max error, and will vary directly with distance from max_err
+                    w = [1. - np.abs(err)/max_err for err in errs]
+                    thresh = np.sum(w*thresholds)
+                else:
+                    # No info on error, or all errors are the same - weight equally
+                    thresh = np.sum(thresholds)/len(thresholds)
+
+                adj_thresh.update({label[0]+'_thresh': thresh})
+
+            train_dict.update({lift_type: adj_thresh})
     else:
         print 'Unable to retrieve lift_ids from database. Cannot learn.'
         return None
@@ -72,21 +79,26 @@ def learn_on_lift_id(lift_id, smooth, plot, verbose):
 
         # re-calculate everything from smoothed acceleration signal
         rms_raw = data['a_rms']
-        a_rms = list()
+        acc_rms = list()
         #: Implement the simple high pass filter
         for i in range(len(rms_raw)):
             if i > 0:
                 rms_raw[i] = 0.66*rms_raw[i] + 0.33*rms_raw[i-1]
-                a = simple_highpass(rms_raw[i], rms_raw[i-1], a_rms[-1], fc=1., fs=fs)
+                a = simple_highpass(rms_raw[i], rms_raw[i-1], acc_rms[-1], fc=1., fs=fs)
             else:
                 a = 0
-            a_rms.append(a)
+            #: After calculating filtered RMS value, push into acc_rms list
+            acc_rms.append(a)
 
-        a_rms = np.array(a_rms)
-        v_euler = calc_integral(a_rms, scale=bin_size, fs=fs)
-        pwr_rms = a_rms * weight * v_euler
+        # acc_rms = np.array(acc_rms)
+        acc_rms = pd.Series(acc_rms, name='a_rms')
+        #: Calculate integral via Euler's method (cumulative sum)
+        vel_rms = calc_integral(acc_rms, scale=bin_size, fs=fs)
+        pwr_rms = acc_rms * weight * vel_rms
     else:
         # Don't smooth; use calculated power
+        acc_rms = data['a_rms']
+        vel_rms = data['v_rms']
         pwr_rms = data['p_rms']
 
     try:
@@ -95,52 +107,61 @@ def learn_on_lift_id(lift_id, smooth, plot, verbose):
     except IndexError:
         print 'Couldnt find number of reps in header from lift_id {}.\n Cannot learn from this file'
         print 'Defaulting to threshold of 1'
-        return {'thresh': 1., 'error': None}
+        return {'a_thresh': 1., 'v_thresh': 1., 'p_thresh': 1., 'a_error': None, 'v_error': None, 'p_error': None}
 
-    #: For use in learning - number of signal points to exclude from calculation of standard deviation
-    offset = 0
-    scale = 0.
+    #: NOTE: This process considers each signal independently of the others.
+    #:        May want to revisit this and figure something out to adjust all three simultaneously..
 
-    pwr_imp, pwr_thresh, pwr_reps = method1(pwr_rms, calc_offset=offset, scale=scale)
+    thresh_dict = {}
+    for label, signal in [('acc', acc_rms), ('vel', vel_rms), ('pwr', pwr_rms)]:
 
-    err = pwr_reps - true_reps
-    err_tracking = [err]
-    cnt = 0
-    scales = [scale]
-    while np.abs(err) > 0:
-        #: Increasing scale increases the value of the threshold, thereby making the classifier LESS sensitive
-        #: Decreasing scale makes classifier MORE sensitive
-        if (err > 0) | (pwr_thresh == 0):
-            scale += 0.1
-        elif err < 0:
-            scale *= 0.9
-        else:
-            print 'Shouldnt reach this'
+        #: For use in learning - number of signal points to exclude from calculation of standard deviation
+        offset = 0
+        scale = 0.
 
-        pwr_imp, pwr_thresh, pwr_reps = method1(pwr_rms, calc_offset=offset, scale=scale)
+        signal_imp, signal_thresh, signal_reps = method1(signal, calc_offset=offset, scale=scale)
 
-        err = pwr_reps - true_reps
-        err_tracking.append(err)
-        scales.append(scale)
+        err = signal_reps - true_reps
+        err_tracking = [err]
+        cnt = 0
+        scales = [scale]
+        while np.abs(err) > 0:
+            #: Increasing scale increases the value of the threshold, thereby making the classifier LESS sensitive
+            #: Decreasing scale makes classifier MORE sensitive
+            if (err > 0) | (signal_thresh == 0):
+                scale += 0.1
+            elif err < 0:
+                scale *= 0.9
+            else:
+                print 'Shouldnt reach this'
+
+            signal_imp, signal_thresh, signal_reps = method1(signal, calc_offset=offset, scale=scale)
+
+            err = signal_reps - true_reps
+            err_tracking.append(err)
+            scales.append(scale)
+            if verbose:
+                print 'iteration {c}: error of {e} reps'.format(c=cnt, e=err)
+            cnt += 1
+
+            #: Force break if err can't get to 0
+            if cnt > 100:
+                print 'Couldnt converge. Breaking..'
+                break
+
+        # if plot:
+        #     #: Plot learning curves
+        #     plot_learning(err_tracking, scales)
+        #     plot_cutoffs(pwr_rms, pwr_imp, pwr_thresh)
+
+        #: Attempt at basic learning
         if verbose:
-            print 'iteration {c}: error of {e} reps'.format(c=cnt, e=err)
-        cnt += 1
+            print 'Final {l} cutoff: {t}'.format(l=label, t=signal_thresh)
 
-        #: Force break if err can't get to 0
-        if cnt > 100:
-            print 'Couldnt converge. Breaking..'
-            break
+        #: Store threshold result for each signal
+        thresh_dict.update({label[0]+'_thresh': signal_thresh, label[0]+'_error':err})
 
-    # if plot:
-    #     #: Plot learning curves
-    #     plot_learning(err_tracking, scales)
-    #     plot_cutoffs(pwr_rms, pwr_imp, pwr_thresh)
-
-    #: Attempt at basic learning
-    if verbose:
-        print 'Final power cutoff: {}'.format(pwr_thresh)
-
-    return {'thresh': pwr_thresh, 'error': err}
+    return thresh_dict
 
 
 # def try_classifier():
@@ -215,24 +236,40 @@ def learn_on_lift_id(lift_id, smooth, plot, verbose):
 
 
 # From an input power vector, detect any change in state and increment
-def calc_reps(pwr, n_reps, state, thresh=0.):
+def calc_reps(acc, vel, pwr, n_reps, state, a_thresh=1., v_thresh=1., p_thresh=1.):
     """
-    Simple - any crossing of the power threshold indicates a change in state. From this, determine where the
+    Simple - a crossing of ALL the thresholds (a, v, p) indicates a change in state. From this, determine where the
     user was (in the state-space), and adjust accordingly
 
+    :param acc: list-like acceleration vector. will be converted to pandas Series
+    :param vel: list-like velocity vector. will be converted to pandas Series
     :param pwr: list-like power vector. will be converted to pandas Series
     :param n_reps: number of reps user is at before processing this power vector
-    :param thresh: threshold to apply to power vector
     :param state: state of user coming into processing step
+    :param a_thresh: threshold to apply to acceleration vector
+    :param v_thresh: threshold to apply to velocity vector
+    :param p_thresh: threshold to apply to power vector
     :return:
     """
 
-    if not isinstance(pwr, pd.Series):
-        print 'converting power {} to pandas Series...'.format(type(pwr))
-        pwr = pd.Series(pwr)
+    diff_list = []
+    for label, signal in [('acceleration', acc), ('velocity', vel), ('power', pwr)]:
+        if not isinstance(signal, pd.Series):
+            print 'converting {l} {t} to pandas Series...'.format(l=label, t=type(pwr))
+            signal = pd.Series(signal)
 
-    # Want to keep track of timepoints too
-    diff_signal = ((pwr > thresh) * 1).diff()[1:].abs().diff()[1:]
+        if label == 'acceleration':
+            thresh = a_thresh
+        elif label == 'velocity':
+            thresh = v_thresh
+        else:
+            thresh = p_thresh
+
+        # Want to keep track of timepoints too
+        diff_list.append(((signal > thresh) * 1).diff()[1:].abs().diff()[1:])
+
+    # AND the signals together - will keep only the crossings where ALL signals cross thresholds
+    diff_signal = diff_list[0] * diff_list[1] * diff_list[2]
 
     # Drops two points off front, but forces signal to stay above/below threshold for at least
     # 1 point to be considered a change in state - better than considering any noise around threshold
