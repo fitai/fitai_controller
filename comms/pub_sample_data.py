@@ -81,6 +81,8 @@ def establish_cli_parser():
                       help='Delay between sending packets (in seconds).')
     parser.add_option('-c', '--collar', dest='collar_id', default='555',
                       help='Specify a collar to use, other than 555 (default)')
+    parser.add_option('-a', '--athlete', dest='athlete_id', default=None,
+                      help='Specify an athlete_id to pass in')
     return parser
 
 
@@ -98,6 +100,7 @@ def main(args):
     lift_id = cli_options.lift_id
     sleep_time = cli_options.sleep_time
     collar_id = cli_options.collar_id
+    athlete_id = cli_options.athlete_id
 
     if verbose:
         print 'Received args {}'.format(argv)
@@ -118,7 +121,13 @@ def main(args):
             print 'Publishing data from lift_id {}'.format(lift_id)
 
         header, dat = pull_data_by_lift(lift_id)
-        send_head = {"header": {"lift_id": "None", "lift_sampling_rate": header['lift_sampling_rate'], "collar_id": collar_id}}
+        send_head = {"header": {"lift_id": "None",
+                                "lift_sampling_rate": header['lift_sampling_rate'],
+                                "collar_id": collar_id}
+                     }
+
+        if athlete_id is not None:
+            send_head['header']['athlete_id'] = athlete_id
 
         #: Hard code for now. Figure out how to arrange dynamically later
         packet_length = 20.

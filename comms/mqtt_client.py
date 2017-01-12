@@ -97,6 +97,9 @@ def mqtt_on_message(client, userdata, msg):
         if collar['collar_id'] == 'None':
             collar['collar_id'] = head['collar_id']
 
+        if 'athlete_id' in head.keys():
+            collar['athlete_id'] = head['athlete_id']
+
         print 'collar contains: \n{}'.format(collar)
 
         # print 'reading content...'
