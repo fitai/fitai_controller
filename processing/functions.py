@@ -3,6 +3,10 @@ from scipy.integrate import cumtrapz
 from pandas import Series
 
 
+#: Calculate standard deviation of signal, starting from index calc_offset
+#: Multiply that standard deviation by a scalar value - this is what changes with the learning
+#: Take any values above threshold, subtract that from itself; creates an impulse signal
+#: Reps = # positive crossings, or # positive impulses
 def method1(signal, calc_offset=0, scale=3.):
     sigma = std(signal[calc_offset:])
     thresh = scale * sigma

@@ -1,6 +1,6 @@
 import json
 
-from numpy import random
+from numpy import random, ceil
 
 from sys import argv, path as syspath
 from os.path import dirname, abspath
@@ -9,6 +9,7 @@ from time import sleep
 
 import paho.mqtt.client as mqtt
 
+
 try:
     path = dirname(dirname(abspath(__file__)))
     print 'Adding {} to sys.path'.format(path)
@@ -16,6 +17,9 @@ try:
 except NameError:
     syspath.append('/Users/kyle/PycharmProjects/fitai_controller')
     print 'Working in Dev mode.'
+
+from databasing.database_pull import pull_data_by_lift
+from databasing.redis_controls import reset_collar_by_id
 
 
 # The callback for when the client successfully connects to the broker
@@ -71,6 +75,12 @@ def establish_cli_parser():
                       help='Increase console outputs (good for dev purposes)')
     parser.add_option('-n', '--num_packets', default=None,
                       help='Specify a number of packets. If not specified, sends 100/sleep_time (2000) packets.')
+    parser.add_option('-l', '--lift_id', dest='lift_id', default=None,
+                      help='Specific lift_id to use as data source.')
+    parser.add_option('-s', '--sleep', dest='sleep_time', default=None,
+                      help='Delay between sending packets (in seconds).')
+    parser.add_option('-c', '--collar', dest='collar_id', default='555',
+                      help='Specify a collar to use, other than 555 (default)')
     return parser
 
 
@@ -85,6 +95,9 @@ def main(args):
     mqtt_topic = cli_options.mqtt_topic
     verbose = cli_options.verbose
     N = cli_options.num_packets
+    lift_id = cli_options.lift_id
+    sleep_time = cli_options.sleep_time
+    collar_id = cli_options.collar_id
 
     if verbose:
         print 'Received args {}'.format(argv)
@@ -92,31 +105,61 @@ def main(args):
 
     mqtt_client = establish_client(host_ip, host_port, mqtt_topic)
 
-    mu = 2
-    var = 0.75
-    sleep_time = 0.05
-    if verbose:
-        print 'Publishing data with mean {} and variance {}'.format(mu, var)
+    #: Set collar_id to default values
+    reset_collar_by_id(collar_id)
 
-    if N is None:
-        N = int(100./sleep_time)
+    #: Delay between packets, in seconds
+    if sleep_time is None:
+        sleep_time = 0.1
+
+    #: If lift_id is supplied, pull the actual data and send it to MQTT client
+    if lift_id is not None:
+        if verbose:
+            print 'Publishing data from lift_id {}'.format(lift_id)
+
+        header, dat = pull_data_by_lift(lift_id)
+        send_head = {"header": {"lift_id": "None", "lift_sampling_rate": header['lift_sampling_rate'], "collar_id": collar_id}}
+
+        #: Hard code for now. Figure out how to arrange dynamically later
+        packet_length = 20.
+        #: Number of packets needed to be sent
+        N = int(ceil(dat.shape[0]/packet_length))
+
+        for i in range(N):
+            #: calculate indices to be used on this loop
+            idx = range((20*i),((i+1)*20))
+            data = {"content": {"a_x": list(dat.ix[idx]['a_x'].values)}}
+            packet = dict(dict(**send_head), **data)
+
+            publish(mqtt_client, mqtt_topic, message=json.dumps(packet))
+            sleep(sleep_time)
+
+    #: If not lift_id is supplied, send random data
     else:
-        N = int(N)
+        mu = 2
+        var = 0.75
+        if verbose:
+            print 'Publishing data with mean {} and variance {}'.format(mu, var)
 
-    for i in range(N):
-        print 'Loop {}'.format(i)
-        a_test = [random.normal(mu, var) for _ in range(30)]
-        if (i % (10./sleep_time) == 0) & (N > 1):
-            header = {"header": {"lift_id": '-1', "lift_sampling_rate": 50, "collar_id": "555"}}
-            data = {"content": {"a_x": [0, 0, 0, 0]}}
+        if N is None:
+            N = int(100./sleep_time)
         else:
-            header = {"header": {"lift_id": "None", "lift_sampling_rate": 50, "collar_id": "555"}}
-            data = {"content": {"a_x": a_test}}
+            N = int(N)
 
-        packet = dict(dict(**header), **data)
+        for i in range(N):
+            print 'Loop {}'.format(i)
+            a_test = [random.normal(mu, var) for _ in range(30)]
+            if (i % (10./sleep_time) == 0) & (N > 1):
+                header = {"header": {"lift_id": '-1', "lift_sampling_rate": 50, "collar_id": collar_id}}
+                data = {"content": {"a_x": [0, 0, 0, 0]}}
+            else:
+                header = {"header": {"lift_id": "None", "lift_sampling_rate": 50, "collar_id": collar_id}}
+                data = {"content": {"a_x": a_test}}
 
-        publish(mqtt_client, mqtt_topic, message=json.dumps(packet))
-        sleep(sleep_time)
+            packet = dict(dict(**header), **data)
+
+            publish(mqtt_client, mqtt_topic, message=json.dumps(packet))
+            sleep(sleep_time)
 
     kill_client(mqtt_client)
 

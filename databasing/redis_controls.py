@@ -3,18 +3,18 @@ from json import loads, dumps
 
 
 def get_default_collar():
-    return {"collar_id": 'None',
+    return {"collar_id": 'None',  # Needs to be "None"
             "athlete_id": 0,
-            "lift_id": 'None',
-            "lift_start": "None",
-            "lift_type": "deadlift",
+            "lift_id": 'None',  # Needs to be "None"
+            "lift_start": "None",  # Needs to be "None"
+            "lift_type": "Barbell Deadlift",
             "lift_weight": 100,
             "lift_weight_units": "lbs",
             "lift_num_reps": 10,
             "calc_reps": 0,
             "a_thresh": "None",
             "v_thresh": "None",
-            "p_thresh": "None",
+            "p_thresh": "None",  # Needs to be "None"
             "curr_state": 'rest',
             "max_t": 0.
             }
@@ -76,3 +76,11 @@ def update_collar_by_id(redis_client=None, dat=None, collar_id=None, verbose=Tru
 
     # update_collars(redis_client, collars, verbose)
     return response
+
+
+def reset_collar_by_id(collar_id, redis_client=None):
+    print 'resetting collar {} to default values...'.format(collar_id)
+    if redis_client is None:
+        redis_client = establish_redis_client()
+
+    update_collar_by_id(redis_client=redis_client, dat=get_default_collar(), collar_id=collar_id)
