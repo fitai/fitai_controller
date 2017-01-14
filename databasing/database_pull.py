@@ -3,10 +3,20 @@ from pandas import read_sql, DataFrame
 from sys import argv, path as syspath
 from os.path import dirname, abspath
 from optparse import OptionParser
-
 from sqlalchemy.exc import OperationalError
 
-from db_conn_strings import conn_string
+#: Don't need to add path if this is being called internally, so I
+#: placed it here
+try:
+    path = dirname(dirname(abspath(__file__)))
+    # print 'Adding {} to sys.path'.format(path)
+    syspath.append(path)
+except NameError:
+    syspath.append('/Users/kyle/PycharmProjects/fitai_controller')
+    print 'Working in Dev mode.'
+
+from processing.util import process_data
+from databasing.db_conn_strings import conn_string
 
 # TODO: move this in to the proper functions
 # Global for now. Should be fixed..
@@ -140,16 +150,4 @@ def main(args):
 #: NOTE: The only external (CLI) ping to this file will be from the PHP
 #: This means that all flags should lead to a JSON output, and not to anything python-readable
 if __name__ == '__main__':
-    #: Don't need to add path if this is being called internally, so I
-    #: placed it here
-    try:
-        path = dirname(dirname(abspath(__file__)))
-        # print 'Adding {} to sys.path'.format(path)
-        syspath.append(path)
-    except NameError:
-        syspath.append('/Users/kyle/PycharmProjects/fitai_controller')
-        print 'Working in Dev mode.'
-
-    from processing.util import process_data
-
     main(argv[1:])
