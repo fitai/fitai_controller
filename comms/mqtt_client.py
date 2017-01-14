@@ -100,6 +100,9 @@ def mqtt_on_message(client, userdata, msg):
         if 'athlete_id' in head.keys():
             collar['athlete_id'] = head['athlete_id']
 
+        #: Left over from old collar format. Shouldn't need this forever - remove key "threshold" if exists
+        collar.pop('threshold', None)
+
         print 'collar contains: \n{}'.format(collar)
 
         # print 'reading content...'
