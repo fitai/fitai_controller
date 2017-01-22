@@ -2,7 +2,8 @@ from pandas import DataFrame
 import json
 import sys
 
-from processing.functions import calc_vel2, calc_rms, calc_power
+from processing.functions import calc_integral, calc_rms, calc_power
+from processing.filters import filter_signal
 
 
 def read_header_mqtt(data):
@@ -94,16 +95,28 @@ def extract_sampling_rate(header):
 
 # Expects a dataframe with known fields
 # Timepoint, a_x, (a_y, a_z), lift_id
-def process_data( (collar_obj, content), verbose=False ):
+#: NOTE: default is to process accel & vel into RMS signals
+def process_data(collar_obj, content, RMS=True, verbose=False):
     if not isinstance(content, DataFrame):
         if verbose:
             print 'Content (type {}) is not a dataframe. Will try to convert...'.format(type(content))
         content = DataFrame(content)
 
-    if isinstance(collar_obj, DataFrame):
-        collar_obj = collar_obj.drop_duplicates().to_dict(orient='index')[0]
+    # if isinstance(collar_obj, DataFrame):
+    #     collar_obj = collar_obj.drop_duplicates().to_dict(orient='index')[0]
 
+    # Drop columns that contain more than 10% missing values
+    x = content.isnull().sum(axis=0) > 0.1*content.shape[0]
+    content = content.loc[:, x.loc[~x].index]
+
+    #: Establish column headers so that any piece of the function can access
     accel_headers = [x for x in content.columns if x in ['a_x', 'a_y', 'a_z']]
+    vel_headers = ['v_' + x.split('_')[-1] for x in accel_headers]
+    pwr_headers = ['p_' + x.split('_')[-1] for x in accel_headers]
+
+    # Try to impose high pass on acceleration - see if it will fix the velocity drift
+    for col in accel_headers:
+        content[col] = filter_signal(content[col], filter_type='highpass', f_low=0.1, fs=collar_obj['lift_sampling_rate'])
 
     fs = extract_sampling_rate(collar_obj)
     weight = extract_weight(collar_obj, verbose)
@@ -116,16 +129,42 @@ def process_data( (collar_obj, content), verbose=False ):
         if verbose:
             print 'Found single axis of data'
 
-        vel = calc_vel2(content[accel_headers[0]], fs=fs)
-        pwr = calc_power(content[accel_headers[0]], vel, weight)
+        accel = DataFrame(data={accel_headers[0]: content[accel_headers[0]]})
+        # accel.name = accel_headers[0]
 
-        return content[accel_headers[0]], vel, pwr
+        vel = DataFrame(data={vel_headers[0]: calc_integral(accel[accel_headers[0]], scale=1., fs=fs)})
+        # vel.name = vel_headers[0]
+
+        pwr = DataFrame(data={pwr_headers[0]: calc_power(accel[accel_headers[0]], vel[vel_headers[0]], weight)})
+        # pwr.name = pwr_headers[0]
+
     else:
         if verbose:
             print 'Found multiple axes of data. Will combine into RMS.'
-        a_rms = calc_rms(content, accel_headers)
-        v_rms = calc_vel2(a_rms, fs=fs)
 
-        p_rms = calc_power(a_rms, v_rms, weight)
+        # Can't calculate integral on rectified signal - will result in a monotonically increasing output
+        # Have to leave acceleration split into constituent dimensions, calculate velocity along each,
+        # then combine into RMS signal
+        vel = DataFrame(columns=vel_headers)
+        for i, header in enumerate(accel_headers):
+            vel[vel_headers[i]] = calc_integral(content[header], scale=1., fs=fs)
+
+        pwr = DataFrame(columns=pwr_headers)
+        for i in range(len(accel_headers)):
+            pwr[pwr_headers[i]] = calc_power(content[accel_headers[i]], vel[vel_headers[i]], weight)
+
+    if RMS:
+        a_rms = calc_rms(content, accel_headers)
+        a_rms.name = 'a_rms'
+
+        v_rms = calc_rms(vel, vel_headers)
+        v_rms.name = 'v_rms'
+
+        # p_rms = calc_power(a_rms, v_rms, weight)
+        p_rms = calc_rms(pwr, pwr_headers)
+        p_rms.name = 'p_rms'
 
         return a_rms, v_rms, p_rms
+
+    else:
+        return content[accel_headers], vel, pwr

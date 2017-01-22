@@ -5,7 +5,7 @@ from os.path import dirname, abspath
 from optparse import OptionParser
 from json import loads
 from datetime import datetime as dt
-from pandas import Series, DataFrame
+from pandas import DataFrame
 
 try:
     path = dirname(dirname(abspath(__file__)))
@@ -21,14 +21,19 @@ from processing.util import read_header_mqtt, read_content_mqtt, process_data
 from comms.ws_publisher import ws_pub
 from processing.ml_test import find_threshold, calc_reps
 
-# TODO: Move this in to relevant functions
-thresh_dict = find_threshold(smooth=True, plot=False, verbose=False)
+# TODO: Turn this entire file into a class. Will allow us to use objects like the redis_client
+# as class attributes instead of forcing us to keep them global
+#: Alpha = learning rate - make smaller to learn slower and take more iterations, make larger to learn faster and
+#: risk non-convergence
+thresh_dict = find_threshold(alpha=0.05, smooth=True, plot=False, verbose=False)
 collar_id = 0
 
 # NOTE TO SELF: NEED A BETTER WAY TO MAKE THIS GLOBAL
 # should probably turn the entire script into an object....
 # Attempt to connect to redis server
 redis_client = establish_redis_client(hostname='localhost', verbose=True)
+# redis_client = establish_redis_client(hostname='52.204.229.101', verbose=True)  # in case conn to server is needed
+
 # If connection fails, MQTT client will not be able to update collar object, and will be useless. Kill and try again
 if redis_client is None:
     print 'Couldnt connect to redis. Killing MQTT client.'
@@ -55,15 +60,16 @@ def mqtt_on_message(client, userdata, msg):
     try:
         data = loads(msg.payload)
 
-        print 'reading header...'
+        # print 'reading header...'
         head = read_header_mqtt(data)
-        print 'header contains: \n{}'.format(head)
+        # print 'header contains: \n{}'.format(head)
 
         # TODO: If collar returns without all necessary fields, what should happen??
         collar = retrieve_collar_by_id(redis_client, head['collar_id'])
         # Quick check that at least one expected field is in collar object
-        if 'threshold' not in collar.keys():
-            print 'Redis collar object {} appears broken. Will replace with default and update as needed.'.format(collar['collar_id'])
+        if 'p_thresh' not in collar.keys():
+            print 'Redis collar object {} appears broken. ' \
+                  'Will replace with default and update as needed.'.format(collar['collar_id'])
             collar_tmp = collar.copy()
             collar = get_default_collar()
             collar.update(collar_tmp)
@@ -73,20 +79,34 @@ def mqtt_on_message(client, userdata, msg):
 
         # TODO: Don't like doing all these checks. Think of a more efficient way...
         # If collar is newly generated, threshold will be 'None'
-        if collar['threshold'] == 'None':
+        if any([(collar[col] == 'None') for col in ['a_thresh', 'v_thresh', 'p_thresh']]):
+            print 'Missing at least one signal threshold. Resetting all...'
             try:
                 # try to extract lift_type
-                collar['threshold'] = thresh_dict[collar['lift_type']]
+                lift_thresh = thresh_dict[collar['lift_type']]
+                collar['a_thresh'] = lift_thresh['a_thresh']
+                collar['v_thresh'] = lift_thresh['v_thresh']
+                collar['p_thresh'] = lift_thresh['p_thresh']
             except KeyError:
-                print 'Couldnt find threshold for lift_type {}. Defaulting to 1.'.format(collar['lift_type'])
-                collar['threshold'] = None
+                print 'Couldnt find any thresholds for lift_type {}. Defaulting to 1.'.format(collar['lift_type'])
+                collar['a_thresh'], collar['v_thresh'], collar['p_thresh'] = 1., 1., 1.
 
         if collar['lift_start'] == 'None':
             collar['lift_start'] = dt.now()
 
+        #: Should only happen with default collar initialization
+        if collar['collar_id'] == 'None':
+            collar['collar_id'] = head['collar_id']
+
+        if 'athlete_id' in head.keys():
+            collar['athlete_id'] = head['athlete_id']
+
+        #: Left over from old collar format. Shouldn't need this forever - remove key "threshold" if exists
+        collar.pop('threshold', None)
+
         print 'collar contains: \n{}'.format(collar)
 
-        print 'reading content...'
+        # print 'reading content...'
         accel = read_content_mqtt(data, collar)
 
         # This will ONLY happen if reset_reps.py is triggered, which means the only action that needs to be taken
@@ -96,15 +116,29 @@ def mqtt_on_message(client, userdata, msg):
             collar['calc_reps'] = 0
 
         # Before taking the time to push to db, process the acceleration and push to PHP websocket
-        _, v, p = process_data(collar, accel)
-        reps, curr_state = calc_reps(p, collar['calc_reps'], collar['curr_state'], collar['threshold'])
+        print 'p_thresh: {}'.format(collar['p_thresh'])
+        a, v, p = process_data(collar, accel)
+        reps, curr_state, crossings = calc_reps(
+            a, v, p, collar['calc_reps'], collar['curr_state'],
+            collar['a_thresh'], collar['v_thresh'], collar['p_thresh'])
+
+        # Assign timepoints to crossings, if there are any
+        if crossings is not None:
+            if crossings.shape[0] > 0:
+                crossings['timepoint'] = (collar['max_t'] + crossings.index*(1./collar['lift_sampling_rate'])).values
+                crossings['lift_id'] = collar['lift_id']
+        # except AttributeError, e:
+        #     print 'Crossings does not exist'
+        #     print e
+
         # reps = 0
         # update state of user via 'collar' dict
         collar['calc_reps'] = reps
         collar['curr_state'] = curr_state
+        collar['max_t'] += len(accel) * 1./collar['lift_sampling_rate']  # track the last timepoint
 
         if 'active' not in collar.keys():
-            print 'collar {} has no Active field set. Will create and set to False'.format(collar['collar_id'])
+            # print 'collar {} has no Active field set. Will create and set to False'.format(collar['collar_id'])
             collar['active'] = False
 
         ws_pub(collar, v, p, reps)
@@ -112,9 +146,11 @@ def mqtt_on_message(client, userdata, msg):
         _ = update_collar_by_id(redis_client, collar, collar['collar_id'], verbose=True)
 
         if collar['active']:
-            header = DataFrame(data=collar, index=[0]).drop(['active', 'calc_reps', 'collar_id', 'curr_state', 'threshold'], axis=1)
-            print 'header has: \n{}'.format(header)
-            push_to_db(header, accel)
+            header = DataFrame(data=collar, index=[0]).drop(
+                ['active', 'calc_reps', 'collar_id', 'curr_state',
+                 'a_thresh', 'v_thresh', 'p_thresh', 'max_t'], axis=1)
+            # print 'header has: \n{}'.format(header)
+            push_to_db(header, accel, crossings)
         else:
             print 'Received and processed data for collar {}, but collar is not active...'.format(collar['collar_id'])
 
