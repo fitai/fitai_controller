@@ -62,8 +62,8 @@ def push_to_db(header, content, crossings):
         else:
             print 'Done'
 
-    try:
-        if (crossings is not None) & (crossings.shape[0] > 0):
+    if crossings is not None:
+        if crossings.shape[0] > 0:
             print 'Pushing crossings to database...'
             try:
                 crossings[['lift_id', 'timepoint', 'event']].to_sql(
@@ -80,5 +80,3 @@ def push_to_db(header, content, crossings):
                 print 'Moving forward without pushing crossings into lift_event...'
             else:
                 print 'Done'
-    except AttributeError:
-        print 'cant push crossings to db.'
