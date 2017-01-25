@@ -254,8 +254,6 @@ class LiftPlot(object):
         # plot.add_layout(LinearAxis(**axis_theme), 'left')
         # plot.add_layout(LinearAxis(**axis_theme), 'below')
 
-        # Note: ColumnDataSource.data[key[0]] returns a list. Want the value in that list (there should be only 1)
-
         rends = list()
 
         for y_val in ['a_x', 'v_x', 'p_x']:

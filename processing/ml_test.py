@@ -7,8 +7,6 @@ import pandas as pd
 from pandas import DataFrame
 
 from processing.functions import method1, calc_integral
-from FitAI.load_data import load_file
-from FitAI.predictors import make_predictions
 from processing.filters import simple_highpass
 from processing.util import process_data, extract_weight, extract_sampling_rate
 from databasing.database_pull import pull_data_by_lift, pull_lift_ids
