@@ -78,7 +78,6 @@ def pull_lift_ids(user=None):
         FROM athlete_lift AS al
         INNER JOIN athlete_info AS ai
             ON al.athlete_id = ai.athlete_id
-        ORDER BY lift_ids ASC
         '''
     if user is not None:
         query += 'WHERE ai.athlete_name = {}'.format(user)
