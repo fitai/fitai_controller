@@ -37,14 +37,24 @@ CREATE TABLE athlete_lift (
     lift_type           TEXT,
     lift_weight         INT,
     lift_weight_units   VARCHAR(5),
-    lift_num_reps       INT,
-    lift_misc           TEXT
+    init_num_reps       INT,
+    final_num_reps      INT,
+    user_comment        TEXT
 );
 -- INSERT INTO athlete_lift (athlete_id, lift_id, lift_sampling_rate, lift_start, lift_type, lift_weight, lift_weight_units, lift_num_reps)
 --     VALUES (0, 0, 50, CURRENT_TIMESTAMP, 'OHP', 50, 'lbs', 10);
 
 
 -- Primary storage for incoming acceleration values
+CREATE TABLE lift_data_temp (
+    lift_id     BIGINT,
+    a_x         DOUBLE PRECISION,
+    a_y         DOUBLE PRECISION,
+    a_z         DOUBLE PRECISION,
+    timepoint   DOUBLE PRECISION,
+);
+
+-- Long-term storage for all "good" data
 CREATE TABLE lift_data (
     lift_id     BIGINT,
     a_x         DOUBLE PRECISION,
