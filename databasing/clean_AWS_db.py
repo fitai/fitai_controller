@@ -1,10 +1,10 @@
 from sqlalchemy import create_engine
 import pandas as pd
 
-from databasing.db_conn_strings import aws_conn_string
+from databasing.db_conn_strings import conn_string
 
 
-conn = create_engine(aws_conn_string)
+conn = create_engine(conn_string)
 
 #: Transfer over any lift_data not currently in the backup
 query = '''

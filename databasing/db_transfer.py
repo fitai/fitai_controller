@@ -1,10 +1,9 @@
 from sqlalchemy import create_engine
-import pandas as pd
 
-from databasing.db_conn_strings import aws_conn_string
+from databasing.db_conn_strings import conn_string
 
 
-conn = create_engine(aws_conn_string)
+conn = create_engine(conn_string)
 
 
 # #: Trying to make this a utility function that can transfer any data between any two tables..

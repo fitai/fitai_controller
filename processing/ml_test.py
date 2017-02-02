@@ -99,7 +99,7 @@ def learn_on_lift_id(lift_id, smooth, alpha, plot, verbose):
 
     try:
         # true_reps = int([x for x in filename.split('_') if 'rep' in x][0].split('rep')[0])
-        true_reps = header['lift_num_reps']
+        true_reps = header['final_num_reps']
     except IndexError:
         print 'Couldnt find number of reps in header from lift_id {}.\n Cannot learn from this file'
         print 'Defaulting to threshold of 1'
@@ -128,10 +128,11 @@ def learn_on_lift_id(lift_id, smooth, alpha, plot, verbose):
         while np.abs(err) > 0:
             #: Increasing scale increases the value of the threshold, thereby making the classifier LESS sensitive
             #: Decreasing scale makes classifier MORE sensitive
-            if (err > 0) | (signal_thresh == 0):
+            if (err > 0) | (signal_thresh <= 0):
                 scale += alpha
             elif err < 0:
-                scale *= (1.-alpha)
+                # scale *= (1.-alpha)
+                scale -= alpha
             else:
                 print 'Shouldnt reach this'
 
@@ -145,9 +146,9 @@ def learn_on_lift_id(lift_id, smooth, alpha, plot, verbose):
             cnt += 1
 
             #: Force break if err can't get to 0
-            if cnt > int(100./alpha):
-                print 'lift_id {l} ({t}): Couldnt converge after {n} iterations. ' \
-                      'Breaking..'.format(t=header['lift_type'], l=lift_id, n=cnt)
+            if cnt > int(300./alpha):
+                print 'lift_id {l} ({t}): Couldnt converge to 0 error after {n} iterations. ' \
+                      '(error: {e} reps) Breaking..'.format(t=header['lift_type'], l=lift_id, n=cnt, e=err)
                 break
 
         #: Store are pieces necessary to build plots for EACH signal
