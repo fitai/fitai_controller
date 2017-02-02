@@ -136,7 +136,11 @@ def main(args):
             # DO iterate lift_id in this case
             update_lift_id = True
             for key in dat.keys():
-                collar[key] = dat[key]
+                #: Temporary workaround until patrick renames this field
+                if key == 'lift_num_reps':
+                    collar['init_num_reps'] = dat[key]
+                else:
+                    collar[key] = dat[key]
             collar['lift_id'] = next_lift_id
         else:
             print 'sent update explicitly for lift_id {}, which is not currently handled.'.format(dat['lift_id'])
