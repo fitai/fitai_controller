@@ -129,7 +129,11 @@ def main(args):
             # In this case, just update collar object with new values and push to redis. DO NOT iterate lift_id
             update_lift_id = False
             for key in dat.keys():
-                collar[key] = dat[key]
+                #: Temporary workaround until patrick renames this field
+                if key == 'lift_num_reps':
+                    collar['init_num_reps'] = dat[key]
+                else:
+                    collar[key] = dat[key]
             collar['athlete_id'] = 'None'
         elif dat['lift_id'] == 'None':
             # lift_id = 'None' is sent to trigger new workout, which means lift_id needs to be updated.
@@ -141,6 +145,7 @@ def main(args):
                     collar['init_num_reps'] = dat[key]
                 else:
                     collar[key] = dat[key]
+            collar['active'] = True
             collar['lift_id'] = next_lift_id
         else:
             print 'sent update explicitly for lift_id {}, which is not currently handled.'.format(dat['lift_id'])
