@@ -149,6 +149,10 @@ def mqtt_on_message(client, userdata, msg):
             header = DataFrame(data=collar, index=[0]).drop(
                 ['active', 'calc_reps', 'collar_id', 'curr_state',
                  'a_thresh', 'v_thresh', 'p_thresh', 'max_t'], axis=1)
+            # Temporary to avoid pushing old field into database
+            if 'lift_num_reps' in header.columns:
+                header = header.drop('lift_num_reps', axis=1)
+
             # print 'header has: \n{}'.format(header)
             push_to_db(header, accel, crossings)
         else:
