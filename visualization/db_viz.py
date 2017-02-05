@@ -23,7 +23,7 @@ from bokeh.plotting import curdoc
 
 from databasing.db_conn_strings import conn_string
 from databasing.database_pull import pull_data_by_lift
-from processing.util import process_data
+# from processing.util import process_data
 
 
 storage = dict()
@@ -51,7 +51,12 @@ class LiftPlot(object):
         # all_dims = ['x', 'y', 'z', 'rms']
         all_dims = ['x', 'rms']
         all_cols = ['a', 'v', 'p']
-        all_opts = [x+'_'+y for (x, y) in zip(tile(all_cols, len(all_dims)), tile(all_dims, len(all_cols)))]
+        all_filts = ['hp', '']
+        all_opts = [x+'_'+y+'_'+z for (x, y, z) in zip(
+                        tile(all_cols, len(all_dims)+len(all_filts)),
+                        tile(all_dims, len(all_cols)+len(all_filts)),
+                        tile(all_filts, len(all_cols)+len(all_dims))
+                    )]
         self.all_signals = all_opts
         self.active_signals = list()  # to be filled in each time update_datasource() is called
 
@@ -256,7 +261,7 @@ class LiftPlot(object):
 
         rends = list()
 
-        for y_val in ['a_x', 'v_x', 'p_x']:
+        for y_val in ['a_x', 'v_x', 'p_x', 'a_x_hp', 'v_x_hp', 'p_x_hp']:
 
             if 'a' in y_val:
                 c = 'black'
@@ -320,32 +325,44 @@ class LiftPlot(object):
             else:
                 print 'Key ({}, {}) NOT found in storage dict'.format(int(self.lift_select.value), 'data')
                 header, data = pull_data_by_lift(int(self.lift_select.value))
-                a_rms, v_rms, p_rms = process_data(header, data, RMS=True)
-                accel, vel, pwr = process_data(header, data, RMS=False)
 
-                for col in accel.columns:
-                    raw_col = str(col) + '_raw'
-                    accel[raw_col] = accel[col]
-                    accel[col] = self.max_min_scale(accel[col])
+                for hp, lab in [(True, '_hp'), (False, '')]:
+                    a_rms, v_rms, p_rms = process_data(header, data, RMS=True, highpass=hp)
+                    accel, vel, pwr = process_data(header, data, RMS=False, highpass=hp)
 
-                for col in vel.columns:
-                    raw_col = str(col) + '_raw'
-                    vel[raw_col] = vel[col]
-                    vel[col] = self.max_min_scale(vel[col])
+                    #: If first loop, instantiate empty dataframe dat with proper index
+                    if hp:
+                        dat = DataFrame(index=a_rms.index)
 
-                for col in pwr.columns:
-                    raw_col = str(col) + '_raw'
-                    pwr[raw_col] = pwr[col]
-                    pwr[col] = self.max_min_scale(pwr[col])
+                    for col in accel.columns:
+                        raw_col = str(col) + '_raw' + lab
+                        accel[raw_col] = accel[col]
+                        accel[col] = self.max_min_scale(accel[col])
 
-                dat = DataFrame(data={'a_rms': self.max_min_scale(a_rms),
-                                      'a_rms_raw': a_rms,
-                                      'v_rms': self.max_min_scale(v_rms),
-                                      'v_rms_raw': v_rms,
-                                      'p_rms': self.max_min_scale(p_rms),
-                                      'p_rms_raw': p_rms,
-                                      'timepoint': data['timepoint']},
-                                index=a_rms.index).join(accel).join(vel).join(pwr)
+                    for col in vel.columns:
+                        raw_col = str(col) + '_raw' + lab
+                        vel[raw_col] = vel[col]
+                        vel[col] = self.max_min_scale(vel[col])
+
+                    for col in pwr.columns:
+                        raw_col = str(col) + '_raw' + lab
+                        pwr[raw_col] = pwr[col]
+                        pwr[col] = self.max_min_scale(pwr[col])
+
+                    #: On first loop, dat should be empty dataframe with overlapping indices,
+                    #: so these joins should be fine. On second loop, dat will already have half the data.
+                    dat = dat.join(DataFrame(
+                        data={
+                            'a_rms'+lab: self.max_min_scale(a_rms),
+                            'a_rms_raw'+lab: a_rms,
+                            'v_rms'+lab: self.max_min_scale(v_rms),
+                            'v_rms_raw'+lab: v_rms,
+                            'p_rms'+lab: self.max_min_scale(p_rms),
+                            'p_rms_raw'+lab: p_rms,
+                            'timepoint': data['timepoint']
+                            },
+                        index=a_rms.index).join(accel).join(vel).join(pwr))
+
                 storage[(int(self.lift_select.value), 'data')] = dat
                 storage[(int(self.lift_select.value), 'header')] = header
                 return header.copy(), dat.copy()
@@ -356,4 +373,4 @@ class LiftPlot(object):
         return x/(max(x) - min(x))
 
 app = LiftPlot(conn_string, verbose=True)
-curdoc().add_root(app.layout)
+# curdoc().add_root(app.layout)
