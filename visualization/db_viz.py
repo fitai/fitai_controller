@@ -1,3 +1,4 @@
+from itertools import product
 from sqlalchemy import create_engine
 from pandas import read_sql, DataFrame, Series
 from numpy import where as np_where, tile, repeat
@@ -23,7 +24,7 @@ from bokeh.plotting import curdoc
 
 from databasing.db_conn_strings import conn_string
 from databasing.database_pull import pull_data_by_lift
-# from processing.util import process_data
+from processing.util import process_data
 
 
 storage = dict()
@@ -49,14 +50,13 @@ class LiftPlot(object):
         #: Start by defaulting all lines to alpha = 0
         # TODO Confirm that app works when all_dims actually contains all possible dimensions
         # all_dims = ['x', 'y', 'z', 'rms']
-        all_dims = ['x', 'rms']
+        all_dims = ['_x', '_rms']
         all_cols = ['a', 'v', 'p']
-        all_filts = ['hp', '']
-        all_opts = [x+'_'+y+'_'+z for (x, y, z) in zip(
-                        tile(all_cols, len(all_dims)+len(all_filts)),
-                        tile(all_dims, len(all_cols)+len(all_filts)),
-                        tile(all_filts, len(all_cols)+len(all_dims))
-                    )]
+        all_filts = ['_hp', '']
+
+        all_suffix = [x+y for (x, y) in product(all_dims, all_filts)]
+        all_opts = [x+y for (x, y) in product(all_cols, all_suffix)]
+
         self.all_signals = all_opts
         self.active_signals = list()  # to be filled in each time update_datasource() is called
 
@@ -145,8 +145,12 @@ class LiftPlot(object):
             print 'setting renderer {i} to {tf}'.format(
                 i=self.signal_select.labels[i], tf=i in self.signal_select.active)
 
+            #: If renderer i is in self.signal_select.active (list[0, 1, 2]), then set visible to true
+            #: Else visible is false and signal is plotted but not shown
             self.rms_plot.renderers[i].visible = i in self.signal_select.active
+            print [rend.name for rend in self.raw_plot.renderers]
             self.raw_plot.renderers[i].visible = i in self.signal_select.active
+            self.raw_plot.renderers[i+3].visible = i in self.signal_select.active
 
     #: Controls behavior of dropdown Select tool
     def _on_lift_change(self, attr, old, new):
@@ -263,6 +267,7 @@ class LiftPlot(object):
 
         for y_val in ['a_x', 'v_x', 'p_x', 'a_x_hp', 'v_x_hp', 'p_x_hp']:
 
+            #: Split out signal type (a/v/p) by color
             if 'a' in y_val:
                 c = 'black'
             elif 'v' in y_val:
@@ -270,9 +275,16 @@ class LiftPlot(object):
             elif 'p' in y_val:
                 c = 'purple'
             else:
+                #: Uncaught line type here - make red so we can see it easily
                 c = 'red'
 
-            l = Line(x='x_axis', y=y_val, name=y_val, line_color=c, line_alpha=1)
+            #: Differentiate between high-passed signal and non-HP signal
+            if 'hp' in y_val:
+                style = 'dashed'
+            else:
+                style = 'solid'
+
+            l = Line(x='x_axis', y=y_val, name=y_val, line_color=c, line_dash=style, line_alpha=1)
             rends.append(GlyphRenderer(data_source=source, glyph=l, name=y_val))
 
         zero_line = Line(x='x_axis', y='zero', name='zero', line_color='red', line_dash='dashed', line_alpha=1)
@@ -337,17 +349,25 @@ class LiftPlot(object):
                     for col in accel.columns:
                         raw_col = str(col) + '_raw' + lab
                         accel[raw_col] = accel[col]
-                        accel[col] = self.max_min_scale(accel[col])
+                        accel[col+lab] = self.max_min_scale(accel[col])
+                        #: If highpass, a_x will be present (cause the column won't be overwritten; a new column is
+                        #: created), but we don't want to keep it.
+                        if hp:
+                            accel = accel.drop(col, axis=1)
 
                     for col in vel.columns:
                         raw_col = str(col) + '_raw' + lab
                         vel[raw_col] = vel[col]
-                        vel[col] = self.max_min_scale(vel[col])
+                        vel[col+lab] = self.max_min_scale(vel[col])
+                        if hp:
+                            vel = vel.drop(col, axis=1)
 
                     for col in pwr.columns:
                         raw_col = str(col) + '_raw' + lab
                         pwr[raw_col] = pwr[col]
-                        pwr[col] = self.max_min_scale(pwr[col])
+                        pwr[col+lab] = self.max_min_scale(pwr[col])
+                        if hp:
+                            pwr = pwr.drop(col, axis=1)
 
                     #: On first loop, dat should be empty dataframe with overlapping indices,
                     #: so these joins should be fine. On second loop, dat will already have half the data.
@@ -358,10 +378,15 @@ class LiftPlot(object):
                             'v_rms'+lab: self.max_min_scale(v_rms),
                             'v_rms_raw'+lab: v_rms,
                             'p_rms'+lab: self.max_min_scale(p_rms),
-                            'p_rms_raw'+lab: p_rms,
-                            'timepoint': data['timepoint']
+                            'p_rms_raw'+lab: p_rms
                             },
                         index=a_rms.index).join(accel).join(vel).join(pwr))
+
+                    #: Only want timepoint series once, so save until the end
+                    if not hp:
+                        dat = dat.join(data['timepoint'])
+
+                # print dat.head()
 
                 storage[(int(self.lift_select.value), 'data')] = dat
                 storage[(int(self.lift_select.value), 'header')] = header
@@ -373,4 +398,4 @@ class LiftPlot(object):
         return x/(max(x) - min(x))
 
 app = LiftPlot(conn_string, verbose=True)
-# curdoc().add_root(app.layout)
+curdoc().add_root(app.layout)
