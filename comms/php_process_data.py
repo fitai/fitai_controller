@@ -40,7 +40,7 @@ def main(argv):
         response = raw_input('Assume default values? (fs = 20Hz, weight = 22.5 kg) - [Y]/n')
         if (response is None) or (response in ('y', 'Y')):
             print 'Moving forward with default values.'
-            header = {'lift_sampling_rate': 20, 'lift_weight': 22.5, 'lift_weight_units': 'kg'}
+            header = {'sampling_rate': 20, 'lift_weight': 22.5, 'weight_units': 'kg'}
         elif response in ('N', 'n'):
             print 'Exiting..'
             sys.exit(20)

@@ -26,7 +26,7 @@ def read_content_mqtt(data, collar_obj):
 
     try:
         # Scale timepoint values
-        accel.timepoint = accel.timepoint.astype(float) / float(collar_obj['lift_sampling_rate'])
+        accel.timepoint = accel.timepoint.astype(float) / float(collar_obj['sampling_rate'])
     except KeyError:
         print 'Couldnt extract sample rate from header. Defaulting to 20 Hz'
         accel.timepoint = accel.timepoint.astype(float) / 20.
@@ -73,7 +73,7 @@ def extract_weight(header, verbose):
             weight = int(header['lift_weight'])
         else:
             if verbose:
-                print 'Unexpected weight unit type {un}. Will leave weight as {w}'.format(un=header['lift_weight_units'], w=header['lift_weight'])
+                print 'Unexpected weight unit type {un}. Will leave weight as {w}'.format(un=header['weight_units'], w=header['lift_weight'])
             weight = int(header['lift_weight'])
     except KeyError, e:
         print 'Error finding weight - {}. Will default to 22.5kg'.format(e)
@@ -85,7 +85,7 @@ def extract_weight(header, verbose):
 def extract_sampling_rate(header):
     # Read in header data
     try:
-        fs = float(header['lift_sampling_rate'])
+        fs = float(header['sampling_rate'])
     except KeyError, e:
         print 'sampling_rate KeyError {}. Assuming 20Hz'.format(e)
         fs = 20.
@@ -117,7 +117,7 @@ def process_data(collar_obj, content, RMS=True, highpass=True, verbose=False):
     # Try to impose high pass on acceleration - see if it will fix the velocity drift
     if highpass:
         for col in accel_headers:
-            content[col] = filter_signal(content[col], filter_type='highpass', f_low=0.1, fs=collar_obj['lift_sampling_rate'])
+            content[col] = filter_signal(content[col], filter_type='highpass', f_low=0.1, fs=collar_obj['sampling_rate'])
 
     fs = extract_sampling_rate(collar_obj)
     weight = extract_weight(collar_obj, verbose)
