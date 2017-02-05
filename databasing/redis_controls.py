@@ -2,6 +2,8 @@ from redis import Redis
 from json import loads, dumps
 
 
+#: Instantiate a default collar object
+#: All fields that trigger logic are commented. DO NOT CHANGE
 def get_default_collar():
     return {"collar_id": 'None',  # Needs to be "None"
             "athlete_id": 0,
@@ -9,7 +11,7 @@ def get_default_collar():
             "lift_start": "None",  # Needs to be "None"
             "lift_type": "Barbell Deadlift",
             "lift_weight": 100,
-            "lift_weight_units": "lbs",
+            "weight_units": "lbs",
             "init_num_reps": 0,
             "final_num_reps": 0,
             "calc_reps": 0,
@@ -17,10 +19,12 @@ def get_default_collar():
             "v_thresh": "None",
             "p_thresh": "None",  # Needs to be "None"
             "curr_state": 'rest',
-            "max_t": 0.
+            "max_t": 0.,
+            "sampling_rate": 20.
             }
 
 
+#: Opens connection to redis server on whichever host is passed
 def establish_redis_client(hostname='localhost', port=6379, password=None, verbose=False):
     r = Redis(host=hostname, port=port, password=password)
     if r is not None:
@@ -33,6 +37,7 @@ def establish_redis_client(hostname='localhost', port=6379, password=None, verbo
         return None
 
 
+#: Queries redis client for collar_id passed in
 def retrieve_collar_by_id(redis_client=None, collar_id=None, verbose=True):
 
     if redis_client is None:
@@ -56,6 +61,7 @@ def retrieve_collar_by_id(redis_client=None, collar_id=None, verbose=True):
     return collar_obj
 
 
+#: Sets redis object that matches collar_id to a JSON string version of 'dat' - the dataframe passed in
 def update_collar_by_id(redis_client=None, dat=None, collar_id=None, verbose=True):
 
     if redis_client is None:
@@ -79,6 +85,8 @@ def update_collar_by_id(redis_client=None, dat=None, collar_id=None, verbose=Tru
     return response
 
 
+#: Wipes redis object at collar_id and replaces with the default collar object
+#: Should only use this if things to horribly wrong
 def reset_collar_by_id(collar_id, redis_client=None):
     print 'resetting collar {} to default values...'.format(collar_id)
     if redis_client is None:
