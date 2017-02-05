@@ -75,7 +75,7 @@ def mqtt_on_message(client, userdata, msg):
             collar.update(collar_tmp)
 
         # The only piece of information from the device not provided by the frontend:
-        collar['lift_sampling_rate'] = head['lift_sampling_rate']
+        collar['sampling_rate'] = head['sampling_rate']
 
         # TODO: Don't like doing all these checks. Think of a more efficient way...
         # If collar is newly generated, threshold will be 'None'
@@ -135,7 +135,7 @@ def mqtt_on_message(client, userdata, msg):
         # update state of user via 'collar' dict
         collar['calc_reps'] = reps
         collar['curr_state'] = curr_state
-        collar['max_t'] += len(accel) * 1./collar['lift_sampling_rate']  # track the last timepoint
+        collar['max_t'] += len(accel) * 1./collar['sampling_rate']  # track the last timepoint
 
         if 'active' not in collar.keys():
             # print 'collar {} has no Active field set. Will create and set to False'.format(collar['collar_id'])

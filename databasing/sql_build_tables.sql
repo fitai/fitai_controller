@@ -32,13 +32,14 @@ CREATE TABLE athlete_info (
 CREATE TABLE athlete_lift (
     athlete_id          BIGINT,
     lift_id             BIGINT PRIMARY KEY,
-    lift_sampling_rate  INT,
+    sampling_rate  INT,
     lift_start          TIMESTAMP,
     lift_type           TEXT,
     lift_weight         INT,
-    lift_weight_units   VARCHAR(5),
+    weight_units   VARCHAR(5),
     init_num_reps       INT,
     final_num_reps      INT,
+    calc_reps           INT,
     user_comment        TEXT
 );
 -- INSERT INTO athlete_lift (athlete_id, lift_id, lift_sampling_rate, lift_start, lift_type, lift_weight, lift_weight_units, lift_num_reps)
