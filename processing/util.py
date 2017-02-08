@@ -65,11 +65,11 @@ def parse_data(json_string):
 
 def extract_weight(header, verbose):
     try:
-        if header['lift_weight_units'] == 'lbs':
+        if header['weight_units'] == 'lbs':
             weight = int(header['lift_weight']) * (1./2.5)
             if verbose:
                 print 'Converted weight from lbs ({w1}) to kg ({w2})'.format(w1=header['lift_weight'], w2=weight)
-        elif header['lift_weight_units'] == 'kg':
+        elif header['weight_units'] == 'kg':
             weight = int(header['lift_weight'])
         else:
             if verbose:
@@ -96,7 +96,7 @@ def extract_sampling_rate(header):
 # Expects a dataframe with known fields
 # Timepoint, a_x, (a_y, a_z), lift_id
 #: NOTE: default is to process accel & vel into RMS signals
-def process_data(collar_obj, content, RMS=True, verbose=False):
+def process_data(collar_obj, content, RMS=True, highpass=True, verbose=False):
     if not isinstance(content, DataFrame):
         if verbose:
             print 'Content (type {}) is not a dataframe. Will try to convert...'.format(type(content))
@@ -115,8 +115,9 @@ def process_data(collar_obj, content, RMS=True, verbose=False):
     pwr_headers = ['p_' + x.split('_')[-1] for x in accel_headers]
 
     # Try to impose high pass on acceleration - see if it will fix the velocity drift
-    for col in accel_headers:
-        content[col] = filter_signal(content[col], filter_type='highpass', f_low=0.1, fs=collar_obj['sampling_rate'])
+    if highpass:
+        for col in accel_headers:
+            content[col] = filter_signal(content[col], filter_type='highpass', f_low=0.1, fs=collar_obj['sampling_rate'])
 
     fs = extract_sampling_rate(collar_obj)
     weight = extract_weight(collar_obj, verbose)

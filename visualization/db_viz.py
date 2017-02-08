@@ -1,6 +1,6 @@
+from itertools import product
 from sqlalchemy import create_engine
 from pandas import read_sql, DataFrame, Series
-from numpy import where as np_where, tile, repeat
 from os.path import dirname, abspath
 from sys import path as sys_path
 from json import dumps
@@ -16,7 +16,7 @@ from bokeh.models.ranges import Range1d
 from bokeh.models.glyphs import Line
 from bokeh.models.tools import HoverTool, ResetTool, BoxZoomTool, PanTool
 from bokeh.layouts import Column, Row
-from bokeh.models.widgets import CheckboxGroup
+from bokeh.models.widgets import CheckboxGroup, Button
 from bokeh.models.widgets.inputs import Select
 from bokeh.models.widgets.markups import Div
 from bokeh.plotting import curdoc
@@ -49,9 +49,13 @@ class LiftPlot(object):
         #: Start by defaulting all lines to alpha = 0
         # TODO Confirm that app works when all_dims actually contains all possible dimensions
         # all_dims = ['x', 'y', 'z', 'rms']
-        all_dims = ['x', 'rms']
+        all_dims = ['_x', '_rms']
         all_cols = ['a', 'v', 'p']
-        all_opts = [x+'_'+y for (x, y) in zip(tile(all_cols, len(all_dims)), tile(all_dims, len(all_cols)))]
+        all_filts = ['_hp', '']
+
+        all_suffix = [x+y for (x, y) in product(all_dims, all_filts)]
+        all_opts = [x+y for (x, y) in product(all_cols, all_suffix)]
+
         self.all_signals = all_opts
         self.active_signals = list()  # to be filled in each time update_datasource() is called
 
@@ -93,14 +97,25 @@ class LiftPlot(object):
                                            active=[0])
         self.signal_select.on_change('active', self._on_signal_change)
 
+        #: Careful with this - button to delete all data associated with current lift
+        #: For use in post-hoc data cleaning.
+        self.del_button = Button(label='DELETE LIFT', button_type='danger', width=100, height=30)
+        self.del_button.on_click(self._del_click)
+        self.del_button_text = 'N/A'
+
     def _establish_outputs(self):
         # Has to be initialized before I can set the text.
         self.lift_info = Div(width=500, height=100)
+        # To print success/fail
+        self.del_button_info = Div(width=100, height=20)
 
     def _create_layout(self):
 
+        self.del_header = Column(width=150, height=50)
+        self.del_header.children = [self.del_button, self.del_button_info]
+
         self.plot_header = Row(width=self.plot_width, height=80)
-        self.plot_header.children = [self.lift_select, self.signal_select, self.lift_info]
+        self.plot_header.children = [self.lift_select, self.signal_select, self.lift_info, self.del_header]
 
         # ## RMS PLOT ##
 
@@ -140,15 +155,51 @@ class LiftPlot(object):
             print 'setting renderer {i} to {tf}'.format(
                 i=self.signal_select.labels[i], tf=i in self.signal_select.active)
 
+            #: If renderer i is in self.signal_select.active (list[0, 1, 2]), then set visible to true
+            #: Else visible is false and signal is plotted but not shown
             self.rms_plot.renderers[i].visible = i in self.signal_select.active
+            # print [rend.name for rend in self.raw_plot.renderers]
             self.raw_plot.renderers[i].visible = i in self.signal_select.active
+            self.raw_plot.renderers[i+3].visible = i in self.signal_select.active
 
     #: Controls behavior of dropdown Select tool
     def _on_lift_change(self, attr, old, new):
         print 'Updating plot with lift_id: {}'.format(new)
         self.update_datasource()
 
+    def _del_click(self, *args):
+        lift_id = self.lift_select.value
+        print 'Deleting data for lift_id {}...'.format(lift_id)
+
+        sql = '''
+        DELETE FROM athlete_lift WHERE lift_id = {id};
+        DELETE FROM lift_data WHERE lift_id = {id};
+        '''.format(id=lift_id)
+
+        conn = create_engine(self.connection_string)
+        ret = conn.execute(sql)
+        ret.close()
+
+        text = 'Executed deletion for lift_id {id} from tables athlete_lift and lift_data'.format(id=lift_id)
+
+        print text
+        self.del_button_text = text
+
+        # remove cached data, if exists
+        storage.pop((lift_id, 'header'), None)  # default to None, i.e. do nothing, if key does not exist
+        storage.pop((lift_id, 'data'), None)
+
+        # remove lift_id from lift_select options
+        self.lift_select.options.remove(str(lift_id))
+
+        # change active lift_id to a default, which should trigger _on_lift_change and
+        # cascade all proper function calls
+        self.lift_select.value = self.lift_select.options[0]
+
     def update_datasource(self):
+
+        #: In case this was triggered by the delete button
+        self.del_button_info.text = self.del_button_text
 
         header, data = self.get_data('lift_data')
 
@@ -254,12 +305,11 @@ class LiftPlot(object):
         # plot.add_layout(LinearAxis(**axis_theme), 'left')
         # plot.add_layout(LinearAxis(**axis_theme), 'below')
 
-        # Note: ColumnDataSource.data[key[0]] returns a list. Want the value in that list (there should be only 1)
-
         rends = list()
 
-        for y_val in ['a_x', 'v_x', 'p_x']:
+        for y_val in ['a_x', 'v_x', 'p_x', 'a_x_hp', 'v_x_hp', 'p_x_hp']:
 
+            #: Split out signal type (a/v/p) by color
             if 'a' in y_val:
                 c = 'black'
             elif 'v' in y_val:
@@ -267,9 +317,16 @@ class LiftPlot(object):
             elif 'p' in y_val:
                 c = 'purple'
             else:
+                #: Uncaught line type here - make red so we can see it easily
                 c = 'red'
 
-            l = Line(x='x_axis', y=y_val, name=y_val, line_color=c, line_alpha=1)
+            #: Differentiate between high-passed signal and non-HP signal
+            if 'hp' in y_val:
+                style = 'dashed'
+            else:
+                style = 'solid'
+
+            l = Line(x='x_axis', y=y_val, name=y_val, line_color=c, line_dash=style, line_alpha=1)
             rends.append(GlyphRenderer(data_source=source, glyph=l, name=y_val))
 
         zero_line = Line(x='x_axis', y='zero', name='zero', line_color='red', line_dash='dashed', line_alpha=1)
@@ -322,32 +379,57 @@ class LiftPlot(object):
             else:
                 print 'Key ({}, {}) NOT found in storage dict'.format(int(self.lift_select.value), 'data')
                 header, data = pull_data_by_lift(int(self.lift_select.value))
-                a_rms, v_rms, p_rms = process_data(header, data, RMS=True)
-                accel, vel, pwr = process_data(header, data, RMS=False)
 
-                for col in accel.columns:
-                    raw_col = str(col) + '_raw'
-                    accel[raw_col] = accel[col]
-                    accel[col] = self.max_min_scale(accel[col])
+                for hp, lab in [(True, '_hp'), (False, '')]:
+                    a_rms, v_rms, p_rms = process_data(header, data, RMS=True, highpass=hp)
+                    accel, vel, pwr = process_data(header, data, RMS=False, highpass=hp)
 
-                for col in vel.columns:
-                    raw_col = str(col) + '_raw'
-                    vel[raw_col] = vel[col]
-                    vel[col] = self.max_min_scale(vel[col])
+                    #: If first loop, instantiate empty dataframe dat with proper index
+                    if hp:
+                        dat = DataFrame(index=a_rms.index)
 
-                for col in pwr.columns:
-                    raw_col = str(col) + '_raw'
-                    pwr[raw_col] = pwr[col]
-                    pwr[col] = self.max_min_scale(pwr[col])
+                    for col in accel.columns:
+                        raw_col = str(col) + '_raw' + lab
+                        accel[raw_col] = accel[col]
+                        accel[col+lab] = self.max_min_scale(accel[col])
+                        #: If highpass, a_x will be present (cause the column won't be overwritten; a new column is
+                        #: created), but we don't want to keep it.
+                        if hp:
+                            accel = accel.drop(col, axis=1)
 
-                dat = DataFrame(data={'a_rms': self.max_min_scale(a_rms),
-                                      'a_rms_raw': a_rms,
-                                      'v_rms': self.max_min_scale(v_rms),
-                                      'v_rms_raw': v_rms,
-                                      'p_rms': self.max_min_scale(p_rms),
-                                      'p_rms_raw': p_rms,
-                                      'timepoint': data['timepoint']},
-                                index=a_rms.index).join(accel).join(vel).join(pwr)
+                    for col in vel.columns:
+                        raw_col = str(col) + '_raw' + lab
+                        vel[raw_col] = vel[col]
+                        vel[col+lab] = self.max_min_scale(vel[col])
+                        if hp:
+                            vel = vel.drop(col, axis=1)
+
+                    for col in pwr.columns:
+                        raw_col = str(col) + '_raw' + lab
+                        pwr[raw_col] = pwr[col]
+                        pwr[col+lab] = self.max_min_scale(pwr[col])
+                        if hp:
+                            pwr = pwr.drop(col, axis=1)
+
+                    #: On first loop, dat should be empty dataframe with overlapping indices,
+                    #: so these joins should be fine. On second loop, dat will already have half the data.
+                    dat = dat.join(DataFrame(
+                        data={
+                            'a_rms'+lab: self.max_min_scale(a_rms),
+                            'a_rms_raw'+lab: a_rms,
+                            'v_rms'+lab: self.max_min_scale(v_rms),
+                            'v_rms_raw'+lab: v_rms,
+                            'p_rms'+lab: self.max_min_scale(p_rms),
+                            'p_rms_raw'+lab: p_rms
+                            },
+                        index=a_rms.index).join(accel).join(vel).join(pwr))
+
+                    #: Only want timepoint series once, so save until the end
+                    if not hp:
+                        dat = dat.join(data['timepoint'])
+
+                # print dat.head()
+
                 storage[(int(self.lift_select.value), 'data')] = dat
                 storage[(int(self.lift_select.value), 'header')] = header
                 return header.copy(), dat.copy()
