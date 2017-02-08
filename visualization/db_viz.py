@@ -1,7 +1,6 @@
 from itertools import product
 from sqlalchemy import create_engine
 from pandas import read_sql, DataFrame, Series
-from numpy import where as np_where, tile, repeat
 from os.path import dirname, abspath
 from sys import path as sys_path
 from json import dumps
@@ -17,7 +16,7 @@ from bokeh.models.ranges import Range1d
 from bokeh.models.glyphs import Line
 from bokeh.models.tools import HoverTool, ResetTool, BoxZoomTool, PanTool
 from bokeh.layouts import Column, Row
-from bokeh.models.widgets import CheckboxGroup
+from bokeh.models.widgets import CheckboxGroup, Button
 from bokeh.models.widgets.inputs import Select
 from bokeh.models.widgets.markups import Div
 from bokeh.plotting import curdoc
@@ -98,14 +97,25 @@ class LiftPlot(object):
                                            active=[0])
         self.signal_select.on_change('active', self._on_signal_change)
 
+        #: Careful with this - button to delete all data associated with current lift
+        #: For use in post-hoc data cleaning.
+        self.del_button = Button(label='DELETE LIFT', button_type='danger', width=100, height=30)
+        self.del_button.on_click(self._del_click)
+        self.del_button_text = 'N/A'
+
     def _establish_outputs(self):
         # Has to be initialized before I can set the text.
         self.lift_info = Div(width=500, height=100)
+        # To print success/fail
+        self.del_button_info = Div(width=100, height=20)
 
     def _create_layout(self):
 
+        self.del_header = Column(width=150, height=50)
+        self.del_header.children = [self.del_button, self.del_button_info]
+
         self.plot_header = Row(width=self.plot_width, height=80)
-        self.plot_header.children = [self.lift_select, self.signal_select, self.lift_info]
+        self.plot_header.children = [self.lift_select, self.signal_select, self.lift_info, self.del_header]
 
         # ## RMS PLOT ##
 
@@ -157,7 +167,38 @@ class LiftPlot(object):
         print 'Updating plot with lift_id: {}'.format(new)
         self.update_datasource()
 
+    def _del_click(self, *args):
+        lift_id = self.lift_select.value
+        print 'Deleting data for lift_id {}...'.format(lift_id)
+
+        sql = '''
+        DELETE FROM athlete_lift WHERE lift_id = {};
+        DELETE FROM lift_data WHERE lift_id = {};
+        '''.format(lift_id)
+
+        # conn = create_engine(self.connection_string)
+        # ret = conn.execute(sql)._echo
+        print 'Would execute: \n{}'.format(sql)
+        ret = False
+
+        if ret:
+            text = 'Successfully deleted lift_id {}'.format(lift_id)
+        else:
+            text = 'Failed to delete lift_id {}'.format(lift_id)
+
+        # ret.close()
+
+        print text
+        self.del_button_text = text
+
+        # change active lift_id to a default, which should trigger _on_lift_change and
+        # cascade all proper function calls
+        self.lift_select.active = self.lift_select.options[0]
+
     def update_datasource(self):
+
+        #: In case this was triggered by the delete button
+        self.del_button_info.text = self.del_button_text
 
         header, data = self.get_data('lift_data')
 
