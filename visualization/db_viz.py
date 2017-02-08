@@ -148,7 +148,7 @@ class LiftPlot(object):
             #: If renderer i is in self.signal_select.active (list[0, 1, 2]), then set visible to true
             #: Else visible is false and signal is plotted but not shown
             self.rms_plot.renderers[i].visible = i in self.signal_select.active
-            print [rend.name for rend in self.raw_plot.renderers]
+            # print [rend.name for rend in self.raw_plot.renderers]
             self.raw_plot.renderers[i].visible = i in self.signal_select.active
             self.raw_plot.renderers[i+3].visible = i in self.signal_select.active
 
