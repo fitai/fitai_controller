@@ -172,28 +172,29 @@ class LiftPlot(object):
         print 'Deleting data for lift_id {}...'.format(lift_id)
 
         sql = '''
-        DELETE FROM athlete_lift WHERE lift_id = {};
-        DELETE FROM lift_data WHERE lift_id = {};
-        '''.format(lift_id)
+        DELETE FROM athlete_lift WHERE lift_id = {id};
+        DELETE FROM lift_data WHERE lift_id = {id};
+        '''.format(id=lift_id)
 
-        # conn = create_engine(self.connection_string)
-        # ret = conn.execute(sql)._echo
-        print 'Would execute: \n{}'.format(sql)
-        ret = False
+        conn = create_engine(self.connection_string)
+        ret = conn.execute(sql)
+        ret.close()
 
-        if ret:
-            text = 'Successfully deleted lift_id {}'.format(lift_id)
-        else:
-            text = 'Failed to delete lift_id {}'.format(lift_id)
-
-        # ret.close()
+        text = 'Executed deletion for lift_id {id} from tables athlete_lift and lift_data'.format(id=lift_id)
 
         print text
         self.del_button_text = text
 
+        # remove cached data, if exists
+        storage.pop((lift_id, 'header'), None)  # default to None, i.e. do nothing, if key does not exist
+        storage.pop((lift_id, 'data'), None)
+
+        # remove lift_id from lift_select options
+        self.lift_select.options.remove(str(lift_id))
+
         # change active lift_id to a default, which should trigger _on_lift_change and
         # cascade all proper function calls
-        self.lift_select.active = self.lift_select.options[0]
+        self.lift_select.value = self.lift_select.options[0]
 
     def update_datasource(self):
 
