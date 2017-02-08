@@ -65,11 +65,11 @@ def parse_data(json_string):
 
 def extract_weight(header, verbose):
     try:
-        if header['lift_weight_units'] == 'lbs':
+        if header['weight_units'] == 'lbs':
             weight = int(header['lift_weight']) * (1./2.5)
             if verbose:
                 print 'Converted weight from lbs ({w1}) to kg ({w2})'.format(w1=header['lift_weight'], w2=weight)
-        elif header['lift_weight_units'] == 'kg':
+        elif header['weight_units'] == 'kg':
             weight = int(header['lift_weight'])
         else:
             if verbose:
