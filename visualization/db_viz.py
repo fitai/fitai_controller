@@ -93,7 +93,8 @@ class LiftPlot(object):
 
         self.signal_select = CheckboxGroup(name='signal_select',
                                            width=100,
-                                           labels=['a', 'v', 'p'],
+                                           height=140,
+                                           labels=['a', 'v', 'p', 'a_hp', 'v_hp', 'p_hp'],
                                            active=[0])
         self.signal_select.on_change('active', self._on_signal_change)
 
@@ -107,14 +108,14 @@ class LiftPlot(object):
         # Has to be initialized before I can set the text.
         self.lift_info = Div(width=500, height=100)
         # To print success/fail
-        self.del_button_info = Div(width=100, height=20)
+        self.del_button_info = Div(width=200, height=20)
 
     def _create_layout(self):
 
         self.del_header = Column(width=150, height=50)
         self.del_header.children = [self.del_button, self.del_button_info]
 
-        self.plot_header = Row(width=self.plot_width, height=80)
+        self.plot_header = Row(width=self.plot_width, height=140)
         self.plot_header.children = [self.lift_select, self.signal_select, self.lift_info, self.del_header]
 
         # ## RMS PLOT ##
@@ -152,15 +153,20 @@ class LiftPlot(object):
     #: Controls behavior of Checkboxgroup Selection tool
     def _on_signal_change(self, attr, old, new):
         for i in range(len(self.signal_select.labels)):
-            print 'setting renderer {i} to {tf}'.format(
-                i=self.signal_select.labels[i], tf=i in self.signal_select.active)
+            # print 'setting renderer {i} to {tf}'.format(
+            #     i=self.signal_select.labels[i], tf=i in self.signal_select.active)
 
             #: If renderer i is in self.signal_select.active (list[0, 1, 2]), then set visible to true
             #: Else visible is false and signal is plotted but not shown
-            self.rms_plot.renderers[i].visible = i in self.signal_select.active
             # print [rend.name for rend in self.raw_plot.renderers]
             self.raw_plot.renderers[i].visible = i in self.signal_select.active
-            self.raw_plot.renderers[i+3].visible = i in self.signal_select.active
+            # self.raw_plot.renderers[i+3].visible = i in self.signal_select.active
+
+            #: For now, raw plot has more renderers in it than the RMS plot does
+            if i > len(self.rms_plot.renderers)-1:
+                continue
+
+            self.rms_plot.renderers[i].visible = i in self.signal_select.active
 
     #: Controls behavior of dropdown Select tool
     def _on_lift_change(self, attr, old, new):
