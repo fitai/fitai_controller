@@ -42,7 +42,6 @@ class LiftPlot(object):
         self.plot_source = ColumnDataSource()
         self.rep_start_source = ColumnDataSource()
         self.rep_stop_source = ColumnDataSource()
-        # self.rep_colors = list()
 
         self.raw_dims = list()
 
@@ -51,7 +50,7 @@ class LiftPlot(object):
         #: rebuild the plot N times. To accommodate this, I will just update the alpha of the lines.
         #: Start by defaulting all lines to alpha = 0
         # TODO Confirm that app works when all_dims actually contains all possible dimensions
-        # all_dims = ['x', 'y', 'z', 'rms']
+        # all_dims = ['_x', '_y', '_z', '_rms']
         all_dims = ['_x', '_rms']
         all_cols = ['a', 'v', 'p']
         all_filts = ['_hp', '']
@@ -114,17 +113,19 @@ class LiftPlot(object):
             name='rep_tool',
             width=100,
             height=100,
-            labels=['rep_start', 'rep_stop'],
+            labels=['rep_start', 'rep_stop', 'delete_nearby'],
             active=0
         )
-        #: Shouldn't need to trigger anything on change.. should be a passive selection tool
-        # self.tap_select.on_change('active', self._on_tap_select_change)
+        #: Used to fill the text box next to the tap_select
+        #: Will update with taptool callbacks
+        self.rep_info_text = ''
 
     def _establish_outputs(self):
         # Has to be initialized before I can set the text.
         self.lift_info = Div(width=500, height=50)
         # To print success/fail
         self.del_button_info = Div(width=200, height=20)
+        self.rep_info = Div(width=350, height=100)
 
     def _create_layout(self):
 
@@ -133,16 +134,16 @@ class LiftPlot(object):
         self.del_header.children = [self.del_button, self.del_button_info]
 
         #: Format the row that the tap_select tool will be in
-        self.h_filler = Div(width=100, height=90)
-        self.tap_select_row = Row(width=500, height=90)
-        self.tap_select_row.children=[self.h_filler, self.tap_select]
+        self.h_filler = Div(width=50, height=100)
+        self.tap_select_row = Row(width=500, height=100)
+        self.tap_select_row.children = [self.h_filler, self.tap_select, self.rep_info]
 
         #: right_header contains the text box with lift metadata and the tap_select buttongroup
-        self.right_header = Column(width=500, height=140)
+        self.right_header = Column(width=500, height=150)
         self.right_header.children = [self.lift_info, self.tap_select_row]
 
         #: plot_header contains all input tools, text boxes, etc that sit above the plot
-        self.plot_header = Row(width=self.plot_width, height=140)
+        self.plot_header = Row(width=self.plot_width, height=150)
         self.plot_header.children = [self.lift_select, self.signal_select, self.right_header, self.del_header]
 
         # ## RMS PLOT ##
@@ -252,6 +253,7 @@ class LiftPlot(object):
         data['x_axis'] = data['timepoint']/max(data['timepoint'])  # scale x axis to be (0, 1)
 
         # ## Rep start/stop lines from database ##
+        self.rep_info.text = self.rep_info_text
 
         rep_dat = self.get_data('rep_data')
 
@@ -356,7 +358,40 @@ class LiftPlot(object):
 
         print 'lift_id {i}: Registered {l} click on timepoint {t}'.format(i=lift_id, l=label, t=t)
 
-        self._add_lift_event(lift_id, label, t)
+        if label == 'delete_nearby':
+            event = self.find_nearest_event(t, t_lim=1.)
+            if event is not None:
+                t_near = event['timepoint']
+                self._remove_lift_event(lift_id, t_near)
+        else:
+            self._add_lift_event(lift_id, label, t)
+
+        #: Update datasources after modifying lift_event table
+        self.update_datasource()
+
+    def find_nearest_event(self, t, t_lim=1.):
+        conn = create_engine(self.connection_string)
+
+        query = '''
+        SELECT * FROM lift_event
+        WHERE lift_id = {id}
+            AND timepoint BETWEEN {t1} AND {t2}
+        '''.format(id=int(self.lift_select.value), t1=t-t_lim, t2=t+t_lim)
+
+        #: Retrieve all lift_event items within the timeframe, if any
+        events = read_sql(query, conn)
+
+        if events.shape[0] > 0:
+            # sort so that min(timepoint) comes first
+            events = events.sort_values(by='timepoint', ascending=True).reset_index(drop=True)
+            nearest_event = events.ix[0]  # returns a pandas Series
+            # print 'Returning nearest event: \n{}'.format(nearest_event)
+        else:
+            nearest_event = None
+            text = 'No events within {lim} seconds of tap at {t}'.format(lim=t_lim, t=t)
+            self.rep_info_text = text
+
+        return nearest_event
 
     def _add_lift_event(self, lift_id, event, timepoint):
         conn = create_engine(self.connection_string)
@@ -366,10 +401,26 @@ class LiftPlot(object):
         ({id}, {t}, '{e}')
         '''.format(id=lift_id, t=timepoint, e=event)
 
-        print '--- Executed --- \n{}'.format(query)
+        text = '--- Executed --- \n{}'.format(query)
+
+        self.rep_info_text = text
 
         conn.execute(query)
-        self.update_datasource()
+
+    def _remove_lift_event(self, lift_id, timepoint):
+        conn = create_engine(self.connection_string)
+
+        query = '''
+        DELETE FROM lift_event
+        WHERE lift_id = {id}
+            AND timepoint = {t}
+        '''.format(id=lift_id, t=timepoint)
+
+        text = '--- Executed --- \n{}'.format(query)
+
+        self.rep_info_text = text
+
+        conn.execute(query)
 
     def make_raw_plot(self, source, rep_start_source, rep_stop_source):
         tooltips = '''<div><span style="font-size: 12px;"> <b>time:</b> @timepoint s</span></div>
