@@ -2,14 +2,9 @@ from sqlalchemy import create_engine
 import pandas as pd
 
 # NOTE TO SELF - update this so that your password doesn't show!
-from databasing.db_conn_strings import aws_conn_string, local_conn_string
+from databasing.db_conn_strings import conn_string
 
-aws_conn = create_engine(aws_conn_string)
-local_conn = create_engine(local_conn_string)
-
-# Switch between conns here
-# conn = aws_conn
-conn = local_conn
+conn = create_engine(conn_string)
 
 # data = pd.read_csv('test_accel_dat.csv')
 # data['lift_id'] = 0

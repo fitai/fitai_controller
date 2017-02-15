@@ -15,7 +15,7 @@ except NameError:
     syspath.append('/Users/kyle/PycharmProjects/fitai_controller')
     print 'Working in Dev mode.'
 
-from databasing.database import push_to_db
+from databasing.database_push import push_to_db
 from databasing.redis_controls import establish_redis_client, retrieve_collar_by_id, update_collar_by_id, get_default_collar
 from processing.util import read_header_mqtt, read_content_mqtt, process_data
 from comms.ws_publisher import ws_pub
