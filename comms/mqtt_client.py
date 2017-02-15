@@ -60,9 +60,7 @@ def mqtt_on_message(client, userdata, msg):
     try:
         data = loads(msg.payload)
 
-        # print 'reading header...'
         head = read_header_mqtt(data)
-        # print 'header contains: \n{}'.format(head)
 
         # TODO: If collar returns without all necessary fields, what should happen??
         collar = retrieve_collar_by_id(redis_client, head['collar_id'])
@@ -117,7 +115,7 @@ def mqtt_on_message(client, userdata, msg):
 
         # Before taking the time to push to db, process the acceleration and push to PHP websocket
         print 'p_thresh: {}'.format(collar['p_thresh'])
-        a, v, p = process_data(collar, accel)
+        a, v, p = process_data(collar, accel, RMS=False)
         reps, curr_state, crossings = calc_reps(
             a, v, p, collar['calc_reps'], collar['curr_state'],
             collar['a_thresh'], collar['v_thresh'], collar['p_thresh'])

@@ -1,4 +1,4 @@
-from pandas import DataFrame
+from pandas import DataFrame, Series
 import json
 import sys
 
@@ -96,7 +96,7 @@ def extract_sampling_rate(header):
 # Expects a dataframe with known fields
 # Timepoint, a_x, (a_y, a_z), lift_id
 #: NOTE: default is to process accel & vel into RMS signals
-def process_data(collar_obj, content, RMS=True, highpass=True, verbose=False):
+def process_data(collar_obj, content, RMS=False, highpass=True, verbose=False):
     if not isinstance(content, DataFrame):
         if verbose:
             print 'Content (type {}) is not a dataframe. Will try to convert...'.format(type(content))
@@ -168,4 +168,8 @@ def process_data(collar_obj, content, RMS=True, highpass=True, verbose=False):
         return a_rms, v_rms, p_rms
 
     else:
-        return content[accel_headers], vel, pwr
+        #: TODO: This pulls out a single axis. Make this more dynamic!
+        a = Series(content[accel_headers[0]], name='a_rms')
+        v = Series(vel[vel_headers[0]], name='v_rms')
+        p = Series(pwr[pwr_headers[0]], name='p_rms')
+        return a, v, p

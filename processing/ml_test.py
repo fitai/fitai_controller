@@ -40,8 +40,9 @@ def find_threshold(alpha=0.1, smooth=False, plot=False, verbose=False):
                     max_err = max(errs)
                     # 1. - abs(err)/max_err
                     # will eliminate observation with max error, and will vary directly with distance from max_err
-                    w = [1. - np.abs(err)/max_err for err in errs]
-                    thresh = np.sum(w*thresholds)
+                    # divide by length of weights so that the weights add to one
+                    w = [(1. - np.abs(err)/np.abs(max_err))/float(len(errs)-1) for err in errs]
+                    thresh = np.sum(a*b for a, b in zip(w, thresholds))
                 else:
                     # No info on error, or all errors are the same - weight equally
                     thresh = np.sum(thresholds)/len(thresholds)
@@ -60,9 +61,10 @@ def find_threshold(alpha=0.1, smooth=False, plot=False, verbose=False):
 
 
 def learn_on_lift_id(lift_id, smooth, alpha, plot, verbose):
-    header, data = pull_data_by_lift(lift_id)
-    a, v, p = process_data(header, data, RMS=True, verbose=verbose)
+    header, dat = pull_data_by_lift(lift_id)
+    a, v, p = process_data(header, dat, RMS=False, verbose=verbose)
 
+    # print a
     data = DataFrame(data={'a_rms': a,
                            'v_rms': v,
                            'p_rms': p},
@@ -146,7 +148,7 @@ def learn_on_lift_id(lift_id, smooth, alpha, plot, verbose):
             cnt += 1
 
             #: Force break if err can't get to 0
-            if cnt > int(300./alpha):
+            if cnt > int(100./alpha):
                 print 'lift_id {l} ({t}): Couldnt converge to 0 error after {n} iterations. ' \
                       '(error: {e} reps) Breaking..'.format(t=header['lift_type'], l=lift_id, n=cnt, e=err)
                 break
