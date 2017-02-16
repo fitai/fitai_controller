@@ -58,6 +58,7 @@ def pull_data_by_lift(lift_id):
         *
     FROM lift_data
     WHERE lift_id = {}
+    ORDER BY timepoint ASC
     '''.format(lift_id)
 
     header_query = '''

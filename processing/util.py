@@ -169,7 +169,7 @@ def process_data(collar_obj, content, RMS=False, highpass=True, verbose=False):
 
     else:
         #: TODO: This pulls out a single axis. Make this more dynamic!
-        a = Series(content[accel_headers[0]], name='a_rms')
-        v = Series(vel[vel_headers[0]], name='v_rms')
-        p = Series(pwr[pwr_headers[0]], name='p_rms')
+        a = Series(content[accel_headers[0]], name='a_x')
+        v = Series(vel[vel_headers[0]], name='v_x')
+        p = Series(pwr[pwr_headers[0]], name='p_x')
         return a, v, p

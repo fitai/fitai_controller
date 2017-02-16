@@ -620,28 +620,36 @@ class LiftPlot(object):
                     if hp:
                         dat = DataFrame(index=a_rms.index)
 
-                    for col in accel.columns:
-                        raw_col = str(col) + '_raw' + lab
-                        accel[raw_col] = accel[col]
-                        accel[col+lab] = self.max_min_scale(accel[col])
-                        #: If highpass, a_x will be present (cause the column won't be overwritten; a new column is
-                        #: created), but we don't want to keep it.
-                        if hp:
-                            accel = accel.drop(col, axis=1)
+                    # for col in accel.columns:
+                    #: Because I changed process_data to return a Series regardless of whether or not RMS is True,
+                    #: some logic downstream has been impacted and needed to be updated.
+                    col = accel.name
+                    accel = accel.to_frame()
+                    raw_col = str(col) + '_raw' + lab
+                    accel[raw_col] = accel[col]
+                    accel[col+lab] = self.max_min_scale(accel[col])
+                    #: If highpass, a_x will be present (cause the column won't be overwritten; a new column is
+                    #: created), but we don't want to keep it.
+                    if hp:
+                        accel = accel.drop(col, axis=1)
 
-                    for col in vel.columns:
-                        raw_col = str(col) + '_raw' + lab
-                        vel[raw_col] = vel[col]
-                        vel[col+lab] = self.max_min_scale(vel[col])
-                        if hp:
-                            vel = vel.drop(col, axis=1)
+                    # for col in vel.columns:
+                    col = vel.name
+                    vel = vel.to_frame()
+                    raw_col = str(col) + '_raw' + lab
+                    vel[raw_col] = vel[col]
+                    vel[col+lab] = self.max_min_scale(vel[col])
+                    if hp:
+                        vel = vel.drop(col, axis=1)
 
-                    for col in pwr.columns:
-                        raw_col = str(col) + '_raw' + lab
-                        pwr[raw_col] = pwr[col]
-                        pwr[col+lab] = self.max_min_scale(pwr[col])
-                        if hp:
-                            pwr = pwr.drop(col, axis=1)
+                    # for col in pwr.columns:
+                    col = pwr.name
+                    pwr = pwr.to_frame()
+                    raw_col = str(col) + '_raw' + lab
+                    pwr[raw_col] = pwr[col]
+                    pwr[col+lab] = self.max_min_scale(pwr[col])
+                    if hp:
+                        pwr = pwr.drop(col, axis=1)
 
                     #: On first loop, dat should be empty dataframe with overlapping indices,
                     #: so these joins should be fine. On second loop, dat will already have half the data.
