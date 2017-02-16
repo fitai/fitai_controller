@@ -2,6 +2,7 @@
 import numpy as np
 import pandas as pd
 
+from json import loads, dump
 from pandas import DataFrame
 
 from processing.functions import method1, calc_integral
@@ -148,7 +149,7 @@ def learn_on_lift_id(lift_id, smooth, alpha, plot, verbose):
             cnt += 1
 
             #: Force break if err can't get to 0
-            if cnt > int(100./alpha):
+            if cnt > int(300./alpha):
                 print 'lift_id {l} ({t}): Couldnt converge to 0 error after {n} iterations. ' \
                       '(error: {e} reps) Breaking..'.format(t=header['lift_type'], l=lift_id, n=cnt, e=err)
                 break
@@ -370,3 +371,18 @@ def plot_cutoffs(track_dict):
         plt.axhline(y=track_dict[sig]['signal_thresh'], color=p_color, linestyle='--')
         for x in np.where(track_dict[sig]['signal_imp'] > 0)[0]:
             plt.axvline(x=x, color=p_color, linestyle='-.')
+
+
+def load_thresh_dict(fname='thresh_dict'):
+    try:
+        tmp = open(fname, 'r')
+        thresh = loads(tmp.read())
+        tmp.close()
+        print 'Loaded thresh_dict from file'
+    except IOError:
+        print 'Couldnt find saved thresh_dict file'
+        thresh = find_threshold(alpha=0.05, smooth=True, plot=False, verbose=False)
+        with open('thresh_dict.txt', 'w') as outfile:
+            dump(thresh, outfile)
+
+    return thresh
