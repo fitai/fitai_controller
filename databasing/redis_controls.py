@@ -57,6 +57,11 @@ def retrieve_collar_by_id(redis_client=None, collar_id=None, verbose=True):
         # Should only occur for DEV purposes
         collar_obj = get_default_collar()
         collar_obj['collar_id'] = collar_id
+    except ValueError:
+        if verbose:
+            print 'Collar {} somehow corrupted and no longer a JSON string. Will create new.'.format(collar_id)
+        collar_obj = get_default_collar()
+        collar_obj['collar_id'] = collar_id
 
     return collar_obj
 

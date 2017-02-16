@@ -3,7 +3,7 @@ import paho.mqtt.client as mqtt
 from sys import argv, path as syspath, exit
 from os.path import dirname, abspath
 from optparse import OptionParser
-from json import loads
+from json import loads, dump
 from datetime import datetime as dt
 from pandas import DataFrame
 
@@ -22,11 +22,21 @@ from comms.ws_publisher import ws_pub
 from processing.ml_test import find_threshold, calc_reps
 
 # TODO: Turn this entire file into a class. Will allow us to use objects like the redis_client
+# TODO: Push thresh_dict load into separate file
 # as class attributes instead of forcing us to keep them global
 #: Alpha = learning rate - make smaller to learn slower and take more iterations, make larger to learn faster and
 #: risk non-convergence
-thresh_dict = find_threshold(alpha=0.05, smooth=True, plot=False, verbose=False)
-collar_id = 0
+fname = 'thresh_dict.txt'
+try:
+    tmp = open(fname, 'r')
+    thresh_dict = loads(tmp.read())
+    tmp.close()
+    print 'Loaded thresh_dict from file'
+except IOError:
+    print 'Couldnt find saved thresh_dict file'
+    thresh_dict = find_threshold(alpha=0.05, smooth=True, plot=False, verbose=False)
+    with open('thresh_dict.txt', 'w') as outfile:
+        dump(thresh_dict, outfile)
 
 # NOTE TO SELF: NEED A BETTER WAY TO MAKE THIS GLOBAL
 # should probably turn the entire script into an object....
