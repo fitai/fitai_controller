@@ -40,8 +40,6 @@ class LiftPlot(object):
         self.verbose = verbose
 
         self.plot_source = ColumnDataSource()
-        self.rep_start_source = ColumnDataSource()
-        self.rep_stop_source = ColumnDataSource()
 
         self.raw_dims = list()
 
@@ -108,18 +106,6 @@ class LiftPlot(object):
         self.del_button.on_click(self._del_click)
         self.del_button_text = 'N/A'
 
-        #: To switch TapTool action to assign either "rep_start" or "rep_stop" on user tap
-        self.tap_select = RadioButtonGroup(
-            name='rep_tool',
-            width=100,
-            height=100,
-            labels=['rep_start', 'rep_stop', 'delete_nearby'],
-            active=0
-        )
-        #: Used to fill the text box next to the tap_select
-        #: Will update with taptool callbacks
-        self.rep_info_text = ''
-
     def _establish_outputs(self):
         # Has to be initialized before I can set the text.
         self.lift_info = Div(width=500, height=50)
@@ -145,16 +131,6 @@ class LiftPlot(object):
         #: plot_header contains all input tools, text boxes, etc that sit above the plot
         self.plot_header = Row(width=self.plot_width, height=150)
         self.plot_header.children = [self.lift_select, self.signal_select, self.right_header, self.del_header]
-
-        # ## RMS PLOT ##
-
-        # Box that contains the RMS plot (Box may be unnecessary)
-        self.rms_panel_box = Column(width=self.plot_width, height=self.plot_height)
-        self.rms_panel_box.children = [self.rms_plot]
-
-        # Panel that contains the RMS box
-        self.panel_rms = Panel(
-            child=self.rms_plot, title='RMS Plot', closable=False, width=self.plot_width, height=self.plot_height)
 
         # ## RAW PLOT ##
 
@@ -620,36 +596,28 @@ class LiftPlot(object):
                     if hp:
                         dat = DataFrame(index=a_rms.index)
 
-                    # for col in accel.columns:
-                    #: Because I changed process_data to return a Series regardless of whether or not RMS is True,
-                    #: some logic downstream has been impacted and needed to be updated.
-                    col = accel.name
-                    accel = accel.to_frame()
-                    raw_col = str(col) + '_raw' + lab
-                    accel[raw_col] = accel[col]
-                    accel[col+lab] = self.max_min_scale(accel[col])
-                    #: If highpass, a_x will be present (cause the column won't be overwritten; a new column is
-                    #: created), but we don't want to keep it.
-                    if hp:
-                        accel = accel.drop(col, axis=1)
+                    for col in accel.columns:
+                        raw_col = str(col) + '_raw' + lab
+                        accel[raw_col] = accel[col]
+                        accel[col+lab] = self.max_min_scale(accel[col])
+                        #: If highpass, a_x will be present (cause the column won't be overwritten; a new column is
+                        #: created), but we don't want to keep it.
+                        if hp:
+                            accel = accel.drop(col, axis=1)
 
-                    # for col in vel.columns:
-                    col = vel.name
-                    vel = vel.to_frame()
-                    raw_col = str(col) + '_raw' + lab
-                    vel[raw_col] = vel[col]
-                    vel[col+lab] = self.max_min_scale(vel[col])
-                    if hp:
-                        vel = vel.drop(col, axis=1)
+                    for col in vel.columns:
+                        raw_col = str(col) + '_raw' + lab
+                        vel[raw_col] = vel[col]
+                        vel[col+lab] = self.max_min_scale(vel[col])
+                        if hp:
+                            vel = vel.drop(col, axis=1)
 
-                    # for col in pwr.columns:
-                    col = pwr.name
-                    pwr = pwr.to_frame()
-                    raw_col = str(col) + '_raw' + lab
-                    pwr[raw_col] = pwr[col]
-                    pwr[col+lab] = self.max_min_scale(pwr[col])
-                    if hp:
-                        pwr = pwr.drop(col, axis=1)
+                    for col in pwr.columns:
+                        raw_col = str(col) + '_raw' + lab
+                        pwr[raw_col] = pwr[col]
+                        pwr[col+lab] = self.max_min_scale(pwr[col])
+                        if hp:
+                            pwr = pwr.drop(col, axis=1)
 
                     #: On first loop, dat should be empty dataframe with overlapping indices,
                     #: so these joins should be fine. On second loop, dat will already have half the data.

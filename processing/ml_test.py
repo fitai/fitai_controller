@@ -2,6 +2,7 @@
 import numpy as np
 import pandas as pd
 
+from json import loads, dump
 from pandas import DataFrame
 
 from processing.functions import method1, calc_integral
@@ -40,8 +41,9 @@ def find_threshold(alpha=0.1, smooth=False, plot=False, verbose=False):
                     max_err = max(errs)
                     # 1. - abs(err)/max_err
                     # will eliminate observation with max error, and will vary directly with distance from max_err
-                    w = [1. - np.abs(err)/max_err for err in errs]
-                    thresh = np.sum(w*thresholds)
+                    # divide by length of weights so that the weights add to one
+                    w = [(1. - np.abs(err)/np.abs(max_err))/float(len(errs)-1) for err in errs]
+                    thresh = np.sum(a*b for a, b in zip(w, thresholds))
                 else:
                     # No info on error, or all errors are the same - weight equally
                     thresh = np.sum(thresholds)/len(thresholds)
@@ -60,9 +62,10 @@ def find_threshold(alpha=0.1, smooth=False, plot=False, verbose=False):
 
 
 def learn_on_lift_id(lift_id, smooth, alpha, plot, verbose):
-    header, data = pull_data_by_lift(lift_id)
-    a, v, p = process_data(header, data, RMS=True, verbose=verbose)
+    header, dat = pull_data_by_lift(lift_id)
+    a, v, p = process_data(header, dat, RMS=False, verbose=verbose)
 
+    # print a
     data = DataFrame(data={'a_rms': a,
                            'v_rms': v,
                            'p_rms': p},
@@ -368,3 +371,18 @@ def plot_cutoffs(track_dict):
         plt.axhline(y=track_dict[sig]['signal_thresh'], color=p_color, linestyle='--')
         for x in np.where(track_dict[sig]['signal_imp'] > 0)[0]:
             plt.axvline(x=x, color=p_color, linestyle='-.')
+
+
+def load_thresh_dict(fname='thresh_dict'):
+    try:
+        tmp = open(fname, 'r')
+        thresh = loads(tmp.read())
+        tmp.close()
+        print 'Loaded thresh_dict from file'
+    except IOError:
+        print 'Couldnt find saved thresh_dict file'
+        thresh = find_threshold(alpha=0.05, smooth=True, plot=False, verbose=False)
+        with open('thresh_dict.txt', 'w') as outfile:
+            dump(thresh, outfile)
+
+    return thresh

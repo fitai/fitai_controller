@@ -16,5 +16,5 @@ databasing/db_conn_strings.py
 # Any temporary visualizations
 *.html
 
-# Any config files
+# Any .txt files that likely contain versions of thresh_dict
 *.txt

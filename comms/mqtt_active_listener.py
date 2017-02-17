@@ -1,5 +1,4 @@
-import json
-
+from json import loads
 from sys import argv, path as syspath
 from os.path import dirname, abspath
 from optparse import OptionParser
@@ -35,7 +34,7 @@ def mqtt_on_message(client, userdata, msg):
     print 'Received message from topic "{}"'.format(topic)
 
     try:
-        data = json.loads(msg.payload)
+        data = loads(msg.payload)
 
         print 'reading header...'
         head = read_header_mqtt(data)

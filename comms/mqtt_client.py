@@ -19,14 +19,16 @@ from databasing.database_push import push_to_db
 from databasing.redis_controls import establish_redis_client, retrieve_collar_by_id, update_collar_by_id, get_default_collar
 from processing.util import read_header_mqtt, read_content_mqtt, process_data
 from comms.ws_publisher import ws_pub
-from processing.ml_test import find_threshold, calc_reps
+from processing.ml_test import calc_reps, load_thresh_dict
 
 # TODO: Turn this entire file into a class. Will allow us to use objects like the redis_client
+# TODO: Push thresh_dict load into separate file
 # as class attributes instead of forcing us to keep them global
 #: Alpha = learning rate - make smaller to learn slower and take more iterations, make larger to learn faster and
 #: risk non-convergence
-thresh_dict = find_threshold(alpha=0.05, smooth=True, plot=False, verbose=False)
-collar_id = 0
+
+#: Optional arg fname, defaults to thresh_dict.txt
+thresh_dict = load_thresh_dict(fname='thresh_dict.txt')
 
 # NOTE TO SELF: NEED A BETTER WAY TO MAKE THIS GLOBAL
 # should probably turn the entire script into an object....
@@ -60,9 +62,7 @@ def mqtt_on_message(client, userdata, msg):
     try:
         data = loads(msg.payload)
 
-        # print 'reading header...'
         head = read_header_mqtt(data)
-        # print 'header contains: \n{}'.format(head)
 
         # TODO: If collar returns without all necessary fields, what should happen??
         collar = retrieve_collar_by_id(redis_client, head['collar_id'])
@@ -117,7 +117,7 @@ def mqtt_on_message(client, userdata, msg):
 
         # Before taking the time to push to db, process the acceleration and push to PHP websocket
         print 'p_thresh: {}'.format(collar['p_thresh'])
-        a, v, p = process_data(collar, accel)
+        a, v, p = process_data(collar, accel, RMS=False)
         reps, curr_state, crossings = calc_reps(
             a, v, p, collar['calc_reps'], collar['curr_state'],
             collar['a_thresh'], collar['v_thresh'], collar['p_thresh'])
