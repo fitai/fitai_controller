@@ -120,12 +120,16 @@ class LiftPlot(object):
         #: Will update with taptool callbacks
         self.rep_info_text = ''
 
+        self.calc_button = Button(label='Calculate', button_type='primary', width=100, height=30)
+        self.calc_button.on_click(self._run_per_rep_calc)
+
     def _establish_outputs(self):
         # Has to be initialized before I can set the text.
         self.lift_info = Div(width=500, height=50)
         # To print success/fail
         self.del_button_info = Div(width=200, height=20)
-        self.rep_info = Div(width=350, height=100)
+        self.rep_info = Div(width=100, height=100)
+        self.calc_button_info = Div(width=200, height=100, text='Ready')
 
     def _create_layout(self):
 
@@ -133,10 +137,14 @@ class LiftPlot(object):
         self.del_header = Column(width=150, height=50)
         self.del_header.children = [self.del_button, self.del_button_info]
 
+        #: calc_header contains calc_button and a text field for the outputs
+        self.calc_header = Column(width=200, height=100)
+        self.calc_header.children = [self.calc_button, self.calc_button_info]
+
         #: Format the row that the tap_select tool will be in
-        self.h_filler = Div(width=50, height=100)
+        self.h_filler = Div(width=20, height=100)
         self.tap_select_row = Row(width=500, height=100)
-        self.tap_select_row.children = [self.h_filler, self.tap_select, self.rep_info]
+        self.tap_select_row.children = [self.h_filler, self.tap_select, self.rep_info, self.calc_header]
 
         #: right_header contains the text box with lift metadata and the tap_select buttongroup
         self.right_header = Column(width=500, height=150)
@@ -200,7 +208,7 @@ class LiftPlot(object):
         print 'Updating plot with lift_id: {}'.format(new)
         self.update_datasource()
 
-    def _del_click(self, *args):
+    def _del_click(self):
         lift_id = self.lift_select.value
         print 'Deleting data for lift_id {}...'.format(lift_id)
 
@@ -228,6 +236,74 @@ class LiftPlot(object):
         # change active lift_id to a default, which should trigger _on_lift_change and
         # cascade all proper function calls
         self.lift_select.value = self.lift_select.options[0]
+
+    def _run_per_rep_calc(self):
+        lift_id = int(self.lift_select.value)
+        print 'Running rep calculations for all reps in lift {}...'.format(lift_id)
+
+        #: Retrieve all rep events for this lift
+        sql = '''
+        SELECT * FROM lift_event WHERE lift_id = {};
+        '''.format(lift_id)
+
+        conn = create_engine(self.connection_string)
+        events = read_sql(sql, conn)
+
+        #: Filter out anything that is not a rep start/stop point
+        events = events.loc[['rep' in x for x in events['event']]].sort_values(by='timepoint', ascending=True)
+
+        #: Group the start and stop points
+        #: NOTE: assumes the structure of df events is alternating start/stop
+        #        if this is not true, this logic will probably break!
+        rep = 0
+        events['rep_num'] = 0
+        for i, row in events.iterrows():
+            if (i % 2 == 0) & (row['event'] == 'rep_start'):
+                events.loc[i, 'rep_num'] = rep
+            elif (i % 2 == 1) & (row['event'] == 'rep_stop'):
+                events.loc[i, 'rep_num'] = rep
+            else:
+                print 'Unhandled event, row number {i} shows event {e}. Fix this.'.format(i=i, e=row['event'])
+
+            #: Increase rep number every 2 iterations, which should capture a full start/stop pair
+            if (i > 0) & ((i % 2) == 1):
+                rep += 1
+
+        #: pair each rep's start and stop points
+        ts = events.groupby('rep_num').apply(lambda df: list(df['timepoint']))
+        ts.name = 't_pair'
+
+        #: run calculations on source data between timepoints
+        data = storage[(lift_id, 'data')]
+
+        # TODO: Try to clean this up
+        rep_info = DataFrame(columns=['v_max', 'v_mean', 'p_max', 'p_mean', 'N'], index=ts.index)
+        for i, row in ts.iteritems():
+            dat = data.loc[(data['timepoint'] >= row[0]) & (data['timepoint'] <= row[1]) ]
+            rep_info.loc[i, 'v_mean'] = round(dat['v_rms_raw_hp'].mean(), 2)
+            rep_info.loc[i, 'v_max'] = round(dat['v_rms_raw_hp'].max(), 2)
+            rep_info.loc[i, 'p_mean'] = round(dat['p_rms_raw_hp'].mean(), 2)
+            rep_info.loc[i, 'p_max'] = round(dat['p_rms_raw_hp'].max(), 2)
+            rep_info.loc[i, 'N'] = dat.shape[0]
+
+        #: Run calculations over all timepoints for total average
+        rep_info.reset_index(inplace=True)
+        rep_info['rep_num'] = (rep_info['rep_num'] + 1).astype(str)
+        rep_info = rep_info.append(DataFrame(
+            data={'rep_num': 'Overall',
+                  'v_max': rep_info['v_max'].max(),
+                  'v_mean': (rep_info['v_mean']*rep_info['N']).sum()/float(rep_info['N'].sum()),
+                  'p_max': rep_info['p_max'].max(),
+                  'p_mean': (rep_info['p_mean'] * rep_info['N']).sum() / float(rep_info['N'].sum())
+                  }, index=[0]
+            ), ignore_index=True)
+
+        #: Don't need column N any more
+        rep_info.drop('N', axis=1, inplace=True)
+        rep_info.set_index('rep_num', inplace=True)
+
+        self.calc_button_info.text = rep_info.to_string()
+        print 'done with calculations'
 
     def update_datasource(self):
 
