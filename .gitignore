@@ -15,3 +15,6 @@ databasing/db_conn_strings.py
 
 # Any temporary visualizations
 *.html
+
+# Any config files
+*.txt
