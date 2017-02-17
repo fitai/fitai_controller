@@ -117,7 +117,7 @@ def mqtt_on_message(client, userdata, msg):
 
         # Before taking the time to push to db, process the acceleration and push to PHP websocket
         print 'p_thresh: {}'.format(collar['p_thresh'])
-        a, v, p = process_data(collar, accel, RMS=False)
+        a, v, p = process_data(collar, accel, RMS=False, highpass=True)
         reps, curr_state, crossings = calc_reps(
             a, v, p, collar['calc_reps'], collar['curr_state'],
             collar['a_thresh'], collar['v_thresh'], collar['p_thresh'])
