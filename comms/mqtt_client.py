@@ -125,7 +125,7 @@ def mqtt_on_message(client, userdata, msg):
         # Assign timepoints to crossings, if there are any
         if crossings is not None:
             if crossings.shape[0] > 0:
-                crossings['timepoint'] = (collar['max_t'] + crossings.index*(1./collar['lift_sampling_rate'])).values
+                crossings['timepoint'] = (collar['max_t'] + crossings.index*(1./collar['sampling_rate'])).values
                 crossings['lift_id'] = collar['lift_id']
         # except AttributeError, e:
         #     print 'Crossings does not exist'
