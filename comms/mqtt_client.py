@@ -122,6 +122,9 @@ def mqtt_on_message(client, userdata, msg):
             a, v, p, collar['calc_reps'], collar['curr_state'],
             collar['a_thresh'], collar['v_thresh'], collar['p_thresh'])
 
+        #: For now, zero out reps
+        reps = 0
+
         # Assign timepoints to crossings, if there are any
         if crossings is not None:
             if crossings.shape[0] > 0:
