@@ -373,16 +373,16 @@ def plot_cutoffs(track_dict):
             plt.axvline(x=x, color=p_color, linestyle='-.')
 
 
-def load_thresh_dict(fname='thresh_dict'):
+def load_thresh_dict(fname='thresh_dict.txt'):
     try:
         tmp = open(fname, 'r')
         thresh = loads(tmp.read())
         tmp.close()
-        print 'Loaded thresh_dict from file'
+        print 'Loaded thresh_dict from file {}'.format(fname)
     except IOError:
-        print 'Couldnt find saved thresh_dict file'
+        print 'Couldnt find saved thresh_dict file {}'.format(fname)
         thresh = find_threshold(alpha=0.05, smooth=True, plot=False, verbose=False)
-        with open('thresh_dict.txt', 'w') as outfile:
+        with open(fname, 'w') as outfile:
             dump(thresh, outfile)
 
     return thresh
