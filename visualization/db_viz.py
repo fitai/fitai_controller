@@ -129,7 +129,7 @@ class LiftPlot(object):
         # To print success/fail
         self.del_button_info = Div(width=200, height=20)
         self.rep_info = Div(width=100, height=100)
-        self.calc_button_info = Div(width=200, height=100, text='Ready')
+        self.calc_button_info = Div(width=300, height=100, text='Ready')
 
     def _create_layout(self):
 
@@ -138,12 +138,12 @@ class LiftPlot(object):
         self.del_header.children = [self.del_button, self.del_button_info]
 
         #: calc_header contains calc_button and a text field for the outputs
-        self.calc_header = Column(width=200, height=100)
+        self.calc_header = Column(width=300, height=100)
         self.calc_header.children = [self.calc_button, self.calc_button_info]
 
         #: Format the row that the tap_select tool will be in
         self.h_filler = Div(width=20, height=100)
-        self.tap_select_row = Row(width=500, height=100)
+        self.tap_select_row = Row(width=600, height=100)
         self.tap_select_row.children = [self.h_filler, self.tap_select, self.rep_info, self.calc_header]
 
         #: right_header contains the text box with lift metadata and the tap_select buttongroup
@@ -302,7 +302,8 @@ class LiftPlot(object):
         rep_info.drop('N', axis=1, inplace=True)
         rep_info.set_index('rep_num', inplace=True)
 
-        self.calc_button_info.text = rep_info.to_string()
+        text = rep_info.reset_index().to_string(index=False).replace('\n', '<br>').replace('    ', '&emsp;').replace('  ', '&emsp;')
+        self.calc_button_info.text = text
         print 'done with calculations'
 
     def update_datasource(self):
