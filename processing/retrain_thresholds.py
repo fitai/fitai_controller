@@ -58,7 +58,7 @@ def main(args):
     alpha = cli_options.alpha
     verbose = cli_options.verbose
 
-    fname = os_join(fpath, os_join(fname, suffix))
+    fname = os_join(fpath, fname+suffix)
 
     retrain(fname, alpha, verbose)
 
