@@ -303,10 +303,10 @@ def calc_reps(acc, vel, pwr, n_reps, state, a_thresh=1., v_thresh=1., p_thresh=1
     if state == 'rest':
         shift = 0
     elif state == 'lift':
-        shift = 1
         # Here the athlete was mid-lift, so any deltas seen should be offset by 1 to acknowledge the athlete
         # started from 'lift' position
-        N += 1
+        shift = 1
+        # N += 1
     else:
         print 'Unsure of lift state {}. Will assume "rest"'.format(state)
 
