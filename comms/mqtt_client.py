@@ -19,7 +19,7 @@ from databasing.database_push import push_to_db
 from databasing.redis_controls import establish_redis_client, retrieve_collar_by_id, update_collar_by_id, get_default_collar
 from processing.util import read_header_mqtt, read_content_mqtt, process_data
 from comms.ws_publisher import ws_pub
-from processing.ml_test import calc_reps, load_thresh_dict
+from ml.ml_test import calc_reps, load_thresh_dict
 
 # TODO: Turn this entire file into a class. Will allow us to use objects like the redis_client
 # TODO: Push thresh_dict load into separate file

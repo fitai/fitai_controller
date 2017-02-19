@@ -1,8 +1,8 @@
 from sys import argv, path as syspath
-from os.path import dirname, abspath, join as os_join, exists as os_exists
 from os import remove
 from optparse import OptionParser
 from json import dump
+from os.path import dirname, abspath, join as os_join, exists as os_exists
 
 try:
     path = dirname(dirname(abspath(__file__)))
@@ -12,7 +12,7 @@ except NameError:
     syspath.append('/Users/kyle/PycharmProjects/fitai_controller')
     print 'Working in Dev mode.'
 
-from ml_test import find_threshold
+from ml.ml_test import find_threshold
 
 
 def retrain(fname, alpha, verbose):
