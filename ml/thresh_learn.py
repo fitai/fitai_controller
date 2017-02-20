@@ -285,12 +285,12 @@ def calc_reps(acc, vel, pwr, n_reps, state, a_thresh=1., v_thresh=1., p_thresh=1
         # diff_list.append(((signal > thresh) * 1).diff()[1:])
 
     # AND the signals together - will keep only the crossings where ALL signals cross thresholds
-    # LESS SENSITIVE
-    diff_signal = diff_list[0] * diff_list[1] * diff_list[2]
-
-    # SUM the signal together and apply a thresh of > 1; anywhere at least 2 of the signals cross counts
     # MORE SENSITIVE
-    # diff_signal = ((diff_list[0] + diff_list[1] + diff_list[2]) > 1) * 1
+    # diff_signal = diff_list[0] * diff_list[1] * diff_list[2]
+
+    # SUM the signal together and apply a thresh of > 2; anywhere at least 2 of the signals cross counts
+    # LESS SENSITIVE
+    diff_signal = ((diff_list[0] + diff_list[1] + diff_list[2]) > 2) * 1
 
     # Drops two points off front, but forces signal to stay above/below threshold for at least
     # 1 point to be considered a change in state - better than considering any noise around threshold
