@@ -63,12 +63,12 @@ def find_threshold(alpha=0.1, smooth=False, plot=False, verbose=False):
 
 def learn_on_lift_id(lift_id, smooth, alpha, plot, verbose):
     header, dat = pull_data_by_lift(lift_id)
-    a, v, p = process_data(header, dat, RMS=False, verbose=verbose)
+    a, v, p = process_data(header, dat, RMS=False, highpass=True, verbose=verbose)
 
     # print a
-    data = DataFrame(data={'a_rms': a,
-                           'v_rms': v,
-                           'p_rms': p},
+    data = DataFrame(data={'a': a,
+                           'v': v,
+                           'p': p},
                      index=a.index)
 
     if smooth:
@@ -77,7 +77,7 @@ def learn_on_lift_id(lift_id, smooth, alpha, plot, verbose):
         weight = extract_weight(header, verbose)
 
         # re-calculate everything from smoothed acceleration signal
-        rms_raw = data['a_rms']
+        rms_raw = data['a']
         acc_rms = list()
         #: Implement the simple high pass filter
         for i in range(len(rms_raw)):
@@ -90,15 +90,15 @@ def learn_on_lift_id(lift_id, smooth, alpha, plot, verbose):
             acc_rms.append(a)
 
         # acc_rms = np.array(acc_rms)
-        acc_rms = pd.Series(acc_rms, name='a_rms')
+        acc_rms = pd.Series(acc_rms, name='a')
         #: Calculate integral via Euler's method (cumulative sum)
         vel_rms = calc_integral(acc_rms, scale=bin_size, fs=fs)
         pwr_rms = acc_rms * weight * vel_rms
     else:
         # Don't smooth; use calculated power
-        acc_rms = data['a_rms']
-        vel_rms = data['v_rms']
-        pwr_rms = data['p_rms']
+        acc_rms = data['a']
+        vel_rms = data['v']
+        pwr_rms = data['p']
 
     try:
         # true_reps = int([x for x in filename.split('_') if 'rep' in x][0].split('rep')[0])

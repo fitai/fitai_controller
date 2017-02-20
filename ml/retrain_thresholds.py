@@ -12,7 +12,7 @@ except NameError:
     syspath.append('/Users/kyle/PycharmProjects/fitai_controller')
     print 'Working in Dev mode.'
 
-from ml.ml_test import find_threshold
+from ml.thresh_learn import find_threshold
 
 
 def retrain(fname, alpha, verbose):
