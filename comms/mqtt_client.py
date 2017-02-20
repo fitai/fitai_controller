@@ -104,7 +104,7 @@ def mqtt_on_message(client, userdata, msg):
         #: Left over from old collar format. Shouldn't need this forever - remove key "threshold" if exists
         collar.pop('threshold', None)
 
-        print 'collar contains: \n{}'.format(collar)
+        # print 'collar contains: \n{}'.format(collar)
 
         # print 'reading content...'
         accel = read_content_mqtt(data, collar)
@@ -121,9 +121,6 @@ def mqtt_on_message(client, userdata, msg):
         reps, curr_state, crossings = calc_reps(
             a, v, p, collar['calc_reps'], collar['curr_state'],
             collar['a_thresh'], collar['v_thresh'], collar['p_thresh'])
-
-        #: For now, zero out reps
-        reps = 0
 
         # Assign timepoints to crossings, if there are any
         if crossings is not None:

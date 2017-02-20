@@ -269,6 +269,11 @@ def calc_reps(acc, vel, pwr, n_reps, state, a_thresh=1., v_thresh=1., p_thresh=1
     :return:
     """
 
+    #: For debug purposes
+    # a_thresh = 1.
+    # v_thresh = 1.
+    # p_thresh = 1.
+
     diff_list = []
     for label, signal in [('acceleration', acc), ('velocity', vel), ('power', pwr)]:
         if not isinstance(signal, pd.Series):
@@ -282,23 +287,25 @@ def calc_reps(acc, vel, pwr, n_reps, state, a_thresh=1., v_thresh=1., p_thresh=1
         else:
             thresh = p_thresh
 
-        # Want to keep track of timepoints too
-        diff_list.append(((signal > thresh) * 1).diff()[1:].abs().diff()[1:])
+        #: Want to keep track of timepoints too
+        diff_list.append((signal > thresh) * 1)
+        #: Why the hell did I do this?? there must have been a reason...
+        # diff_list.append(((signal > thresh) * 1).diff()[1:].abs().diff()[1:])
         # diff_list.append(((signal > thresh) * 1).diff()[1:])
 
     # AND the signals together - will keep only the crossings where ALL signals cross thresholds
     # MORE SENSITIVE
-    # diff_signal = diff_list[0] * diff_list[1] * diff_list[2]
+    diff_signal = (diff_list[0] * diff_list[1] * diff_list[2]).diff()[1:]
 
     # SUM the signal together and apply a thresh of > 2; anywhere at least 2 of the signals cross counts
     # LESS SENSITIVE
-    diff_signal = ((diff_list[0] + diff_list[1] + diff_list[2]) > 2) * 1
+    # diff_signal = (((diff_list[0] + diff_list[1] + diff_list[2]) > 2) * 1).diff()[1:]
 
     # Drops two points off front, but forces signal to stay above/below threshold for at least
     # 1 point to be considered a change in state - better than considering any noise around threshold
     # as a change in state. Compare this to how it was before:
     # N = float( ((pwr > thresh) * 1).diff()[1:].abs().sum() )
-    N = float( diff_signal.sum() )
+    N = float( np.abs(diff_signal).sum() )
 
     # np.where() is resource intensive - just map for now
     # Want to identify any shift in the state of the user
@@ -315,7 +322,7 @@ def calc_reps(acc, vel, pwr, n_reps, state, a_thresh=1., v_thresh=1., p_thresh=1
     # N = number of threshold crossings (absolute value)
     # So, if user is at rest, it will take 2 crossings to count as a full rep
     # If user is mid-rep, then it will only take 1 crossing (the downswing) to complete a rep
-    n_reps += np.floor( (shift+N)/2.)
+    n_reps += np.floor( (shift+N)/2. )
     print 'User at {} reps'.format(n_reps)
 
     # Update the state
