@@ -158,7 +158,8 @@ def main(args):
         #: for whatever lift just ended.
         if response & update_lift_id:
             #: This is triggered when a Submit form is sent, and the user is about to START lifting
-            print 'Redis object updated properly. Will increment lift_id'
+            # print 'Redis object updated properly. Will increment lift_id'
+            print 'lift_id: {}'.format(collar['lift_id'])
             # lift_id was 'None', and the redis collar object was successfully updated
             redis_client.incr('lift_id', 1)
         elif not response:

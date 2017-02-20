@@ -501,6 +501,7 @@ class LiftPlot(object):
 
     def make_raw_plot(self, source, rep_start_source, rep_stop_source):
         tooltips = '''<div><span style="font-size: 12px;"> <b>time  :</b> @timepoint s</span></div>
+                      <div><span style="font-size: 12px;"> <b>acc   :</b> @a_x_raw m/s^2</span></div>
                       <div><span style="font-size: 12px;"> <b>acc HP:</b> @a_x_hp m/s^2</span></div>
                       <div><span style="font-size: 12px;"> <b>vel HP:</b> @v_x_hp m/s</span></div>
                       <div><span style="font-size: 12px;"> <b>pwr HP:</b> @p_x_hp W</span></div>'''

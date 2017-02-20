@@ -22,7 +22,7 @@ def retrain(fname, alpha, verbose):
         remove(fname)
 
     print 'Retraining threshold dict...'
-    thresh = find_threshold(alpha=alpha, smooth=True, plot=False, verbose=verbose)
+    thresh = find_threshold(alpha=alpha, smooth=False, plot=False, verbose=verbose)
 
     if verbose:
         print 'Saving threshold dict to {}...'.format(fname)

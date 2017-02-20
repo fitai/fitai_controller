@@ -132,10 +132,10 @@ def process_data(collar_obj, content, RMS=False, highpass=True, verbose=False):
         # accel = DataFrame(data={accel_headers[0]: content[accel_headers[0]]})
         # accel.name = accel_headers[0]
 
-        vel = DataFrame(data={vel_headers[0]: calc_integral(content.loc[:, accel_headers], scale=1., fs=fs)})
+        vel = DataFrame(data={vel_headers[0]: calc_integral(content[accel_headers[0]], scale=1., fs=fs)})
         # vel.name = vel_headers[0]
 
-        pwr = DataFrame(data={pwr_headers[0]: calc_power(content.loc[:, accel_headers], vel[vel_headers[0]], weight)})
+        pwr = DataFrame(data={pwr_headers[0]: calc_power(content[accel_headers[0]], vel[vel_headers[0]], weight)})
         # pwr.name = pwr_headers[0]
 
     else:
@@ -168,8 +168,8 @@ def process_data(collar_obj, content, RMS=False, highpass=True, verbose=False):
 
     else:
         #: TODO: This pulls out a single axis. Make this more dynamic!
-        a = Series(content.loc[:, accel_headers], name='a')
-        v = Series(vel.loc[:, vel_headers], name='v')
-        p = Series(pwr.loc[:, pwr_headers], name='p')
+        a = Series(content[accel_headers[0]], name='a')
+        v = Series(vel[vel_headers[0]], name='v')
+        p = Series(pwr[pwr_headers[0]], name='p')
 
     return a, v, p
