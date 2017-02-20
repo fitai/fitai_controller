@@ -176,6 +176,8 @@ def learn_on_lift_id(lift_id, smooth, alpha, plot, verbose):
         plot_learning(signal_tracking)
         plot_cutoffs(signal_tracking)
 
+    print 'Done with lift_id {l} ({t})'.format(l=lift_id, t=header['lift_type'])
+
     return thresh_dict
 
 
