@@ -114,7 +114,7 @@ def mqtt_on_message(client, userdata, msg):
         if head['lift_id'] != 'None':
             print 'resetting reps'
             collar['calc_reps'] = 0
-            _ = update_collar_by_id(redis_client, collar, collar['collar_id'], verbose=True)
+            # _ = update_collar_by_id(redis_client, collar, collar['collar_id'], verbose=True)
 
         # Before taking the time to push to db, process the acceleration and push to PHP websocket
         print 'p_thresh: {}'.format(collar['p_thresh'])
@@ -148,7 +148,7 @@ def mqtt_on_message(client, userdata, msg):
 
         if collar['active']:
             header = DataFrame(data=collar, index=[0]).drop(
-                ['active', 'calc_reps', 'collar_id', 'curr_state',
+                ['active', 'collar_id', 'curr_state',
                  'a_thresh', 'v_thresh', 'p_thresh', 'max_t'], axis=1)
             # Temporary to avoid pushing old field into database
             if 'lift_num_reps' in header.columns:
