@@ -1,9 +1,7 @@
-import json
-
-from sys import path as syspath
+from sys import path as syspath, argv
 from os.path import dirname, abspath
+from optparse import OptionParser
 
-import paho.mqtt.client as mqtt
 
 try:
     path = dirname(dirname(abspath(__file__)))
@@ -13,53 +11,43 @@ except NameError:
     syspath.append('/Users/kyle/PycharmProjects/fitai_controller')
     print 'Working in Dev mode.'
 
-
-# The callback for when the client successfully connects to the broker
-def mqtt_on_connect(client, userdata, rc):
-    ''' We subscribe on_connect() so that if we lose the connection
-        and reconnect, subscriptions will be renewed. '''
-
-    # client.subscribe('fitai')
-    print 'connected'
+from databasing.redis_controls import retrieve_collar_by_id, update_collar_by_id, establish_redis_client
 
 
-def establish_client(ip, port, topic):
-    client = mqtt.Client()
-    client.on_connect = mqtt_on_connect
+def reset_reps(collar_id):
+    redis_client = establish_redis_client()
 
-    print 'Connecting MQTT client...'
-    client.connect(ip, port, 60)  # AWS IP
-    print 'MQTT client ready'
-    return client
+    collar = retrieve_collar_by_id(redis_client, collar_id)
+    collar['calc_reps'] = 0
+
+    print 'pushing reset through pipeline'
+
+    res = update_collar_by_id(redis_client, collar, collar['collar_id'], verbose=False)
+
+    if res:
+        print 'Successfully reset reps on collar {}'.format(collar_id)
+    else:
+        print 'Failed to reset reps on collar {}'.format(collar_id)
 
 
-def kill_client(client):
-    print 'Disconnecting MQTT client...'
-    client.disconnect()
-    print 'Disconnected.'
+# Establish default behaviors of command-line call
+def establish_cli_parser():
+    parser = OptionParser()
+    parser.add_option('-c', '--collar', dest='collar_id', default=None,
+                      help='collar_id to reset reps of')
+    return parser
 
 
-def publish(client, topic='fitai', message='test message'):
-    print 'Publishing to topic {t} message:\n{m}'.format(t=topic, m=message)
-    client.publish(topic=topic, payload=message)
+def main(args):
+
+    cli_parser = establish_cli_parser()
+
+    (cli_options, _) = cli_parser.parse_args(args)
+
+    collar_id = cli_options.collar_id
+
+    reset_reps(collar_id)
 
 
 if __name__ == '__main__':
-
-    # Static
-    host_ip = '52.204.229.101'
-    host_port = 1883
-    mqtt_topic = 'fitai'
-
-    mqtt_client = establish_client(host_ip, host_port, mqtt_topic)
-
-    header = {"header": {"lift_id": '-1', "lift_sampling_rate": 50, "collar_id": "-1"}}
-    data = {"content": {"a_x": [0, 0, 0, 0, 0, 0, 0]}}
-    packet = dict(dict(**header), **data)
-
-    print 'pushing reset through pipeline'
-    publish(mqtt_client, mqtt_topic, message=json.dumps(packet))
-
-    # run_client(mqtt_client)
-    kill_client(mqtt_client)
-
+    main(argv[1:])

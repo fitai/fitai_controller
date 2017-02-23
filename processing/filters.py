@@ -4,7 +4,7 @@ import numpy as np
 from scipy.signal import freqz
 
 
-#: TO DO: Replace butter_bandpass/highpass/lowpass with the relevant math. iOS may not have packages to support
+#: TODO: Replace butter_bandpass/highpass/lowpass with the relevant math. iOS may not have packages to support
 #: calculating numerators/denominators. May also want to implement the filtering in basic math.
 def butter_bandpass(lowcut, highcut, fs, order):
     nyq = 0.5 * fs

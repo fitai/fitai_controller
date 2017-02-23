@@ -500,10 +500,11 @@ class LiftPlot(object):
         conn.execute(query)
 
     def make_raw_plot(self, source, rep_start_source, rep_stop_source):
-        tooltips = '''<div><span style="font-size: 12px;"> <b>time:</b> @timepoint s</span></div>
-                      <div><span style="font-size: 12px;"> <b>accel:</b> @a_x_raw m/s^2</span></div>
-                      <div><span style="font-size: 12px;"> <b>vel:</b> @v_x_raw m/s</span></div>
-                      <div><span style="font-size: 12px;"> <b>pwr:</b> @p_x_raw W</span></div>'''
+        tooltips = '''<div><span style="font-size: 12px;"> <b>time  :</b> @timepoint s</span></div>
+                      <div><span style="font-size: 12px;"> <b>acc   :</b> @a_x_raw m/s^2</span></div>
+                      <div><span style="font-size: 12px;"> <b>acc HP:</b> @a_x_hp m/s^2</span></div>
+                      <div><span style="font-size: 12px;"> <b>vel HP:</b> @v_x_hp m/s</span></div>
+                      <div><span style="font-size: 12px;"> <b>pwr HP:</b> @p_x_hp W</span></div>'''
 
         #: Gold line that moves to where user clicks to show which timepoint will be logged on use of TapTool
         src = ColumnDataSource(
@@ -691,7 +692,10 @@ class LiftPlot(object):
 
                 for hp, lab in [(True, '_hp'), (False, '')]:
                     a_rms, v_rms, p_rms = process_data(header, data, RMS=True, highpass=hp)
+                    a_rms.name, v_rms.name, p_rms.name = 'a_rms', 'v_rms', 'p_rms'
+
                     accel, vel, pwr = process_data(header, data, RMS=False, highpass=hp)
+                    accel.name, vel.name, pwr.name = 'a_x', 'v_x', 'p_x'
 
                     #: If first loop, instantiate empty dataframe dat with proper index
                     if hp:

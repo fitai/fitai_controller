@@ -63,12 +63,12 @@ def find_threshold(alpha=0.1, smooth=False, plot=False, verbose=False):
 
 def learn_on_lift_id(lift_id, smooth, alpha, plot, verbose):
     header, dat = pull_data_by_lift(lift_id)
-    a, v, p = process_data(header, dat, RMS=False, verbose=verbose)
+    a, v, p = process_data(header, dat, RMS=False, highpass=True, verbose=verbose)
 
     # print a
-    data = DataFrame(data={'a_rms': a,
-                           'v_rms': v,
-                           'p_rms': p},
+    data = DataFrame(data={'a': a,
+                           'v': v,
+                           'p': p},
                      index=a.index)
 
     if smooth:
@@ -77,7 +77,7 @@ def learn_on_lift_id(lift_id, smooth, alpha, plot, verbose):
         weight = extract_weight(header, verbose)
 
         # re-calculate everything from smoothed acceleration signal
-        rms_raw = data['a_rms']
+        rms_raw = data['a']
         acc_rms = list()
         #: Implement the simple high pass filter
         for i in range(len(rms_raw)):
@@ -90,15 +90,15 @@ def learn_on_lift_id(lift_id, smooth, alpha, plot, verbose):
             acc_rms.append(a)
 
         # acc_rms = np.array(acc_rms)
-        acc_rms = pd.Series(acc_rms, name='a_rms')
+        acc_rms = pd.Series(acc_rms, name='a')
         #: Calculate integral via Euler's method (cumulative sum)
         vel_rms = calc_integral(acc_rms, scale=bin_size, fs=fs)
         pwr_rms = acc_rms * weight * vel_rms
     else:
         # Don't smooth; use calculated power
-        acc_rms = data['a_rms']
-        vel_rms = data['v_rms']
-        pwr_rms = data['p_rms']
+        acc_rms = data['a']
+        vel_rms = data['v']
+        pwr_rms = data['p']
 
     try:
         # true_reps = int([x for x in filename.split('_') if 'rep' in x][0].split('rep')[0])
@@ -175,6 +175,8 @@ def learn_on_lift_id(lift_id, smooth, alpha, plot, verbose):
         #: Plot learning curves
         plot_learning(signal_tracking)
         plot_cutoffs(signal_tracking)
+
+    print 'Done with lift_id {l} ({t})'.format(l=lift_id, t=header['lift_type'])
 
     return thresh_dict
 
@@ -267,6 +269,11 @@ def calc_reps(acc, vel, pwr, n_reps, state, a_thresh=1., v_thresh=1., p_thresh=1
     :return:
     """
 
+    #: For debug purposes
+    # a_thresh = 1.
+    # v_thresh = 1.
+    # p_thresh = 1.
+
     diff_list = []
     for label, signal in [('acceleration', acc), ('velocity', vel), ('power', pwr)]:
         if not isinstance(signal, pd.Series):
@@ -280,23 +287,25 @@ def calc_reps(acc, vel, pwr, n_reps, state, a_thresh=1., v_thresh=1., p_thresh=1
         else:
             thresh = p_thresh
 
-        # Want to keep track of timepoints too
-        diff_list.append(((signal > thresh) * 1).diff()[1:].abs().diff()[1:])
+        #: Want to keep track of timepoints too
+        diff_list.append((signal > thresh) * 1)
+        #: Why the hell did I do this?? there must have been a reason...
+        # diff_list.append(((signal > thresh) * 1).diff()[1:].abs().diff()[1:])
         # diff_list.append(((signal > thresh) * 1).diff()[1:])
 
     # AND the signals together - will keep only the crossings where ALL signals cross thresholds
-    # LESS SENSITIVE
-    diff_signal = diff_list[0] * diff_list[1] * diff_list[2]
-
-    # SUM the signal together and apply a thresh of > 1; anywhere at least 2 of the signals cross counts
     # MORE SENSITIVE
-    # diff_signal = ((diff_list[0] + diff_list[1] + diff_list[2]) > 1) * 1
+    diff_signal = (diff_list[0] * diff_list[1] * diff_list[2]).diff()[1:]
+
+    # SUM the signal together and apply a thresh of > 2; anywhere at least 2 of the signals cross counts
+    # LESS SENSITIVE
+    # diff_signal = (((diff_list[0] + diff_list[1] + diff_list[2]) > 2) * 1).diff()[1:]
 
     # Drops two points off front, but forces signal to stay above/below threshold for at least
     # 1 point to be considered a change in state - better than considering any noise around threshold
     # as a change in state. Compare this to how it was before:
     # N = float( ((pwr > thresh) * 1).diff()[1:].abs().sum() )
-    N = float( diff_signal.sum() )
+    N = float( np.abs(diff_signal).sum() )
 
     # np.where() is resource intensive - just map for now
     # Want to identify any shift in the state of the user
@@ -313,7 +322,7 @@ def calc_reps(acc, vel, pwr, n_reps, state, a_thresh=1., v_thresh=1., p_thresh=1
     # N = number of threshold crossings (absolute value)
     # So, if user is at rest, it will take 2 crossings to count as a full rep
     # If user is mid-rep, then it will only take 1 crossing (the downswing) to complete a rep
-    n_reps += np.floor( (shift+N)/2.)
+    n_reps += np.floor( (shift+N)/2. )
     print 'User at {} reps'.format(n_reps)
 
     # Update the state
@@ -373,16 +382,16 @@ def plot_cutoffs(track_dict):
             plt.axvline(x=x, color=p_color, linestyle='-.')
 
 
-def load_thresh_dict(fname='thresh_dict'):
+def load_thresh_dict(fname='thresh_dict.txt'):
     try:
         tmp = open(fname, 'r')
         thresh = loads(tmp.read())
         tmp.close()
-        print 'Loaded thresh_dict from file'
+        print 'Loaded thresh_dict from file {}'.format(fname)
     except IOError:
-        print 'Couldnt find saved thresh_dict file'
+        print 'Couldnt find saved thresh_dict file {}'.format(fname)
         thresh = find_threshold(alpha=0.05, smooth=True, plot=False, verbose=False)
-        with open('thresh_dict.txt', 'w') as outfile:
+        with open(fname, 'w') as outfile:
             dump(thresh, outfile)
 
     return thresh

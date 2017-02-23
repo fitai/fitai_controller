@@ -1,5 +1,4 @@
 from pandas import DataFrame, Series
-import json
 import sys
 
 from processing.functions import calc_integral, calc_rms, calc_power
@@ -40,27 +39,27 @@ def read_content_mqtt(data, collar_obj):
     return accel
 
 
-def read_content_fitai(data, content_key='content'):
-    try:
-        for key in data['content'].keys():
-            data[content_key][key] = [float(x) for x in data[content_key][key][0].split(',')]
-        accel = DataFrame(data[content_key], index=data[content_key]['timepoint']).reset_index(drop=True)
-    except AttributeError:
-        print 'No "content" field. Returning None'
-        return None
+# def read_content_fitai(data, content_key='content'):
+#     try:
+#         for key in data['content'].keys():
+#             data[content_key][key] = [float(x) for x in data[content_key][key][0].split(',')]
+#         accel = DataFrame(data[content_key], index=data[content_key]['timepoint']).reset_index(drop=True)
+#     except AttributeError:
+#         print 'No "content" field. Returning None'
+#         return None
+#
+#     return accel
 
-    return accel
 
-
-def parse_data(json_string):
-    # try:
-    data = json.loads(json_string)
-    # What should the except statement be??
-
-    header = read_header_mqtt(data)
-    content = read_content_fitai(data)
-
-    return header, content
+# def parse_data(json_string):
+#     # try:
+#     data = json.loads(json_string)
+#     # What should the except statement be??
+#
+#     header = read_header_mqtt(data)
+#     content = read_content_fitai(data)
+#
+#     return header, content
 
 
 def extract_weight(header, verbose):
@@ -130,20 +129,20 @@ def process_data(collar_obj, content, RMS=False, highpass=True, verbose=False):
         if verbose:
             print 'Found single axis of data'
 
-        accel = DataFrame(data={accel_headers[0]: content[accel_headers[0]]})
+        # accel = DataFrame(data={accel_headers[0]: content[accel_headers[0]]})
         # accel.name = accel_headers[0]
 
-        vel = DataFrame(data={vel_headers[0]: calc_integral(accel[accel_headers[0]], scale=1., fs=fs)})
+        vel = DataFrame(data={vel_headers[0]: calc_integral(content[accel_headers[0]], scale=1., fs=fs)})
         # vel.name = vel_headers[0]
 
-        pwr = DataFrame(data={pwr_headers[0]: calc_power(accel[accel_headers[0]], vel[vel_headers[0]], weight)})
+        pwr = DataFrame(data={pwr_headers[0]: calc_power(content[accel_headers[0]], vel[vel_headers[0]], weight)})
         # pwr.name = pwr_headers[0]
 
     else:
         if verbose:
             print 'Found multiple axes of data. Will combine into RMS.'
 
-        # Can't calculate integral on rectified signal - will result in a monotonically increasing output
+        # Can't calculate integral on rectified signal - will result in a positively drifting signal
         # Have to leave acceleration split into constituent dimensions, calculate velocity along each,
         # then combine into RMS signal
         vel = DataFrame(columns=vel_headers)
@@ -155,21 +154,22 @@ def process_data(collar_obj, content, RMS=False, highpass=True, verbose=False):
             pwr[pwr_headers[i]] = calc_power(content[accel_headers[i]], vel[vel_headers[i]], weight)
 
     if RMS:
-        a_rms = calc_rms(content, accel_headers)
-        a_rms.name = 'a_rms'
+        a = calc_rms(content, accel_headers)
+        a.name = 'a'
 
-        v_rms = calc_rms(vel, vel_headers)
-        v_rms.name = 'v_rms'
+        v = calc_rms(vel, vel_headers)
+        v.name = 'v'
 
         # p_rms = calc_power(a_rms, v_rms, weight)
-        p_rms = calc_rms(pwr, pwr_headers)
-        p_rms.name = 'p_rms'
+        p = calc_rms(pwr, pwr_headers)
+        p.name = 'p'
 
-        return a_rms, v_rms, p_rms
+        # return a_rms, v_rms, p_rms
 
     else:
         #: TODO: This pulls out a single axis. Make this more dynamic!
-        a = Series(content[accel_headers[0]], name='a_x')
-        v = Series(vel[vel_headers[0]], name='v_x')
-        p = Series(pwr[pwr_headers[0]], name='p_x')
-        return a, v, p
+        a = Series(content[accel_headers[0]], name='a')
+        v = Series(vel[vel_headers[0]], name='v')
+        p = Series(pwr[pwr_headers[0]], name='p')
+
+    return a, v, p

@@ -19,7 +19,7 @@ from databasing.database_push import push_to_db
 from databasing.redis_controls import establish_redis_client, retrieve_collar_by_id, update_collar_by_id, get_default_collar
 from processing.util import read_header_mqtt, read_content_mqtt, process_data
 from comms.ws_publisher import ws_pub
-from processing.ml_test import calc_reps, load_thresh_dict
+from ml.thresh_learn import calc_reps, load_thresh_dict
 
 # TODO: Turn this entire file into a class. Will allow us to use objects like the redis_client
 # TODO: Push thresh_dict load into separate file
@@ -104,7 +104,7 @@ def mqtt_on_message(client, userdata, msg):
         #: Left over from old collar format. Shouldn't need this forever - remove key "threshold" if exists
         collar.pop('threshold', None)
 
-        print 'collar contains: \n{}'.format(collar)
+        # print 'collar contains: \n{}'.format(collar)
 
         # print 'reading content...'
         accel = read_content_mqtt(data, collar)
@@ -114,6 +114,7 @@ def mqtt_on_message(client, userdata, msg):
         if head['lift_id'] != 'None':
             print 'resetting reps'
             collar['calc_reps'] = 0
+            # _ = update_collar_by_id(redis_client, collar, collar['collar_id'], verbose=True)
 
         # Before taking the time to push to db, process the acceleration and push to PHP websocket
         print 'p_thresh: {}'.format(collar['p_thresh'])
@@ -121,9 +122,6 @@ def mqtt_on_message(client, userdata, msg):
         reps, curr_state, crossings = calc_reps(
             a, v, p, collar['calc_reps'], collar['curr_state'],
             collar['a_thresh'], collar['v_thresh'], collar['p_thresh'])
-
-        #: For now, zero out reps
-        reps = 0
 
         # Assign timepoints to crossings, if there are any
         if crossings is not None:
@@ -150,7 +148,7 @@ def mqtt_on_message(client, userdata, msg):
 
         if collar['active']:
             header = DataFrame(data=collar, index=[0]).drop(
-                ['active', 'calc_reps', 'collar_id', 'curr_state',
+                ['active', 'collar_id', 'curr_state',
                  'a_thresh', 'v_thresh', 'p_thresh', 'max_t'], axis=1)
             # Temporary to avoid pushing old field into database
             if 'lift_num_reps' in header.columns:
