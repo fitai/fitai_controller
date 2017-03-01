@@ -12,6 +12,7 @@ except NameError:
     print 'Working in Dev mode.'
 
 from databasing.database_pull import lift_to_json, pull_max_lift_id
+from databasing.database_push import update_calc_reps
 from databasing.redis_controls import establish_redis_client, update_collar_by_id
 
 
@@ -126,15 +127,24 @@ def main(args):
 
         if 'lift_id' not in dat.keys():
             # No lift_id field occurs when End Lift button is pressed, and we want to stop pushing data to db
-            # In this case, just update collar object with new values and push to redis. DO NOT iterate lift_id
+            # In this case, first update the athlete_lift table with the calculated number of reps,
+            # then update collar object with new values and push to redis. DO NOT iterate lift_id
             update_lift_id = False
             for key in dat.keys():
                 #: Temporary workaround until patrick renames this field
-                if key == 'lift_num_reps':
-                    collar['init_num_reps'] = dat[key]
-                else:
-                    collar[key] = dat[key]
+                # if key == 'lift_num_reps':
+                collar['init_num_reps'] = dat[key]
+                # else:
+                #     collar[key] = dat[key]
             collar['athlete_id'] = 'None'
+
+            # Update calc_reps in database with final calculated value
+            if ('calc_reps' in collar.keys()) & (collar['calc_reps'] is not None):
+                update_calc_reps(collar)
+            else:
+                print 'Meant to update calc_reps in db, but collar {} does not contain valid calc_reps entry'.\
+                    format(collar['collar_id'])
+
         elif dat['lift_id'] == 'None':
             # lift_id = 'None' is sent to trigger new workout, which means lift_id needs to be updated.
             # DO iterate lift_id in this case
