@@ -1,5 +1,5 @@
 from sqlalchemy import create_engine
-import pandas as pd
+from pandas import read_sql
 from numpy import abs, round
 from sqlalchemy.exc import ProgrammingError, OperationalError, IntegrityError
 
@@ -30,7 +30,7 @@ def push_to_db(header, content, crossings):
     if content is not None:
         lift_id = content.lift_id.unique()[0]
         try:
-            ts = pd.read_sql(
+            ts = read_sql(
                 'SELECT timepoint::DOUBLE PRECISION FROM lift_data WHERE lift_id = {id} ORDER BY timepoint DESC LIMIT 2'.format(id=lift_id), conn)['timepoint']
             # NOTE: Console prints max_t = 19.89999999999999 - will this cause a rounding error??
             if len(ts) > 1:
@@ -81,3 +81,12 @@ def push_to_db(header, content, crossings):
     #             print 'Moving forward without pushing crossings into lift_event...'
     #         else:
     #             print 'Done'
+
+
+def update_calc_reps(collar):
+    sql = '''
+    UPDATE athlete_lift SET calc_reps = {cr}::NUMERIC
+    WHERE lift_id = {l}::INT;
+    '''.format(cr=collar['calc_reps'], l=collar['lift_id'])
+
+    read_sql(sql, conn)
