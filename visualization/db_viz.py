@@ -176,7 +176,7 @@ class LiftPlot(object):
 
         # Contains ALL panels
         self.panel_parent = Tabs(width=self.plot_width+10, height=self.plot_height, active=0)
-        self.panel_parent.tabs = [self.panel_rms, self.panel_raw]
+        self.panel_parent.tabs = [self.panel_raw, self.panel_rms]
 
         self.layout = Column(children=[self.plot_header, self.panel_parent], width=self.plot_width+20, height=self.plot_height)
 
