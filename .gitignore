@@ -17,4 +17,4 @@ databasing/db_conn_strings.py
 *.html
 
 # Any .txt files that likely contain versions of thresh_dict
-*.txt
+thresh_dict.txt
