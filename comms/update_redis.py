@@ -105,8 +105,8 @@ def main(args):
     if verbose:
         print 'Received json: {}'.format(dat)
 
-    redis_client = establish_redis_client(hostname='localhost', verbose=verbose)
-    # redis_client = establish_redis_client(hostname='52.204.229.101', verbose=True)
+    # redis_client = establish_redis_client(hostname='localhost', verbose=verbose)
+    redis_client = establish_redis_client(hostname='52.204.229.101', verbose=True)
 
     if redis_client is None:
         print 'Unsuccessful attempt to launch redis client. Cannot update.'
@@ -141,9 +141,9 @@ def main(args):
             # Update calc_reps in database with final calculated value
             if ('calc_reps' in collar.keys()) & (collar['calc_reps'] is not None):
                 update_calc_reps(collar)
-            else:
-                print 'Meant to update calc_reps in db, but collar {} does not contain valid calc_reps entry'.\
-                    format(collar['collar_id'])
+            # else:
+            #     print 'Meant to update calc_reps in db, but collar {} does not contain valid calc_reps entry'.\
+            #         format(collar['collar_id'])
 
         elif dat['lift_id'] == 'None':
             # lift_id = 'None' is sent to trigger new workout, which means lift_id needs to be updated.
@@ -186,7 +186,8 @@ def main(args):
             # stdout so that the PHP can retrieve it.
 
             # print 'JSON object did not include lift_id'
-            print 'found lift_id: {}'.format(collar['lift_id'])
+            if verbose:
+                print 'found lift_id: {}'.format(collar['lift_id'])
             print lift_to_json(collar['lift_id'])
         else:
             print 'SHOULDNT SEE THIS!?!'
