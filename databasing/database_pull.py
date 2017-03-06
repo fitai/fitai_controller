@@ -77,6 +77,11 @@ def pull_data_by_lift(lift_id):
         print e
         print 'Returning None...'
         header, dat = None, None
+
+    except KeyError:
+        print 'No values returned for lift_id {}. Likely not in database.'.format(lift_id)
+        header, dat = None, None
+
     return header, dat
 
 
