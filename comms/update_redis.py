@@ -5,7 +5,7 @@ from os.path import dirname, abspath
 
 try:
     path = dirname(dirname(abspath(__file__)))
-    print 'Adding {} to sys.path'.format(path)
+    # print 'Adding {} to sys.path'.format(path)
     syspath.append(path)
 except NameError:
     syspath.append('/Users/kyle/PycharmProjects/fitai_controller')
@@ -14,6 +14,7 @@ except NameError:
 from databasing.database_pull import lift_to_json, pull_max_lift_id
 from databasing.database_push import update_calc_reps
 from databasing.redis_controls import establish_redis_client, update_collar_by_id
+from databasing.redis_conn_strings import redis_host
 
 
 # Establish default behaviors of command-line call
@@ -105,8 +106,8 @@ def main(args):
     if verbose:
         print 'Received json: {}'.format(dat)
 
-    # redis_client = establish_redis_client(hostname='localhost', verbose=verbose)
-    redis_client = establish_redis_client(hostname='52.204.229.101', verbose=True)
+    redis_client = establish_redis_client(hostname=redis_host, verbose=verbose)
+    # redis_client = establish_redis_client(hostname='52.204.229.101', verbose=True)
 
     if redis_client is None:
         if verbose:
@@ -135,17 +136,14 @@ def main(args):
             for key in dat.keys():
                 #: Temporary workaround until patrick renames this field
                 # if key == 'lift_num_reps':
-                collar['init_num_reps'] = dat[key]
+                # collar['init_num_reps'] = dat[key]
                 # else:
-                #     collar[key] = dat[key]
+                collar[key] = dat[key]
             collar['athlete_id'] = 'None'
 
             # Update calc_reps in database with final calculated value
             if ('calc_reps' in collar.keys()) & (collar['calc_reps'] is not None):
                 update_calc_reps(collar)
-            # else:
-            #     print 'Meant to update calc_reps in db, but collar {} does not contain valid calc_reps entry'.\
-            #         format(collar['collar_id'])
 
         elif dat['lift_id'] == 'None':
             # lift_id = 'None' is sent to trigger new workout, which means lift_id needs to be updated.

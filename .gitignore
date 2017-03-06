@@ -9,6 +9,7 @@
 
 # because the connection strings can contain database user/password info, those will be handled more carefully.
 databasing/db_conn_strings.py
+databasing/redis_conn_strings.py
 
 # any logging
 *.log

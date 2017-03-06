@@ -20,6 +20,7 @@ from databasing.redis_controls import establish_redis_client, retrieve_collar_by
 from processing.util import read_header_mqtt, read_content_mqtt, process_data
 from comms.ws_publisher import ws_pub
 from ml.thresh_learn import calc_reps, load_thresh_dict
+from databasing.redis_conn_strings import redis_host
 
 # TODO: Turn this entire file into a class. Will allow us to use objects like the redis_client
 # TODO: Push thresh_dict load into separate file
@@ -33,7 +34,7 @@ thresh_dict = load_thresh_dict(fname='thresh_dict.txt')
 # NOTE TO SELF: NEED A BETTER WAY TO MAKE THIS GLOBAL
 # should probably turn the entire script into an object....
 # Attempt to connect to redis server
-redis_client = establish_redis_client(hostname='localhost', verbose=True)
+redis_client = establish_redis_client(hostname=redis_host, verbose=True)
 # redis_client = establish_redis_client(hostname='52.204.229.101', verbose=True)  # in case conn to server is needed
 
 # If connection fails, MQTT client will not be able to update collar object, and will be useless. Kill and try again

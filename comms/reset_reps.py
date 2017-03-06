@@ -12,10 +12,11 @@ except NameError:
     print 'Working in Dev mode.'
 
 from databasing.redis_controls import retrieve_collar_by_id, update_collar_by_id, establish_redis_client
+from databasing.redis_conn_strings import redis_host
 
 
 def reset_reps(collar_id):
-    redis_client = establish_redis_client()
+    redis_client = establish_redis_client(hostname=redis_host)
 
     collar = retrieve_collar_by_id(redis_client, collar_id)
     collar['calc_reps'] = 0
