@@ -134,12 +134,9 @@ def main(args):
             # then update collar object with new values and push to redis. DO NOT iterate lift_id
             update_lift_id = False
             for key in dat.keys():
-                #: Temporary workaround until patrick renames this field
-                # if key == 'lift_num_reps':
-                # collar['init_num_reps'] = dat[key]
-                # else:
                 collar[key] = dat[key]
-            collar['athlete_id'] = 'None'
+            collar['athlete_id'] = 'None'  # Release athlete from collar
+            collar['active'] = False  # stop pushing data to db
 
             # Update calc_reps in database with final calculated value
             if ('calc_reps' in collar.keys()) & (collar['calc_reps'] is not None):
