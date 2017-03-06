@@ -112,7 +112,7 @@ def mqtt_on_message(client, userdata, msg):
         # This will ONLY happen if reset_reps.py is triggered, which means the only action that needs to be taken
         # is to zero out the reps
         if head['lift_id'] != 'None':
-            print 'resetting reps'
+            # print 'resetting reps'
             collar['calc_reps'] = 0
             # _ = update_collar_by_id(redis_client, collar, collar['collar_id'], verbose=True)
 
@@ -151,8 +151,8 @@ def mqtt_on_message(client, userdata, msg):
                 ['active', 'collar_id', 'curr_state',
                  'a_thresh', 'v_thresh', 'p_thresh', 'max_t'], axis=1)
             # Temporary to avoid pushing old field into database
-            if 'lift_num_reps' in header.columns:
-                header = header.drop('lift_num_reps', axis=1)
+            # if 'lift_num_reps' in header.columns:
+            #     header = header.drop('lift_num_reps', axis=1)
 
             # print 'header has: \n{}'.format(header)
             push_to_db(header, accel, crossings)
@@ -233,3 +233,7 @@ def main(args):
 # Receives initial ping to file
 if __name__ == '__main__':
     main(argv[1:])
+
+
+# {"header": {"collar_id": 555,"lift_id": "None" ,"sampling_rate":30},"content":{"a_x":
+# [11.58,11.57,11.58,11.59,11.59,11.57,11.57,11.59,11.58,11.57,11.60,11.59,11.60,11.56,11.59,11.59,11.60,11.60,11.58,11.56]}}

@@ -109,7 +109,8 @@ def main(args):
     redis_client = establish_redis_client(hostname='52.204.229.101', verbose=True)
 
     if redis_client is None:
-        print 'Unsuccessful attempt to launch redis client. Cannot update.'
+        if verbose:
+            print 'Unsuccessful attempt to launch redis client. Cannot update.'
         exit(200)
 
     try:
@@ -122,7 +123,8 @@ def main(args):
         # is reliable
         if next_lift_id is None:
             next_lift_id = pull_max_lift_id() + 1
-            print 'No Redis variable "lift_id" found. Will set to {} (from athlete_lift)'.format(next_lift_id)
+            if verbose:
+                print 'No Redis variable "lift_id" found. Will set to {} (from athlete_lift)'.format(next_lift_id)
             redis_client.set('lift_id', next_lift_id)
 
         if 'lift_id' not in dat.keys():
@@ -158,7 +160,8 @@ def main(args):
             collar['active'] = True
             collar['lift_id'] = next_lift_id
         else:
-            print 'sent update explicitly for lift_id {}, which is not currently handled.'.format(dat['lift_id'])
+            if verbose:
+                print 'sent update explicitly for lift_id {}, which is not currently handled.'.format(dat['lift_id'])
             update_lift_id = False
             collar = dat
 
@@ -169,13 +172,15 @@ def main(args):
         if response & update_lift_id:
             #: This is triggered when a Submit form is sent, and the user is about to START lifting
             # print 'Redis object updated properly. Will increment lift_id'
-            print 'lift_id: {}'.format(collar['lift_id'])
+            if verbose:
+                print 'lift_id: {}'.format(collar['lift_id'])
             # lift_id was 'None', and the redis collar object was successfully updated
             redis_client.incr('lift_id', 1)
         elif not response:
             #: This is triggered when a Submit form is sent, but redis couldn't be updated properly.
             #: User intends to START lifting, but there may be technical issues, as Redis didn't update..
-            print 'Redis object not updated properly. Will not increment lift_id.'
+            if verbose:
+                print 'Redis object not updated properly. Will not increment lift_id.'
         elif not update_lift_id:
             #: Triggered when the End Lift button is triggered on the frontend.
             #: Indicates that the user intends to STOP lifting (or has already stopped).
@@ -193,8 +198,8 @@ def main(args):
             print 'SHOULDNT SEE THIS!?!'
 
     except KeyError, e:
-        print 'Couldnt extract collar_id from json object. Cannot update.'
         if verbose:
+            print 'Couldnt extract collar_id from json object. Cannot update.'
             print 'Error message: \n{}'.format(e)
         # exit(200)
 
