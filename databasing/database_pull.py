@@ -37,7 +37,7 @@ def pull_max_lift_id():
 # TODO: Put this in a different file or a different folder
 def lift_to_json(lift_id):
     # Retrieve data from last lift, process into vel and power, push to frontend
-    print 'pulling data for lift_id {}...'.format(lift_id)
+    # print 'pulling data for lift_id {}...'.format(lift_id)
     header, data = pull_data_by_lift(lift_id)
     a, v, p = process_data(header, data)
 
@@ -77,6 +77,11 @@ def pull_data_by_lift(lift_id):
         print e
         print 'Returning None...'
         header, dat = None, None
+
+    except KeyError:
+        print 'No values returned for lift_id {}. Likely not in database.'.format(lift_id)
+        header, dat = None, None
+
     return header, dat
 
 

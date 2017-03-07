@@ -122,7 +122,7 @@ def main(args):
 
         header, dat = pull_data_by_lift(lift_id)
         send_head = {"header": {"lift_id": "None",
-                                "lift_sampling_rate": header['lift_sampling_rate'],
+                                "sampling_rate": header['sampling_rate'],
                                 "collar_id": collar_id}
                      }
 
@@ -159,10 +159,10 @@ def main(args):
             print 'Loop {}'.format(i)
             a_test = [random.normal(mu, var) for _ in range(30)]
             if (i % (10./sleep_time) == 0) & (N > 1):
-                header = {"header": {"lift_id": '-1', "lift_sampling_rate": 50, "collar_id": collar_id}}
+                header = {"header": {"lift_id": '-1', "sampling_rate": 20., "collar_id": collar_id}}
                 data = {"content": {"a_x": [0, 0, 0, 0]}}
             else:
-                header = {"header": {"lift_id": "None", "lift_sampling_rate": 50, "collar_id": collar_id}}
+                header = {"header": {"lift_id": "None", "sampling_rate": 20., "collar_id": collar_id}}
                 data = {"content": {"a_x": a_test}}
 
             packet = dict(dict(**header), **data)

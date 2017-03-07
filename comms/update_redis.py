@@ -5,7 +5,7 @@ from os.path import dirname, abspath
 
 try:
     path = dirname(dirname(abspath(__file__)))
-    print 'Adding {} to sys.path'.format(path)
+    # print 'Adding {} to sys.path'.format(path)
     syspath.append(path)
 except NameError:
     syspath.append('/Users/kyle/PycharmProjects/fitai_controller')
@@ -14,6 +14,7 @@ except NameError:
 from databasing.database_pull import lift_to_json, pull_max_lift_id
 from databasing.database_push import update_calc_reps
 from databasing.redis_controls import establish_redis_client, update_collar_by_id
+from databasing.redis_conn_strings import redis_host
 
 
 # Establish default behaviors of command-line call
@@ -105,11 +106,12 @@ def main(args):
     if verbose:
         print 'Received json: {}'.format(dat)
 
-    redis_client = establish_redis_client(hostname='localhost', verbose=verbose)
+    redis_client = establish_redis_client(hostname=redis_host, verbose=verbose)
     # redis_client = establish_redis_client(hostname='52.204.229.101', verbose=True)
 
     if redis_client is None:
-        print 'Unsuccessful attempt to launch redis client. Cannot update.'
+        if verbose:
+            print 'Unsuccessful attempt to launch redis client. Cannot update.'
         exit(200)
 
     try:
@@ -122,7 +124,8 @@ def main(args):
         # is reliable
         if next_lift_id is None:
             next_lift_id = pull_max_lift_id() + 1
-            print 'No Redis variable "lift_id" found. Will set to {} (from athlete_lift)'.format(next_lift_id)
+            if verbose:
+                print 'No Redis variable "lift_id" found. Will set to {} (from athlete_lift)'.format(next_lift_id)
             redis_client.set('lift_id', next_lift_id)
 
         if 'lift_id' not in dat.keys():
@@ -131,19 +134,13 @@ def main(args):
             # then update collar object with new values and push to redis. DO NOT iterate lift_id
             update_lift_id = False
             for key in dat.keys():
-                #: Temporary workaround until patrick renames this field
-                # if key == 'lift_num_reps':
-                collar['init_num_reps'] = dat[key]
-                # else:
-                #     collar[key] = dat[key]
-            collar['athlete_id'] = 'None'
+                collar[key] = dat[key]
+            collar['athlete_id'] = 'None'  # Release athlete from collar
+            collar['active'] = False  # stop pushing data to db
 
             # Update calc_reps in database with final calculated value
             if ('calc_reps' in collar.keys()) & (collar['calc_reps'] is not None):
                 update_calc_reps(collar)
-            else:
-                print 'Meant to update calc_reps in db, but collar {} does not contain valid calc_reps entry'.\
-                    format(collar['collar_id'])
 
         elif dat['lift_id'] == 'None':
             # lift_id = 'None' is sent to trigger new workout, which means lift_id needs to be updated.
@@ -158,7 +155,8 @@ def main(args):
             collar['active'] = True
             collar['lift_id'] = next_lift_id
         else:
-            print 'sent update explicitly for lift_id {}, which is not currently handled.'.format(dat['lift_id'])
+            if verbose:
+                print 'sent update explicitly for lift_id {}, which is not currently handled.'.format(dat['lift_id'])
             update_lift_id = False
             collar = dat
 
@@ -169,13 +167,15 @@ def main(args):
         if response & update_lift_id:
             #: This is triggered when a Submit form is sent, and the user is about to START lifting
             # print 'Redis object updated properly. Will increment lift_id'
-            print 'lift_id: {}'.format(collar['lift_id'])
+            if verbose:
+                print 'lift_id: {}'.format(collar['lift_id'])
             # lift_id was 'None', and the redis collar object was successfully updated
             redis_client.incr('lift_id', 1)
         elif not response:
             #: This is triggered when a Submit form is sent, but redis couldn't be updated properly.
             #: User intends to START lifting, but there may be technical issues, as Redis didn't update..
-            print 'Redis object not updated properly. Will not increment lift_id.'
+            if verbose:
+                print 'Redis object not updated properly. Will not increment lift_id.'
         elif not update_lift_id:
             #: Triggered when the End Lift button is triggered on the frontend.
             #: Indicates that the user intends to STOP lifting (or has already stopped).
@@ -186,14 +186,15 @@ def main(args):
             # stdout so that the PHP can retrieve it.
 
             # print 'JSON object did not include lift_id'
-            print 'found lift_id: {}'.format(collar['lift_id'])
+            if verbose:
+                print 'found lift_id: {}'.format(collar['lift_id'])
             print lift_to_json(collar['lift_id'])
         else:
             print 'SHOULDNT SEE THIS!?!'
 
     except KeyError, e:
-        print 'Couldnt extract collar_id from json object. Cannot update.'
         if verbose:
+            print 'Couldnt extract collar_id from json object. Cannot update.'
             print 'Error message: \n{}'.format(e)
         # exit(200)
 

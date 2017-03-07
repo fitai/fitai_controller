@@ -1,7 +1,7 @@
 from sqlalchemy import create_engine
 from pandas import read_sql
 from numpy import abs, round
-from sqlalchemy.exc import ProgrammingError, OperationalError, IntegrityError
+from sqlalchemy.exc import ProgrammingError, OperationalError, IntegrityError, ResourceClosedError
 
 from db_conn_strings import conn_string
 
@@ -84,9 +84,14 @@ def push_to_db(header, content, crossings):
 
 
 def update_calc_reps(collar):
+    tmp_conn = create_engine(conn_string)
+
     sql = '''
     UPDATE athlete_lift SET calc_reps = {cr}::NUMERIC
     WHERE lift_id = {l}::INT;
     '''.format(cr=collar['calc_reps'], l=collar['lift_id'])
 
-    read_sql(sql, conn)
+    try:
+        _ = tmp_conn.execute(sql)
+    except ResourceClosedError:
+        print 'update?'
