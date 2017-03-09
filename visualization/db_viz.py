@@ -110,10 +110,19 @@ class LiftPlot(object):
 
         #: To switch TapTool action to assign either "rep_start" or "rep_stop" on user tap
         self.tap_select = RadioButtonGroup(
-            name='rep_tool',
-            width=100,
+            name='rep_tool_event_type',
+            width=75,
             height=100,
-            labels=['rep_start', 'rep_stop', 'delete_nearby'],
+            labels=['rep', 'eccentric', 'concentric'],
+            active=0
+        )
+        self.tap_select.on_click(self._event_type_change)
+
+        self.tap_action = RadioButtonGroup(
+            name='rep_tool_action',
+            width=75,
+            height=100,
+            labels=['_start', '_stop', '_delete'],
             active=0
         )
         #: Used to fill the text box next to the tap_select
@@ -144,7 +153,7 @@ class LiftPlot(object):
         #: Format the row that the tap_select tool will be in
         self.h_filler = Div(width=20, height=100)
         self.tap_select_row = Row(width=600, height=100)
-        self.tap_select_row.children = [self.h_filler, self.tap_select, self.rep_info, self.calc_header]
+        self.tap_select_row.children = [self.h_filler, self.tap_select, self.tap_action, self.rep_info, self.calc_header]
 
         #: right_header contains the text box with lift metadata and the tap_select buttongroup
         self.right_header = Column(width=500, height=150)
@@ -206,7 +215,12 @@ class LiftPlot(object):
     #: Controls behavior of dropdown Select tool
     def _on_lift_change(self, attr, old, new):
         print 'Updating plot with lift_id: {}'.format(new)
+        self._reset_tap_buttons()
         self.update_datasource()
+
+    def _reset_tap_buttons(self):
+        self.tap_action.active = 0
+        self.tap_select.active = 0
 
     def _del_click(self):
         lift_id = self.lift_select.value
@@ -237,6 +251,9 @@ class LiftPlot(object):
         # cascade all proper function calls
         self.lift_select.value = self.lift_select.options[0]
 
+    def _get_e_type(self):
+        return self.tap_select.labels[self.tap_select.active]
+
     def _run_per_rep_calc(self):
         lift_id = int(self.lift_select.value)
         print 'Running rep calculations for all reps in lift {}...'.format(lift_id)
@@ -249,61 +266,67 @@ class LiftPlot(object):
         conn = create_engine(self.connection_string)
         events = read_sql(sql, conn)
 
-        #: Filter out anything that is not a rep start/stop point
-        events = events.loc[['rep' in x for x in events['event']]].sort_values(by='timepoint', ascending=True)
+        #: Filter out anything that is not a start/stop point of the appropriate event type
+        e_type = self._get_e_type()
+        events = events.loc[[e_type in x for x in events['event']]].sort_values(by='timepoint', ascending=True)
 
-        #: Group the start and stop points
-        #: NOTE: assumes the structure of df events is alternating start/stop
-        #        if this is not true, this logic will probably break!
-        rep = 0
-        events['rep_num'] = 0
-        for i, row in events.iterrows():
-            if (i % 2 == 0) & (row['event'] == 'rep_start'):
-                events.loc[i, 'rep_num'] = rep
-            elif (i % 2 == 1) & (row['event'] == 'rep_stop'):
-                events.loc[i, 'rep_num'] = rep
-            else:
-                print 'Unhandled event, row number {i} shows event {e}. Fix this.'.format(i=i, e=row['event'])
+        if events.shape[0] > 0:
+            #: Group the start and stop points
+            #: NOTE: assumes the structure of df events is alternating start/stop
+            #        if this is not true, this logic will probably break!
+            rep = 0
+            events['rep_num'] = 0
+            for i, row in events.iterrows():
+                if (i % 2 == 0) & (row['event'] == 'rep_start'):
+                    events.loc[i, 'rep_num'] = rep
+                elif (i % 2 == 1) & (row['event'] == 'rep_stop'):
+                    events.loc[i, 'rep_num'] = rep
+                else:
+                    print 'Unhandled event, row number {i} shows event {e}. Fix this.'.format(i=i, e=row['event'])
 
-            #: Increase rep number every 2 iterations, which should capture a full start/stop pair
-            if (i > 0) & ((i % 2) == 1):
-                rep += 1
+                #: Increase rep number every 2 iterations, which should capture a full start/stop pair
+                if (i > 0) & ((i % 2) == 1):
+                    rep += 1
 
-        #: pair each rep's start and stop points
-        ts = events.groupby('rep_num').apply(lambda df: list(df['timepoint']))
-        ts.name = 't_pair'
+            #: pair each rep's start and stop points
+            ts = events.groupby('rep_num').apply(lambda df: list(df['timepoint']))
+            ts.name = 't_pair'
 
-        #: run calculations on source data between timepoints
-        data = storage[(lift_id, 'data')]
+            #: run calculations on source data between timepoints
+            data = storage[(lift_id, 'data')]
 
-        # TODO: Try to clean this up
-        rep_info = DataFrame(columns=['v_max', 'v_mean', 'p_max', 'p_mean', 'N'], index=ts.index)
-        for i, row in ts.iteritems():
-            dat = data.loc[(data['timepoint'] >= row[0]) & (data['timepoint'] <= row[1]) ]
-            rep_info.loc[i, 'v_mean'] = round(dat['v_rms_raw_hp'].mean(), 2)
-            rep_info.loc[i, 'v_max'] = round(dat['v_rms_raw_hp'].max(), 2)
-            rep_info.loc[i, 'p_mean'] = round(dat['p_rms_raw_hp'].mean(), 2)
-            rep_info.loc[i, 'p_max'] = round(dat['p_rms_raw_hp'].max(), 2)
-            rep_info.loc[i, 'N'] = dat.shape[0]
+            # TODO: Try to clean this up
+            rep_info = DataFrame(columns=['v_max', 'v_mean', 'p_max', 'p_mean', 'N'], index=ts.index)
+            for i, row in ts.iteritems():
+                dat = data.loc[(data['timepoint'] >= row[0]) & (data['timepoint'] <= row[1]) ]
+                rep_info.loc[i, 'v_mean'] = round(dat['v_rms_raw_hp'].mean(), 2)
+                rep_info.loc[i, 'v_max'] = round(dat['v_rms_raw_hp'].max(), 2)
+                rep_info.loc[i, 'p_mean'] = round(dat['p_rms_raw_hp'].mean(), 2)
+                rep_info.loc[i, 'p_max'] = round(dat['p_rms_raw_hp'].max(), 2)
+                rep_info.loc[i, 'N'] = dat.shape[0]
 
-        #: Run calculations over all timepoints for total average
-        rep_info.reset_index(inplace=True)
-        rep_info['rep_num'] = (rep_info['rep_num'] + 1).astype(str)
-        rep_info = rep_info.append(DataFrame(
-            data={'rep_num': 'Overall',
-                  'v_max': rep_info['v_max'].max(),
-                  'v_mean': (rep_info['v_mean']*rep_info['N']).sum()/float(rep_info['N'].sum()),
-                  'p_max': rep_info['p_max'].max(),
-                  'p_mean': (rep_info['p_mean'] * rep_info['N']).sum() / float(rep_info['N'].sum())
-                  }, index=[0]
-            ), ignore_index=True)
+            #: Run calculations over all timepoints for total average
+            rep_info.reset_index(inplace=True)
+            rep_info['rep_num'] = (rep_info['rep_num'] + 1).astype(str)
+            rep_info = rep_info.append(DataFrame(
+                data={'rep_num': 'Overall',
+                      'v_max': rep_info['v_max'].max(),
+                      'v_mean': (rep_info['v_mean']*rep_info['N']).sum()/float(rep_info['N'].sum()),
+                      'p_max': rep_info['p_max'].max(),
+                      'p_mean': (rep_info['p_mean'] * rep_info['N']).sum() / float(rep_info['N'].sum())
+                      }, index=[0]
+                ), ignore_index=True)
 
-        #: Don't need column N any more
-        rep_info.drop('N', axis=1, inplace=True)
-        rep_info.set_index('rep_num', inplace=True)
+            #: Don't need column N any more
+            rep_info.drop('N', axis=1, inplace=True)
+            rep_info.set_index('rep_num', inplace=True)
 
-        text = rep_info.reset_index().to_string(index=False).replace('\n', '<br>').replace('    ', '&emsp;').replace('  ', '&emsp;')
-        self.calc_button_info.text = text
+            text = rep_info.reset_index().to_string(index=False).replace('\n', '<br>').replace('    ', '&emsp;').replace('  ', '&emsp;')
+            self.calc_button_info.text = text
+        else:
+            text = 'Couldnt find start/stop pairs of type {}.\nCannot calculate anything'.format(e_type)
+            self.calc_button_info.text = text
+
         print 'done with calculations'
 
     def update_datasource(self):
@@ -334,9 +357,12 @@ class LiftPlot(object):
 
         rep_dat = self.get_data('rep_data')
 
+        #: decide which start/stop points to plot
+        e_type = self._get_e_type()
+
         if rep_dat is not None:
             start_dat, stop_dat = self.format_lift_event_data(
-                rep_dat, min(data['a_x']), max(data['a_x']), max(data['timepoint']))
+                rep_dat, e_type, min(data['a_x']), max(data['a_x']), max(data['timepoint']))
             start_src = ColumnDataSource(start_dat)
             stop_src = ColumnDataSource(stop_dat)
         else:
@@ -357,7 +383,7 @@ class LiftPlot(object):
         self.rep_stop_source.data = stop_src.data
         self.rep_stop_source.column_names = self.rep_stop_source.data.keys()
 
-        print 'done updating plot datasource'
+        # print 'done updating plot datasource'
 
     def make_RMS_plot(self, source):
         tooltips = '''<div><span style="font-size: 12px;"> <b>time:</b> @timepoint s</span></div>
@@ -428,25 +454,32 @@ class LiftPlot(object):
         t = ts[idx]
 
         #: Other pieces of app metadata
-        #: Parse out whether rep_start or rep_stop
+        #: Parse out what label (rep, eccentric, concentric) and action (_start, _stop, _delete)
+        #: to apply when tap is triggered
         label = self.tap_select.labels[self.tap_select.active]
+        action = self.tap_action.labels[self.tap_action.active]
+        event = label + action
+
         #: Find lift_id
         lift_id = int(self.lift_select.value)
 
-        print 'lift_id {i}: Registered {l} click on timepoint {t}'.format(i=lift_id, l=label, t=t)
+        print 'lift_id {i}: Registered {e} click on timepoint {t}'.format(i=lift_id, e=event, t=t)
 
-        if label == 'delete_nearby':
-            event = self.find_nearest_event(t, t_lim=1.)
+        if action == '_delete':
+            event = self.find_nearest_event(label, t, t_lim=1.)
             if event is not None:
                 t_near = event['timepoint']
                 self._remove_lift_event(lift_id, t_near)
         else:
-            self._add_lift_event(lift_id, label, t)
+            self._add_lift_event(lift_id, event, t)
 
         #: Update datasources after modifying lift_event table
         self.update_datasource()
 
-    def find_nearest_event(self, t, t_lim=1.):
+    def _event_type_change(self, new):
+        self.update_datasource()
+
+    def find_nearest_event(self, e_type, t, t_lim=1.):
         conn = create_engine(self.connection_string)
 
         query = '''
@@ -459,13 +492,22 @@ class LiftPlot(object):
         events = read_sql(query, conn)
 
         if events.shape[0] > 0:
-            # sort so that min(timepoint) comes first
-            events = events.sort_values(by='timepoint', ascending=True).reset_index(drop=True)
-            nearest_event = events.ix[0]  # returns a pandas Series
-            # print 'Returning nearest event: \n{}'.format(nearest_event)
+            #: only want to delete events of same e_type as what is active on tap_select tool
+            event_mask = events['event'].apply(lambda x: e_type in x)
+            filt_events = events.loc[event_mask, :].reset_index(drop=True)
+
+            if filt_events.shape[0] > 0:
+                # sort so that min(timepoint) comes first
+                filt_events = filt_events.sort_values(by='timepoint', ascending=True).reset_index(drop=True)
+                nearest_event = filt_events.ix[0]  # returns a pandas Series
+            else:
+                nearest_event = None
+                text = 'No events of type {e} within {lim} seconds of tap at {t}'.format(e=e_type, lim=t_lim, t=t)
+                self.rep_info_text = text
+                # print 'Returning nearest event: \n{}'.format(nearest_event)
         else:
             nearest_event = None
-            text = 'No events within {lim} seconds of tap at {t}'.format(lim=t_lim, t=t)
+            text = 'No events of type {e} within {lim} seconds of tap at {t}'.format(e=e_type, lim=t_lim, t=t)
             self.rep_info_text = text
 
         return nearest_event
@@ -682,12 +724,12 @@ class LiftPlot(object):
             return None
         elif set_name == 'lift_data':
             if (int(self.lift_select.value), 'data') in storage.keys():
-                print 'Key ({}, {}) found in storage dict'.format(int(self.lift_select.value), 'data')
+                # print 'Key ({}, {}) found in storage dict'.format(int(self.lift_select.value), 'data')
                 header = storage[(int(self.lift_select.value), 'header')]
                 data = storage[(int(self.lift_select.value), 'data')]
                 return header.copy(), data.copy()
             else:
-                print 'Key ({}, {}) NOT found in storage dict'.format(int(self.lift_select.value), 'data')
+                # print 'Key ({}, {}) NOT found in storage dict'.format(int(self.lift_select.value), 'data')
                 header, data = pull_data_by_lift(int(self.lift_select.value))
 
                 for hp, lab in [(True, '_hp'), (False, '')]:
@@ -770,10 +812,10 @@ class LiftPlot(object):
                 return None
 
     @staticmethod
-    def format_lift_event_data(df, y_min, y_max, t_max):
+    def format_lift_event_data(df, e_type, y_min, y_max, t_max):
         #: df is dataframe with columns lift_id, timepoint, event
         #: timepoint = time at which event occurs
-        #: event = "rep_start" or "rep_stop"
+        #: event = e_type (e.g. rep, eccentric, concentric) + action (_start, _stop)
 
         #: Bokeh MultiLine wants a series of points of the format
         #: [[x11, x12], [y11, y12]], [[x21, x22], [y21, y22]], ...
@@ -785,8 +827,10 @@ class LiftPlot(object):
         df.drop(['x_val', 'timepoint', 'lift_id'], axis=1, inplace=True)
 
         #: Divvy up data according to whether each row reflects a rep start or stop
-        starts = df.loc[df['event'] == 'rep_start'].drop('event', axis=1).reset_index(drop=True)
-        stops = df.loc[df['event'] == 'rep_stop'].drop('event', axis=1).reset_index(drop=True)
+        e_start = e_type + '_start'
+        e_stop = e_type + '_stop'
+        starts = df.loc[df['event'] == e_start].drop('event', axis=1).reset_index(drop=True)
+        stops = df.loc[df['event'] == e_stop].drop('event', axis=1).reset_index(drop=True)
 
         return starts, stops
 
