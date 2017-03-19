@@ -80,17 +80,18 @@ def mqtt_on_message(client, userdata, msg):
 
         # TODO: Don't like doing all these checks. Think of a more efficient way...
         # If collar is newly generated, threshold will be 'None'
-        if any([(collar[col] == 'None') for col in ['a_thresh', 'v_thresh', 'p_thresh']]):
+        if any([(collar[col] == 'None') for col in ['a_thresh', 'v_thresh', 'pwr_thresh', 'pos_thresh']]):
             print 'Missing at least one signal threshold. Resetting all...'
             try:
                 # try to extract lift_type
                 lift_thresh = thresh_dict[collar['lift_type']]
                 collar['a_thresh'] = lift_thresh['a_thresh']
                 collar['v_thresh'] = lift_thresh['v_thresh']
-                collar['p_thresh'] = lift_thresh['p_thresh']
+                collar['pwr_thresh'] = lift_thresh['pwr_thresh']
+                collar['pos_thresh'] = lift_thresh['pos_thresh']
             except KeyError:
                 print 'Couldnt find any thresholds for lift_type {}. Defaulting to 1.'.format(collar['lift_type'])
-                collar['a_thresh'], collar['v_thresh'], collar['p_thresh'] = 1., 1., 1.
+                collar['a_thresh'], collar['v_thresh'], collar['pwr_thresh'], collar['pos_thresh'] = 1., 1., 1., 1.
 
         if collar['lift_start'] == 'None':
             collar['lift_start'] = dt.now()
@@ -119,10 +120,10 @@ def mqtt_on_message(client, userdata, msg):
 
         # Before taking the time to push to db, process the acceleration and push to PHP websocket
         print 'p_thresh: {}'.format(collar['p_thresh'])
-        a, v, p = process_data(collar, accel, RMS=False, highpass=True)
+        a, v, pwr, pos = process_data(collar, accel, RMS=False, highpass=True)
         reps, curr_state, crossings = calc_reps(
-            a, v, p, collar['calc_reps'], collar['curr_state'],
-            collar['a_thresh'], collar['v_thresh'], collar['p_thresh'])
+            a, v, pwr, pos, collar['calc_reps'], collar['curr_state'],
+            collar['a_thresh'], collar['v_thresh'], collar['pwr_thresh'], collar['pos_thresh'])
 
         # Assign timepoints to crossings, if there are any
         if crossings is not None:
@@ -143,14 +144,14 @@ def mqtt_on_message(client, userdata, msg):
             # print 'collar {} has no Active field set. Will create and set to False'.format(collar['collar_id'])
             collar['active'] = False
 
-        ws_pub(collar, v, p, reps)
+        ws_pub(collar, v, pwr, reps)
 
         _ = update_collar_by_id(redis_client, collar, collar['collar_id'], verbose=True)
 
         if collar['active']:
             header = DataFrame(data=collar, index=[0]).drop(
                 ['active', 'collar_id', 'curr_state',
-                 'a_thresh', 'v_thresh', 'p_thresh', 'max_t'], axis=1)
+                 'a_thresh', 'v_thresh', 'pwr_thresh', 'pos_thresh', 'max_t'], axis=1)
             # Temporary to avoid pushing old field into database
             # if 'lift_num_reps' in header.columns:
             #     header = header.drop('lift_num_reps', axis=1)

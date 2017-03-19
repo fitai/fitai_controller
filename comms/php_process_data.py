@@ -52,13 +52,14 @@ def main(argv):
         print 'Could not read content. Exiting...'
         sys.exit(30)
 
-    a, v, p = process_data(header, content)
+    a, v, pwr, pos = process_data(header, content)
 
     data_out = DataFrame(data={'lift_id': [header['lift_id']]*len(a),
                                'timepoint': content['timepoint'],
                                'a_rms': a,
                                'v_rms': v,
-                               'p_rms': p},
+                               'pwr_rms': pwr,
+                               'pos_rms': pos},
                          index=a.index)
 
     print 'Processed headers into:\n{}'.format(json.dumps(list(data_out.columns)))

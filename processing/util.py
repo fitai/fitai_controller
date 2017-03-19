@@ -172,6 +172,7 @@ def process_data(collar_obj, content, RMS=False, highpass=True, verbose=False):
         pwr.name = 'pwr'
 
         pos = calc_rms(pos, pos_headers)
+        pos.name = 'pos'
 
         # return a_rms, v_rms, p_rms
 

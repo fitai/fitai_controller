@@ -52,7 +52,7 @@ class LiftPlot(object):
         # TODO Confirm that app works when all_dims actually contains all possible dimensions
         # all_dims = ['_x', '_y', '_z', '_rms']
         all_dims = ['_x', '_rms']
-        all_cols = ['a', 'v', 'p']
+        all_cols = ['a', 'v', 'pwr', 'pos']
         all_filts = ['_hp', '']
 
         all_suffix = [x+y for (x, y) in product(all_dims, all_filts)]
@@ -95,9 +95,9 @@ class LiftPlot(object):
 
         self.signal_select = CheckboxGroup(
             name='signal_select',
-            width=100,
-            height=90,
-            labels=['a', 'v', 'p', 'a_hp', 'v_hp', 'p_hp'],
+            width=80,
+            height=150,
+            labels=['a', 'v', 'pwr', 'pos', 'a_hp', 'v_hp', 'pwr_hp', 'pos_hp'],
             active=[0]
         )
         self.signal_select.on_change('active', self._on_signal_change)
@@ -160,7 +160,7 @@ class LiftPlot(object):
         self.right_header.children = [self.lift_info, self.tap_select_row]
 
         #: plot_header contains all input tools, text boxes, etc that sit above the plot
-        self.plot_header = Row(width=self.plot_width, height=150)
+        self.plot_header = Row(width=self.plot_width, height=185)
         self.plot_header.children = [self.lift_select, self.signal_select, self.right_header, self.del_header]
 
         # ## RMS PLOT ##
@@ -296,13 +296,13 @@ class LiftPlot(object):
             data = storage[(lift_id, 'data')]
 
             # TODO: Try to clean this up
-            rep_info = DataFrame(columns=['v_max', 'v_mean', 'p_max', 'p_mean', 'N'], index=ts.index)
+            rep_info = DataFrame(columns=['v_max', 'v_mean', 'pwr_max', 'pwr_mean', 'N'], index=ts.index)
             for i, row in ts.iteritems():
                 dat = data.loc[(data['timepoint'] >= row[0]) & (data['timepoint'] <= row[1]) ]
                 rep_info.loc[i, 'v_mean'] = round(dat['v_rms_raw_hp'].mean(), 2)
                 rep_info.loc[i, 'v_max'] = round(dat['v_rms_raw_hp'].max(), 2)
-                rep_info.loc[i, 'p_mean'] = round(dat['p_rms_raw_hp'].mean(), 2)
-                rep_info.loc[i, 'p_max'] = round(dat['p_rms_raw_hp'].max(), 2)
+                rep_info.loc[i, 'pwr_mean'] = round(dat['pwr_rms_raw_hp'].mean(), 2)
+                rep_info.loc[i, 'pwr_max'] = round(dat['pwr_rms_raw_hp'].max(), 2)
                 rep_info.loc[i, 'N'] = dat.shape[0]
 
             #: Run calculations over all timepoints for total average
@@ -312,8 +312,8 @@ class LiftPlot(object):
                 data={'rep_num': 'Overall',
                       'v_max': rep_info['v_max'].max(),
                       'v_mean': (rep_info['v_mean']*rep_info['N']).sum()/float(rep_info['N'].sum()),
-                      'p_max': rep_info['p_max'].max(),
-                      'p_mean': (rep_info['p_mean'] * rep_info['N']).sum() / float(rep_info['N'].sum())
+                      'pwr_max': rep_info['pwr_max'].max(),
+                      'pwr_mean': (rep_info['pwr_mean'] * rep_info['N']).sum() / float(rep_info['N'].sum())
                       }, index=[0]
                 ), ignore_index=True)
 
@@ -389,7 +389,8 @@ class LiftPlot(object):
         tooltips = '''<div><span style="font-size: 12px;"> <b>time:</b> @timepoint s</span></div>
                       <div><span style="font-size: 12px;"> <b>accel:</b> @a_rms_raw m/s^2</span></div>
                       <div><span style="font-size: 12px;"> <b>vel:</b> @v_rms_raw m/s</span></div>
-                      <div><span style="font-size: 12px;"> <b>pwr:</b> @p_rms_raw W</span></div>'''
+                      <div><span style="font-size: 12px;"> <b>pwr:</b> @pwr_rms_raw W</span></div>
+                      <div><span style="font-size: 12px;"> <b>pos:</b> @pos_rms_raw W</span></div>'''
 
         plot = Plot(
             title=None,
@@ -407,14 +408,16 @@ class LiftPlot(object):
 
         rends = list()
         # for y_val in [x for x in self.all_signals if 'rms' in x]:
-        for y_val in ['a_rms', 'v_rms', 'p_rms']:
+        for y_val in ['a_rms', 'v_rms', 'pwr_rms', 'pos_rms']:
 
             if 'a' in y_val:
                 c = 'black'
             elif 'v' in y_val:
                 c = 'blue'
-            elif 'p' in y_val:
+            elif 'pwr' in y_val:
                 c = 'purple'
+            elif 'pos' in y_val:
+                c = 'brown'
             else:
                 c = 'red'
 
@@ -546,7 +549,8 @@ class LiftPlot(object):
                       <div><span style="font-size: 12px;"> <b>acc   :</b> @a_x_raw m/s^2</span></div>
                       <div><span style="font-size: 12px;"> <b>acc HP:</b> @a_x_hp m/s^2</span></div>
                       <div><span style="font-size: 12px;"> <b>vel HP:</b> @v_x_hp m/s</span></div>
-                      <div><span style="font-size: 12px;"> <b>pwr HP:</b> @p_x_hp W</span></div>'''
+                      <div><span style="font-size: 12px;"> <b>pwr HP:</b> @pwr_x_hp W</span></div>
+                      <div><span style="font-size: 12px;"> <b>pos HP:</b> @pos_x_hp m</span></div>'''
 
         #: Gold line that moves to where user clicks to show which timepoint will be logged on use of TapTool
         src = ColumnDataSource(
@@ -632,14 +636,16 @@ class LiftPlot(object):
         )
 
         rends = list()
-        for y_val in ['a_x', 'v_x', 'p_x', 'a_x_hp', 'v_x_hp', 'p_x_hp']:
+        for y_val in ['a_x', 'v_x', 'pwr_x', 'pos_x', 'a_x_hp', 'v_x_hp', 'pwr_x_hp', 'pos_x_hp']:
             #: Split out signal type (a/v/p) by color
             if 'a' in y_val:
                 c = 'black'
             elif 'v' in y_val:
                 c = 'blue'
-            elif 'p' in y_val:
+            elif 'pwr' in y_val:
                 c = 'purple'
+            elif 'pos' in y_val:
+                c = 'brown'
             else:
                 #: Uncaught line type here - make red so we can see it easily
                 c = 'red'
@@ -733,11 +739,11 @@ class LiftPlot(object):
                 header, data = pull_data_by_lift(int(self.lift_select.value))
 
                 for hp, lab in [(True, '_hp'), (False, '')]:
-                    a_rms, v_rms, p_rms = process_data(header, data, RMS=True, highpass=hp)
-                    a_rms.name, v_rms.name, p_rms.name = 'a_rms', 'v_rms', 'p_rms'
+                    a_rms, v_rms, pwr_rms, pos_rms = process_data(header, data, RMS=True, highpass=hp)
+                    a_rms.name, v_rms.name, pwr_rms.name, pos_rms.name = 'a_rms', 'v_rms', 'pwr_rms', 'pos_rms'
 
-                    accel, vel, pwr = process_data(header, data, RMS=False, highpass=hp)
-                    accel.name, vel.name, pwr.name = 'a_x', 'v_x', 'p_x'
+                    accel, vel, pwr, pos = process_data(header, data, RMS=False, highpass=hp)
+                    accel.name, vel.name, pwr.name, pos.name = 'a_x', 'v_x', 'pwr_x', 'pos_x'
 
                     #: If first loop, instantiate empty dataframe dat with proper index
                     if hp:
@@ -774,6 +780,15 @@ class LiftPlot(object):
                     if hp:
                         pwr = pwr.drop(col, axis=1)
 
+                    # for col in pos.columns:
+                    col = pos.name
+                    pos = pos.to_frame()
+                    raw_col = str(col) + '_raw' + lab
+                    pos[raw_col] = pos[col]
+                    pos[col+lab] = self.max_min_scale(pos[col])
+                    if hp:
+                        pos = pos.drop(col, axis=1)
+
                     #: On first loop, dat should be empty dataframe with overlapping indices,
                     #: so these joins should be fine. On second loop, dat will already have half the data.
                     dat = dat.join(DataFrame(
@@ -782,10 +797,12 @@ class LiftPlot(object):
                             'a_rms_raw'+lab: a_rms,
                             'v_rms'+lab: self.max_min_scale(v_rms),
                             'v_rms_raw'+lab: v_rms,
-                            'p_rms'+lab: self.max_min_scale(p_rms),
-                            'p_rms_raw'+lab: p_rms
+                            'pwr_rms'+lab: self.max_min_scale(pwr_rms),
+                            'pwr_rms_raw'+lab: pwr_rms,
+                            'pos_rms'+lab: self.max_min_scale(pos_rms),
+                            'pos_rms_raw'+lab: pos_rms
                             },
-                        index=a_rms.index).join(accel).join(vel).join(pwr))
+                        index=a_rms.index).join(accel).join(vel).join(pwr).join(pos))
 
                     #: Only want timepoint series once, so save until the end
                     if not hp:

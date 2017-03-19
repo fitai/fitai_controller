@@ -28,14 +28,15 @@ id = lift_ids[0]
 
 header, data = pull_data_by_lift(id)
 
-a, v, p = process_data(header, data, RMS=False, verbose=True)
+a, v, pwr, pos = process_data(header, data, RMS=False, verbose=True)
 
 # print a
 d = pd.DataFrame(data={'a': a,
-                      'v': v,
-                      'p': p,
-                      'timepoint': data['timepoint'],
-                      'lift_id': header['lift_id']},
+                       'v': v,
+                       'pwr': pwr,
+                       'pos': pos,
+                       'timepoint': data['timepoint'],
+                       'lift_id': header['lift_id']},
                     index=a.index)
 
 dat = dat.append(d, ignore_index=True)
