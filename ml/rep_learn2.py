@@ -57,7 +57,7 @@ starts = events.loc[events['event'].eq('rep_start')].reset_index(drop=True)
 stops = events.loc[events['event'].eq('rep_stop')].reset_index(drop=True)
 
 
-def build_rep_prob_signal(t, sampling, t_range):
+def build_rep_prob_signal(t, sampling, t_window):
     # print 'row as passed (type{t}): \n{v}'.format(t=type(row), v=row)
     # # i, s = row
     # t = row['timepoint']
@@ -67,10 +67,10 @@ def build_rep_prob_signal(t, sampling, t_range):
     #: appropriate mean, std
     #: Where mean = t_start (or t_stop) ( = t)
     #:       std = such that any values outside of +/- 4*std will be truncated to zero
-    t_half = t_range/2.  # half of range on each side (+/-) of t
+    t_half = t_window/2.  # half of range on each side (+/-) of t
     sig = (t_half/4.)   # anything outside this gets truncated to prob = 0
 
-    #: NOTE TO SELF: Look into why this doesn't create number spaced evenly
+    #: NOTE TO SELF: Look into why this doesn't create numbers spaced evenly
     # test = np.linspace(t - t_half, t + t_half, num=t_range * sampling)
 
     bound = int(t_half*sampling)
@@ -90,7 +90,7 @@ def build_rep_prob_signal(t, sampling, t_range):
 # starts.apply(lambda row: build_prob_signal(row['timepoint'], row['sampling_rate'], t_range=1.), axis=1)
 probs = pd.Series()
 for i, row in starts.iterrows():
-    probs = probs.append(build_rep_prob_signal(row['timepoint'], row['sampling_rate'], t_range=1.))
+    probs = probs.append(build_rep_prob_signal(row['timepoint'], row['sampling_rate'], t_window=1.))
 
 
 zeros = pd.Series(0., index=dat['timepoint'])
@@ -99,7 +99,7 @@ p1.name = 'p1'
 
 probs = pd.Series()
 for i, row in stops.iterrows():
-    probs = probs.append(build_rep_prob_signal(row['timepoint'], row['sampling_rate'], t_range=1.))
+    probs = probs.append(build_rep_prob_signal(row['timepoint'], row['sampling_rate'], t_window=1.))
 
 p0 = (zeros + probs).fillna(0.)
 p0.name = 'p0'
@@ -111,12 +111,29 @@ X = dat.drop(['lift_id', 'timepoint'], axis=1).copy()
 
 #: Train model on each
 
-from sklearn.linear_model import LinearRegression
+from sklearn.linear_model import LinearRegression, Ridge
 
 start_model = LinearRegression()
+start_model = Ridge()
 start_model.fit(X, y=p1.reset_index(drop=True))
 
 y_hat = start_model.predict(X)
 
 plt.plot(p1.reset_index(drop=True), 'black')
 plt.plot(y_hat, 'blue')
+
+from sklearn.neural_network import MLPRegressor
+
+mlp = MLPRegressor(hidden_layer_sizes=(10, 10), activation='tanh')
+mlp.fit(X, p1.reset_index(drop=True))
+y_hat = mlp.predict(X)
+
+plt.plot(p1.reset_index(drop=True), 'black')
+plt.plot(y_hat, 'blue')
+
+from sklearn.ensemble import RandomForestRegressor
+
+rf = RandomForestRegressor(n_estimators=200)
+
+rf.fit(X, p1.reset_index(drop=True))
+y_hat = rf.predict(X)
