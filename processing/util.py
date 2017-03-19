@@ -1,7 +1,7 @@
 from pandas import DataFrame, Series
 import sys
 
-from processing.functions import calc_integral, calc_rms, calc_power
+from processing.functions import calc_integral, calc_rms, calc_power, calc_pos
 from processing.filters import filter_signal
 
 
@@ -111,7 +111,8 @@ def process_data(collar_obj, content, RMS=False, highpass=True, verbose=False):
     #: Establish column headers so that any piece of the function can access
     accel_headers = [x for x in content.columns if x in ['a_x', 'a_y', 'a_z']]
     vel_headers = ['v_' + x.split('_')[-1] for x in accel_headers]
-    pwr_headers = ['p_' + x.split('_')[-1] for x in accel_headers]
+    pwr_headers = ['pwr_' + x.split('_')[-1] for x in accel_headers]
+    pos_headers = ['pos_' + x.split('_')[-1] for x in accel_headers]
 
     # Try to impose high pass on acceleration - see if it will fix the velocity drift
     if highpass:
@@ -138,6 +139,8 @@ def process_data(collar_obj, content, RMS=False, highpass=True, verbose=False):
         pwr = DataFrame(data={pwr_headers[0]: calc_power(content[accel_headers[0]], vel[vel_headers[0]], weight)})
         # pwr.name = pwr_headers[0]
 
+        pos = DataFrame(data={pos_headers[0]: calc_pos(content[accel_headers[0]], scale=1., fs=fs)})
+
     else:
         if verbose:
             print 'Found multiple axes of data. Will combine into RMS.'
@@ -153,6 +156,10 @@ def process_data(collar_obj, content, RMS=False, highpass=True, verbose=False):
         for i in range(len(accel_headers)):
             pwr[pwr_headers[i]] = calc_power(content[accel_headers[i]], vel[vel_headers[i]], weight)
 
+        pos = DataFrame(columns=pos_headers)
+        for i, header in enumerate(accel_headers):
+            pos[pos_headers[i]] = calc_integral(content[header], scale=1., fs=fs)
+
     if RMS:
         a = calc_rms(content, accel_headers)
         a.name = 'a'
@@ -161,8 +168,10 @@ def process_data(collar_obj, content, RMS=False, highpass=True, verbose=False):
         v.name = 'v'
 
         # p_rms = calc_power(a_rms, v_rms, weight)
-        p = calc_rms(pwr, pwr_headers)
-        p.name = 'p'
+        pwr = calc_rms(pwr, pwr_headers)
+        pwr.name = 'pwr'
+
+        pos = calc_rms(pos, pos_headers)
 
         # return a_rms, v_rms, p_rms
 
@@ -170,6 +179,7 @@ def process_data(collar_obj, content, RMS=False, highpass=True, verbose=False):
         #: TODO: This pulls out a single axis. Make this more dynamic!
         a = Series(content[accel_headers[0]], name='a')
         v = Series(vel[vel_headers[0]], name='v')
-        p = Series(pwr[pwr_headers[0]], name='p')
+        pwr = Series(pwr[pwr_headers[0]], name='pwr')
+        pos = Series(pos[pos_headers[0]], name='pos')
 
-    return a, v, p
+    return a, v, pwr, pos
