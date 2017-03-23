@@ -18,6 +18,7 @@ def get_default_collar():
             "a_thresh": "None",
             "v_thresh": "None",
             "pwr_thresh": "None",  # Needs to be "None"
+            "pos_thresh": "None",
             "curr_state": 'rest',
             "max_t": 0.,
             "sampling_rate": 20.
