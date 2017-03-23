@@ -68,7 +68,7 @@ def mqtt_on_message(client, userdata, msg):
         # TODO: If collar returns without all necessary fields, what should happen??
         collar = retrieve_collar_by_id(redis_client, head['collar_id'])
         # Quick check that at least one expected field is in collar object
-        if 'p_thresh' not in collar.keys():
+        if 'pwr_thresh' not in collar.keys():
             print 'Redis collar object {} appears broken. ' \
                   'Will replace with default and update as needed.'.format(collar['collar_id'])
             collar_tmp = collar.copy()
@@ -119,7 +119,7 @@ def mqtt_on_message(client, userdata, msg):
             # _ = update_collar_by_id(redis_client, collar, collar['collar_id'], verbose=True)
 
         # Before taking the time to push to db, process the acceleration and push to PHP websocket
-        print 'p_thresh: {}'.format(collar['p_thresh'])
+        print 'pwr_thresh: {}'.format(collar['pwr_thresh'])
         a, v, pwr, pos = process_data(collar, accel, RMS=False, highpass=True)
         reps, curr_state, crossings = calc_reps(
             a, v, pwr, pos, collar['calc_reps'], collar['curr_state'],
