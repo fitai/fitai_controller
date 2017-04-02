@@ -101,9 +101,6 @@ def process_data(collar_obj, content, RMS=False, highpass=True, verbose=False):
             print 'Content (type {}) is not a dataframe. Will try to convert...'.format(type(content))
         content = DataFrame(content)
 
-    # if isinstance(collar_obj, DataFrame):
-    #     collar_obj = collar_obj.drop_duplicates().to_dict(orient='index')[0]
-
     # Drop columns that contain more than 10% missing values
     x = content.isnull().sum(axis=0) > 0.1*content.shape[0]
     content = content.loc[:, x.loc[~x].index]
@@ -126,25 +123,8 @@ def process_data(collar_obj, content, RMS=False, highpass=True, verbose=False):
         if verbose:
             print 'Could not find acceleration field(s). Cannot process'
         sys.exit(10)
-    elif len(accel_headers) == 1:
-        if verbose:
-            print 'Found single axis of data'
-
-        # accel = DataFrame(data={accel_headers[0]: content[accel_headers[0]]})
-        # accel.name = accel_headers[0]
-
-        vel = DataFrame(data={vel_headers[0]: calc_integral(content[accel_headers[0]], scale=1., fs=fs)})
-        # vel.name = vel_headers[0]
-
-        pwr = DataFrame(data={pwr_headers[0]: calc_power(content[accel_headers[0]], vel[vel_headers[0]], weight)})
-        # pwr.name = pwr_headers[0]
-
-        pos = DataFrame(data={pos_headers[0]: calc_pos(content[accel_headers[0]], scale=1., fs=fs)})
 
     else:
-        if verbose:
-            print 'Found multiple axes of data. Will combine into RMS.'
-
         # Can't calculate integral on rectified signal - will result in a positively drifting signal
         # Have to leave acceleration split into constituent dimensions, calculate velocity along each,
         # then combine into RMS signal
@@ -161,26 +141,13 @@ def process_data(collar_obj, content, RMS=False, highpass=True, verbose=False):
             pos[pos_headers[i]] = calc_integral(content[header], scale=1., fs=fs)
 
     if RMS:
-        a = calc_rms(content, accel_headers)
-        a.name = 'a'
-
-        v = calc_rms(vel, vel_headers)
-        v.name = 'v'
-
-        # p_rms = calc_power(a_rms, v_rms, weight)
-        pwr = calc_rms(pwr, pwr_headers)
-        pwr.name = 'pwr'
-
-        pos = calc_rms(pos, pos_headers)
-        pos.name = 'pos'
-
-        # return a_rms, v_rms, p_rms
+        a = calc_rms(content, accel_headers).to_frame()
+        v = calc_rms(vel, vel_headers).to_frame()
+        pwr = calc_rms(pwr, pwr_headers).to_frame()
+        pos = calc_rms(pos, pos_headers).to_frame()
 
     else:
-        #: TODO: This pulls out a single axis. Make this more dynamic!
-        a = Series(content[accel_headers[0]], name='a')
-        v = Series(vel[vel_headers[0]], name='v')
-        pwr = Series(pwr[pwr_headers[0]], name='pwr')
-        pos = Series(pos[pos_headers[0]], name='pos')
+        a = content
+        v = vel
 
     return a, v, pwr, pos

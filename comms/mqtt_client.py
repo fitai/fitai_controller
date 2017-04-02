@@ -20,7 +20,7 @@ from databasing.redis_controls import establish_redis_client, retrieve_collar_by
 from processing.util import read_header_mqtt, read_content_mqtt, process_data
 from comms.ws_publisher import ws_pub
 from ml.thresh_learn import calc_reps, load_thresh_dict
-from databasing.redis_conn_strings import redis_host
+from databasing.conn_strings import redis_host
 
 # TODO: Turn this entire file into a class. Will allow us to use objects like the redis_client
 # TODO: Push thresh_dict load into separate file
@@ -106,20 +106,9 @@ def mqtt_on_message(client, userdata, msg):
         #: Left over from old collar format. Shouldn't need this forever - remove key "threshold" if exists
         collar.pop('threshold', None)
 
-        # print 'collar contains: \n{}'.format(collar)
-
-        # print 'reading content...'
         accel = read_content_mqtt(data, collar)
 
-        # This will ONLY happen if reset_reps.py is triggered, which means the only action that needs to be taken
-        # is to zero out the reps
-        if head['lift_id'] != 'None':
-            # print 'resetting reps'
-            collar['calc_reps'] = 0
-            # _ = update_collar_by_id(redis_client, collar, collar['collar_id'], verbose=True)
-
         # Before taking the time to push to db, process the acceleration and push to PHP websocket
-        print 'pwr_thresh: {}'.format(collar['pwr_thresh'])
         a, v, pwr, pos = process_data(collar, accel, RMS=False, highpass=True)
         reps, curr_state, crossings = calc_reps(
             a, v, pwr, pos, collar['calc_reps'], collar['curr_state'],
@@ -130,11 +119,7 @@ def mqtt_on_message(client, userdata, msg):
             if crossings.shape[0] > 0:
                 crossings['timepoint'] = (collar['max_t'] + crossings.index*(1./collar['sampling_rate'])).values
                 crossings['lift_id'] = collar['lift_id']
-        # except AttributeError, e:
-        #     print 'Crossings does not exist'
-        #     print e
 
-        # reps = 0
         # update state of user via 'collar' dict
         collar['calc_reps'] = reps
         collar['curr_state'] = curr_state
@@ -144,7 +129,8 @@ def mqtt_on_message(client, userdata, msg):
             # print 'collar {} has no Active field set. Will create and set to False'.format(collar['collar_id'])
             collar['active'] = False
 
-        ws_pub(collar, v, pwr, reps)
+        _, v_rms, p_rms, _ = process_data(collar, accel, RMS=True, highpass=True)
+        ws_pub(collar, v_rms['rms'], p_rms['rms'], reps)
 
         _ = update_collar_by_id(redis_client, collar, collar['collar_id'], verbose=True)
 
@@ -152,11 +138,6 @@ def mqtt_on_message(client, userdata, msg):
             header = DataFrame(data=collar, index=[0]).drop(
                 ['active', 'collar_id', 'curr_state',
                  'a_thresh', 'v_thresh', 'pwr_thresh', 'pos_thresh', 'max_t'], axis=1)
-            # Temporary to avoid pushing old field into database
-            # if 'lift_num_reps' in header.columns:
-            #     header = header.drop('lift_num_reps', axis=1)
-
-            # print 'header has: \n{}'.format(header)
             push_to_db(header, accel, crossings)
         else:
             print 'Received and processed data for collar {}, but collar is not active...'.format(collar['collar_id'])
@@ -179,7 +160,7 @@ def establish_mqtt_client(ip, port, topic):
     client.on_message = mqtt_on_message
 
     print 'Connecting MQTT client...'
-    client.connect(ip, port, 60)  # AWS IP
+    client.connect(ip, port, 60)
     print 'Subscribing to topic "{}"'.format(topic)
     client.subscribe(topic=topic, qos=2)
     print 'MQTT client ready'
@@ -235,7 +216,3 @@ def main(args):
 # Receives initial ping to file
 if __name__ == '__main__':
     main(argv[1:])
-
-
-# {"header": {"collar_id": 555,"lift_id": "None" ,"sampling_rate":30},"content":{"a_x":
-# [11.58,11.57,11.58,11.59,11.59,11.57,11.57,11.59,11.58,11.57,11.60,11.59,11.60,11.56,11.59,11.59,11.60,11.60,11.58,11.56]}}

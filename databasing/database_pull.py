@@ -16,11 +16,11 @@ except NameError:
     print 'Working in Dev mode.'
 
 from processing.util import process_data
-from databasing.db_conn_strings import conn_string
+from databasing.conn_strings import db_conn_string
 
 # TODO: move this in to the proper functions
 # Global for now. Should be fixed..
-conn = create_engine(conn_string)
+conn = create_engine(db_conn_string)
 
 
 # Utility function for other functions. Won't be seen by anything in database_pull.py
@@ -41,12 +41,16 @@ def lift_to_json(lift_id):
     header, data = pull_data_by_lift(lift_id)
     a, v, pwr, pos = process_data(header, data, RMS=True)
 
-    data_out = DataFrame(data={'a_rms': a,
-                               'v_rms': v,
-                               'pwr_rms': pwr,
-                               'pos_rms': pos,
+    data_out = DataFrame(data={'a_rms': a['a_x'],
+                               'v_rms': v['v_x'],
+                               'pwr_rms': pwr['pwr_x'],
+                               'pos_rms': pos['pos_x'],
                                'timepoint': data['timepoint']},
                          index=a.index)
+
+    # when ready, use this:
+    # data_out = a.join(v).join(pwr).join(pos)
+    # data_out['timepoint'] = data['timepoint']
 
     return data_out.to_json(orient='split')
 

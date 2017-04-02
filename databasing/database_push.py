@@ -3,11 +3,11 @@ from pandas import read_sql
 from numpy import abs, round
 from sqlalchemy.exc import ProgrammingError, OperationalError, IntegrityError, ResourceClosedError
 
-from db_conn_strings import conn_string
+from databasing.conn_strings import db_conn_string
 
 # TODO: move this in to the proper functions
 # Global for now. Should be fixed..
-conn = create_engine(conn_string)
+conn = create_engine(db_conn_string)
 
 
 def push_to_db(header, content, crossings):
@@ -84,7 +84,7 @@ def push_to_db(header, content, crossings):
 
 
 def update_calc_reps(collar):
-    tmp_conn = create_engine(conn_string)
+    tmp_conn = create_engine(db_conn_string)
 
     sql = '''
     UPDATE athlete_lift SET calc_reps = {cr}::NUMERIC
