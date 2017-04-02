@@ -41,10 +41,10 @@ def lift_to_json(lift_id):
     header, data = pull_data_by_lift(lift_id)
     a, v, pwr, pos = process_data(header, data, RMS=True)
 
-    data_out = DataFrame(data={'a_rms': a['a_x'],
-                               'v_rms': v['v_x'],
-                               'pwr_rms': pwr['pwr_x'],
-                               'pos_rms': pos['pos_x'],
+    data_out = DataFrame(data={'a_rms': a['rms'],
+                               'v_rms': v['rms'],
+                               'pwr_rms': pwr['rms'],
+                               # 'pos_rms': pos['rms'],
                                'timepoint': data['timepoint']},
                          index=a.index)
 
