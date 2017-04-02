@@ -26,16 +26,17 @@ def calc_vel1(signal, scale, fs):
 #: Euler method
 #: Accepts single dimension of values (e.g. series or array)
 #: Returns pandas Series
-def calc_integral(signal, scale=1., fs=20):
+def calc_integral(signal, scale=1., fs=20.):
     delta_t = scale / fs
     integral = cumsum(signal * delta_t)
     return Series(data=integral, name='integral')
 
 
-def calc_pos(signal, scale, fs):
+def calc_pos(signal, scale=1., fs=20.):
     delta_t = scale / fs
     integral = cumsum(0.5 * (signal[1:] + diff(signal) / 2.) * (delta_t**2))
-    return integral
+    integral[0] = 0.  # because of the use of diff() above, the first value as cut off. insert it here
+    return integral.sort_index(axis=0)
 
 
 #: Scipy's trapezoid method

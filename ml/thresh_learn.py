@@ -5,7 +5,7 @@ import pandas as pd
 from json import loads, dump
 from pandas import DataFrame
 
-from processing.functions import method1, calc_integral
+from processing.functions import method1, calc_integral, calc_pos
 from processing.filters import simple_highpass
 from processing.util import process_data, extract_weight, extract_sampling_rate
 from databasing.database_pull import pull_data_by_lift, pull_lift_ids
@@ -32,7 +32,7 @@ def find_threshold(alpha=0.1, smooth=False, plot=False, verbose=False):
             for i, lift_id in enumerate(ids):
                 type_dict[i] = learn_on_lift_id(int(lift_id), smooth, alpha, plot, verbose)
 
-            for label in ['a', 'v', 'p']:
+            for label in ['a', 'v', 'pwr', 'pos']:
 
                 errs = [d[label[0]+'_error'] for _, d in type_dict.iteritems()]
                 thresholds = [d[label[0]+'_thresh'] for _, d in type_dict.iteritems()]
@@ -63,12 +63,13 @@ def find_threshold(alpha=0.1, smooth=False, plot=False, verbose=False):
 
 def learn_on_lift_id(lift_id, smooth, alpha, plot, verbose):
     header, dat = pull_data_by_lift(lift_id)
-    a, v, p = process_data(header, dat, RMS=False, highpass=True, verbose=verbose)
+    a, v, pwr, pos = process_data(header, dat, RMS=False, highpass=True, verbose=verbose)
 
     # print a
     data = DataFrame(data={'a': a,
                            'v': v,
-                           'p': p},
+                           'pwr': pwr,
+                           'pos': pos},
                      index=a.index)
 
     if smooth:
@@ -94,11 +95,13 @@ def learn_on_lift_id(lift_id, smooth, alpha, plot, verbose):
         #: Calculate integral via Euler's method (cumulative sum)
         vel_rms = calc_integral(acc_rms, scale=bin_size, fs=fs)
         pwr_rms = acc_rms * weight * vel_rms
+        pos_rms = calc_pos(acc_rms, scale=bin_size, fs=fs)
     else:
         # Don't smooth; use calculated power
         acc_rms = data['a']
         vel_rms = data['v']
-        pwr_rms = data['p']
+        pwr_rms = data['pwr']
+        pos_rms = data['pos']
 
     try:
         # true_reps = int([x for x in filename.split('_') if 'rep' in x][0].split('rep')[0])
@@ -113,7 +116,7 @@ def learn_on_lift_id(lift_id, smooth, alpha, plot, verbose):
 
     thresh_dict = {}
     signal_tracking = {}
-    for label, signal in [('acc', acc_rms), ('vel', vel_rms), ('pwr', pwr_rms)]:
+    for label, signal in [('acc', acc_rms), ('vel', vel_rms), ('pwr', pwr_rms), ('pos', pos_rms)]:
 
         #: For use in plotting, if wanted
         signal.name = label
@@ -253,7 +256,7 @@ def learn_on_lift_id(lift_id, smooth, alpha, plot, verbose):
 
 
 # From an input power vector, detect any change in state and increment
-def calc_reps(acc, vel, pwr, n_reps, state, a_thresh=1., v_thresh=1., p_thresh=1.):
+def calc_reps(acc, vel, pwr, pos, n_reps, state, a_thresh=1., v_thresh=1., pwr_thresh=1., pos_thresh=1.):
     """
     Simple - a crossing of ALL the thresholds (a, v, p) indicates a change in state. From this, determine where the
     user was (in the state-space), and adjust accordingly
@@ -261,11 +264,13 @@ def calc_reps(acc, vel, pwr, n_reps, state, a_thresh=1., v_thresh=1., p_thresh=1
     :param acc: list-like acceleration vector. will be converted to pandas Series
     :param vel: list-like velocity vector. will be converted to pandas Series
     :param pwr: list-like power vector. will be converted to pandas Series
+    :param pos: list-like position vector. will be converted to pandas Series
     :param n_reps: number of reps user is at before processing this power vector
     :param state: state of user coming into processing step
     :param a_thresh: threshold to apply to acceleration vector
     :param v_thresh: threshold to apply to velocity vector
-    :param p_thresh: threshold to apply to power vector
+    :param pwr_thresh: threshold to apply to power vector
+    :param pos_thresh: threshold to apply to position vector
     :return:
     """
 
@@ -275,7 +280,7 @@ def calc_reps(acc, vel, pwr, n_reps, state, a_thresh=1., v_thresh=1., p_thresh=1
     # p_thresh = 1.
 
     diff_list = []
-    for label, signal in [('acceleration', acc), ('velocity', vel), ('power', pwr)]:
+    for label, signal in [('acceleration', acc), ('velocity', vel), ('power', pwr), ('position', pos)]:
         if not isinstance(signal, pd.Series):
             print 'converting {l} {t} to pandas Series...'.format(l=label, t=type(pwr))
             signal = pd.Series(signal)
@@ -284,8 +289,12 @@ def calc_reps(acc, vel, pwr, n_reps, state, a_thresh=1., v_thresh=1., p_thresh=1
             thresh = a_thresh
         elif label == 'velocity':
             thresh = v_thresh
+        elif label == 'power':
+            thresh = pwr_thresh
+        elif label == 'position':
+            thresh = pos_thresh
         else:
-            thresh = p_thresh
+            thresh = 1.
 
         #: Want to keep track of timepoints too
         diff_list.append((signal > thresh) * 1)
@@ -295,7 +304,7 @@ def calc_reps(acc, vel, pwr, n_reps, state, a_thresh=1., v_thresh=1., p_thresh=1
 
     # AND the signals together - will keep only the crossings where ALL signals cross thresholds
     # MORE SENSITIVE
-    diff_signal = (diff_list[0] * diff_list[1] * diff_list[2]).diff()[1:]
+    diff_signal = (diff_list[0] * diff_list[1] * diff_list[2] * diff_list[3]).diff()[1:]
 
     # SUM the signal together and apply a thresh of > 2; anywhere at least 2 of the signals cross counts
     # LESS SENSITIVE

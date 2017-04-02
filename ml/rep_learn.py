@@ -23,12 +23,13 @@ metadata, dat = pd.DataFrame(), pd.DataFrame()
 for id in lift_ids:
     header, data = pull_data_by_lift(id)
 
-    a, v, p = process_data(header, data, RMS=False, verbose=True)
+    a, v, pwr, pos = process_data(header, data, RMS=False, verbose=True)
 
     # print a
     d = pd.DataFrame(data={'a_rms': a,
                               'v_rms': v,
-                              'p_rms': p,
+                              'pwr_rms': pwr,
+                              'pos_rms': pos,
                               'timepoint': data['timepoint'],
                               'lift_id': header['lift_id']},
                         index=a.index)
