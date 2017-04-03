@@ -39,18 +39,18 @@ def lift_to_json(lift_id):
     # Retrieve data from last lift, process into vel and power, push to frontend
     # print 'pulling data for lift_id {}...'.format(lift_id)
     header, data = pull_data_by_lift(lift_id)
-    a, v, pwr, pos = process_data(header, data, RMS=True)
+    a, v, pwr, pos = process_data(header, data, RMS=False)
+    a.drop('lift_id', axis=1, inplace=True)
 
-    data_out = DataFrame(data={'a_rms': a['rms'],
-                               'v_rms': v['rms'],
-                               'pwr_rms': pwr['rms'],
-                               # 'pos_rms': pos['rms'],
-                               'timepoint': data['timepoint']},
-                         index=a.index)
+    # data_out = DataFrame(data={'a_rms': a['rms'],
+    #                            'v_rms': v['rms'],
+    #                            'pwr_rms': pwr['rms'],
+    #                            # 'pos_rms': pos['rms'],
+    #                            'timepoint': data['timepoint']},
+    #                      index=a.index)
 
     # when ready, use this:
-    # data_out = a.join(v).join(pwr).join(pos)
-    # data_out['timepoint'] = data['timepoint']
+    data_out = a.join(v).join(pwr).join(pos)
 
     return data_out.to_json(orient='split')
 
