@@ -21,7 +21,7 @@ from bokeh.models.widgets.inputs import Select
 from bokeh.models.widgets.markups import Div
 from bokeh.plotting import curdoc
 
-from databasing.db_conn_strings import conn_string
+from databasing.conn_strings import db_conn_string
 from databasing.database_pull import pull_data_by_lift
 from processing.util import process_data
 
@@ -706,6 +706,21 @@ class LiftPlot(object):
 
         return plot
 
+    def _proc_non_rms(self, signal, label, hp, sigtype):
+        # for col in accel.columns:
+        #: Because I changed process_data to return a Series regardless of whether or not RMS is True,
+        #: some logic downstream has been impacted and needed to be updated.
+        col = sigtype
+        raw_col = str(col) + '_raw' + label
+        signal[raw_col] = signal[col]
+        signal[col + label] = self.max_min_scale(signal[col])
+        #: If highpass, a_x will be present (cause the column won't be overwritten; a new column is
+        #: created), but we don't want to keep it.
+        if hp:
+            signal = signal.drop(col, axis=1)
+
+        return signal
+
     def get_data(self, set_name):
 
         conn = create_engine(self.connection_string)
@@ -740,66 +755,71 @@ class LiftPlot(object):
 
                 for hp, lab in [(True, '_hp'), (False, '')]:
                     a_rms, v_rms, pwr_rms, pos_rms = process_data(header, data, RMS=True, highpass=hp)
-                    a_rms.name, v_rms.name, pwr_rms.name, pos_rms.name = 'a_rms', 'v_rms', 'pwr_rms', 'pos_rms'
 
                     accel, vel, pwr, pos = process_data(header, data, RMS=False, highpass=hp)
-                    accel.name, vel.name, pwr.name, pos.name = 'a_x', 'v_x', 'pwr_x', 'pos_x'
+                    accel = accel.drop(['timepoint', 'lift_id'], axis=1)
 
                     #: If first loop, instantiate empty dataframe dat with proper index
                     if hp:
                         dat = DataFrame(index=a_rms.index)
 
-                    # for col in accel.columns:
-                    #: Because I changed process_data to return a Series regardless of whether or not RMS is True,
-                    #: some logic downstream has been impacted and needed to be updated.
-                    col = accel.name
-                    accel = accel.to_frame()
-                    raw_col = str(col) + '_raw' + lab
-                    accel[raw_col] = accel[col]
-                    accel[col+lab] = self.max_min_scale(accel[col])
-                    #: If highpass, a_x will be present (cause the column won't be overwritten; a new column is
-                    #: created), but we don't want to keep it.
-                    if hp:
-                        accel = accel.drop(col, axis=1)
 
-                    # for col in vel.columns:
-                    col = vel.name
-                    vel = vel.to_frame()
-                    raw_col = str(col) + '_raw' + lab
-                    vel[raw_col] = vel[col]
-                    vel[col+lab] = self.max_min_scale(vel[col])
-                    if hp:
-                        vel = vel.drop(col, axis=1)
+                    accel = self._proc_non_rms(accel, lab, hp, sigtype='a_x')
+                    vel = self._proc_non_rms(vel, lab, hp, sigtype='v_x')
+                    pwr = self._proc_non_rms(pwr, lab, hp, sigtype='pwr_x')
+                    pos = self._proc_non_rms(pos, lab, hp, sigtype='pos_x')
 
-                    # for col in pwr.columns:
-                    col = pwr.name
-                    pwr = pwr.to_frame()
-                    raw_col = str(col) + '_raw' + lab
-                    pwr[raw_col] = pwr[col]
-                    pwr[col+lab] = self.max_min_scale(pwr[col])
-                    if hp:
-                        pwr = pwr.drop(col, axis=1)
-
-                    # for col in pos.columns:
-                    col = pos.name
-                    pos = pos.to_frame()
-                    raw_col = str(col) + '_raw' + lab
-                    pos[raw_col] = pos[col]
-                    pos[col+lab] = self.max_min_scale(pos[col])
-                    if hp:
-                        pos = pos.drop(col, axis=1)
+                    # # for col in accel.columns:
+                    # #: Because I changed process_data to return a Series regardless of whether or not RMS is True,
+                    # #: some logic downstream has been impacted and needed to be updated.
+                    # col = 'a_x'
+                    # # accel = accel.to_frame()
+                    # raw_col = str(col) + '_raw' + lab
+                    # accel[raw_col] = accel[col]
+                    # accel[col+lab] = self.max_min_scale(accel[col])
+                    # #: If highpass, a_x will be present (cause the column won't be overwritten; a new column is
+                    # #: created), but we don't want to keep it.
+                    # if hp:
+                    #     accel = accel.drop(col, axis=1)
+                    #
+                    # # for col in vel.columns:
+                    # col = 'v_x'
+                    # # vel = vel.to_frame()
+                    # raw_col = str(col) + '_raw' + lab
+                    # vel[raw_col] = vel[col]
+                    # vel[col+lab] = self.max_min_scale(vel[col])
+                    # if hp:
+                    #     vel = vel.drop(col, axis=1)
+                    #
+                    # # for col in pwr.columns:
+                    # col = 'p_x'
+                    # # pwr = pwr.to_frame()
+                    # raw_col = str(col) + '_raw' + lab
+                    # pwr[raw_col] = pwr[col]
+                    # pwr[col+lab] = self.max_min_scale(pwr[col])
+                    # if hp:
+                    #     pwr = pwr.drop(col, axis=1)
+                    #
+                    # # for col in pos.columns:
+                    # col = pos.name
+                    # pos = pos.to_frame()
+                    # raw_col = str(col) + '_raw' + lab
+                    # pos[raw_col] = pos[col]
+                    # pos[col+lab] = self.max_min_scale(pos[col])
+                    # if hp:
+                    #     pos = pos.drop(col, axis=1)
 
                     #: On first loop, dat should be empty dataframe with overlapping indices,
                     #: so these joins should be fine. On second loop, dat will already have half the data.
                     dat = dat.join(DataFrame(
                         data={
-                            'a_rms'+lab: self.max_min_scale(a_rms),
+                            'a_rms'+lab: self.max_min_scale(a_rms['rms']),
                             'a_rms_raw'+lab: a_rms,
-                            'v_rms'+lab: self.max_min_scale(v_rms),
+                            'v_rms'+lab: self.max_min_scale(v_rms['rms']),
                             'v_rms_raw'+lab: v_rms,
-                            'pwr_rms'+lab: self.max_min_scale(pwr_rms),
+                            'pwr_rms'+lab: self.max_min_scale(pwr_rms['rms']),
                             'pwr_rms_raw'+lab: pwr_rms,
-                            'pos_rms'+lab: self.max_min_scale(pos_rms),
+                            'pos_rms'+lab: self.max_min_scale(pos_rms['rms']),
                             'pos_rms_raw'+lab: pos_rms
                             },
                         index=a_rms.index).join(accel).join(vel).join(pwr).join(pos))
@@ -856,5 +876,5 @@ class LiftPlot(object):
         # return (x - min(x))/(max(x) - min(x))
         return x/(max(x) - min(x))
 
-app = LiftPlot(conn_string, verbose=True)
+app = LiftPlot(db_conn_string, verbose=True)
 curdoc().add_root(app.layout)

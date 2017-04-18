@@ -65,12 +65,7 @@ def learn_on_lift_id(lift_id, smooth, alpha, plot, verbose):
     header, dat = pull_data_by_lift(lift_id)
     a, v, pwr, pos = process_data(header, dat, RMS=False, highpass=True, verbose=verbose)
 
-    # print a
-    data = DataFrame(data={'a': a,
-                           'v': v,
-                           'pwr': pwr,
-                           'pos': pos},
-                     index=a.index)
+    data = a.join(v).join(pwr).join(pos)
 
     if smooth:
         # Needed to scale signal and run calcs
@@ -281,9 +276,6 @@ def calc_reps(acc, vel, pwr, pos, n_reps, state, a_thresh=1., v_thresh=1., pwr_t
 
     diff_list = []
     for label, signal in [('acceleration', acc), ('velocity', vel), ('power', pwr), ('position', pos)]:
-        if not isinstance(signal, pd.Series):
-            print 'converting {l} {t} to pandas Series...'.format(l=label, t=type(pwr))
-            signal = pd.Series(signal)
 
         if label == 'acceleration':
             thresh = a_thresh
@@ -297,10 +289,11 @@ def calc_reps(acc, vel, pwr, pos, n_reps, state, a_thresh=1., v_thresh=1., pwr_t
             thresh = 1.
 
         #: Want to keep track of timepoints too
-        diff_list.append((signal > thresh) * 1)
-        #: Why the hell did I do this?? there must have been a reason...
-        # diff_list.append(((signal > thresh) * 1).diff()[1:].abs().diff()[1:])
-        # diff_list.append(((signal > thresh) * 1).diff()[1:])
+        # for multi-dim signal
+        diff_list.append( ((signal > thresh).sum(axis=1) > 0) * 1)
+
+        # for single dimensional signal
+        # diff_list.append((signal > thresh) * 1)
 
     # AND the signals together - will keep only the crossings where ALL signals cross thresholds
     # MORE SENSITIVE

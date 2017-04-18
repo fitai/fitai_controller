@@ -14,7 +14,7 @@ except NameError:
 from databasing.database_pull import lift_to_json, pull_max_lift_id
 from databasing.database_push import update_calc_reps
 from databasing.redis_controls import establish_redis_client, update_collar_by_id
-from databasing.redis_conn_strings import redis_host
+from databasing.conn_strings import redis_host
 
 
 # Establish default behaviors of command-line call

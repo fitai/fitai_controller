@@ -52,6 +52,7 @@ def main(argv):
         print 'Could not read content. Exiting...'
         sys.exit(30)
 
+<<<<<<< 51c0f7846dfeccaa2fee2fd84e72d766c8acbd4e
     a, v, pwr, pos = process_data(header, content)
 
     data_out = DataFrame(data={'lift_id': [header['lift_id']]*len(a),
@@ -61,6 +62,20 @@ def main(argv):
                                'pwr_rms': pwr,
                                'pos_rms': pos},
                          index=a.index)
+=======
+    a, v, p = process_data(header, content, RMS=True)
+
+    data_out = a.join(v).join(p)
+    data_out['timepoint'] = content['timepoint']
+    data_out['lift_id'] = header['lift_id']
+
+    # data_out = DataFrame(data={'lift_id': [header['lift_id']]*len(a),
+    #                            'timepoint': content['timepoint'],
+    #                            'a_rms': a,
+    #                            'v_rms': v,
+    #                            'p_rms': p},
+    #                      index=a.index)
+>>>>>>> adjusts util.process_data to handle multiple axes of data. updates handling of returned values from process_data to handle dataframes, not series. does not include any viz tools.
 
     print 'Processed headers into:\n{}'.format(json.dumps(list(data_out.columns)))
     print 'Processed data into:\n{}'.format(data_out.head().to_json(orient='values'))

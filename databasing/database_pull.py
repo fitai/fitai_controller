@@ -16,11 +16,11 @@ except NameError:
     print 'Working in Dev mode.'
 
 from processing.util import process_data
-from databasing.db_conn_strings import conn_string
+from databasing.conn_strings import db_conn_string
 
 # TODO: move this in to the proper functions
 # Global for now. Should be fixed..
-conn = create_engine(conn_string)
+conn = create_engine(db_conn_string)
 
 
 # Utility function for other functions. Won't be seen by anything in database_pull.py
@@ -39,14 +39,18 @@ def lift_to_json(lift_id):
     # Retrieve data from last lift, process into vel and power, push to frontend
     # print 'pulling data for lift_id {}...'.format(lift_id)
     header, data = pull_data_by_lift(lift_id)
-    a, v, pwr, pos = process_data(header, data, RMS=True)
+    a, v, pwr, pos = process_data(header, data, RMS=False)
+    a.drop('lift_id', axis=1, inplace=True)
 
-    data_out = DataFrame(data={'a_rms': a,
-                               'v_rms': v,
-                               'pwr_rms': pwr,
-                               'pos_rms': pos,
-                               'timepoint': data['timepoint']},
-                         index=a.index)
+    # data_out = DataFrame(data={'a_rms': a['rms'],
+    #                            'v_rms': v['rms'],
+    #                            'pwr_rms': pwr['rms'],
+    #                            # 'pos_rms': pos['rms'],
+    #                            'timepoint': data['timepoint']},
+    #                      index=a.index)
+
+    # when ready, use this:
+    data_out = a.join(v).join(pwr).join(pos)
 
     return data_out.to_json(orient='split')
 

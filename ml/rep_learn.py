@@ -25,14 +25,9 @@ for id in lift_ids:
 
     a, v, pwr, pos = process_data(header, data, RMS=False, verbose=True)
 
-    # print a
-    d = pd.DataFrame(data={'a_rms': a,
-                              'v_rms': v,
-                              'pwr_rms': pwr,
-                              'pos_rms': pos,
-                              'timepoint': data['timepoint'],
-                              'lift_id': header['lift_id']},
-                        index=a.index)
+    d = a.join(v).join(pwr).join(pos)
+    d['timepoint'] = data['timepoint']
+    d['lift_id'] = header['lift_id']
 
     dat = dat.append(d, ignore_index=True)
     metadata = metadata.append(pd.Series(header), ignore_index=True)
