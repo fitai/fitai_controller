@@ -74,10 +74,6 @@ def mqtt_on_message(client, userdata, msg):
         #       so I decided just to pass them straight through to the calc_reps function
         collar, crossings = calc_reps(process_data(collar, accel, RMS=False, highpass=True), collar)
 
-        if 'active' not in collar.keys():
-            # print 'collar {} has no Active field set. Will create and set to False'.format(collar['collar_id'])
-            collar['active'] = False
-
         _, v_rms, p_rms, _ = process_data(collar, accel, RMS=True, highpass=True)
         ws_pub(collar, v_rms['rms'], p_rms['rms'], collar['calc_reps'])
 

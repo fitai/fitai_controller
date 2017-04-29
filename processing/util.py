@@ -194,4 +194,9 @@ def prep_collar(collar, head, thresh_dict):
 
     #: Left over from old collar format. Shouldn't need this forever - remove key "threshold" if exists
     collar.pop('threshold', None)
+
+    # If stored collar doesn't have "active" field, create it and set to False
+    if 'active' not in collar.keys():
+        collar['active'] = False
+
     return collar
