@@ -1,8 +1,10 @@
-from pandas import DataFrame, Series
 import sys
+from pandas import DataFrame, Series
+from datetime import datetime as dt
 
 from processing.functions import calc_integral, calc_rms, calc_power, calc_pos
 from processing.filters import filter_signal
+from databasing.redis_controls import get_default_collar
 
 
 def read_header_mqtt(data):
@@ -151,3 +153,45 @@ def process_data(collar_obj, content, RMS=False, highpass=True, verbose=False):
         v = vel
 
     return a, v, pwr, pos
+
+
+def prep_collar(collar, head, thresh_dict):
+    # Quick check that at least one expected field is in collar object
+    if 'pwr_thresh' not in collar.keys():
+        print 'Redis collar object {} appears broken. ' \
+              'Will replace with default and update as needed.'.format(collar['collar_id'])
+        collar_tmp = collar.copy()
+        collar = get_default_collar()
+        collar.update(collar_tmp)
+
+    # The only piece of information from the device not provided by the frontend:
+    collar['sampling_rate'] = head['sampling_rate']
+
+    # TODO: Don't like doing all these checks. Think of a more efficient way...
+    # If collar is newly generated, threshold will be 'None'
+    if any([(collar[col] == 'None') for col in ['a_thresh', 'v_thresh', 'pwr_thresh', 'pos_thresh']]):
+        print 'Missing at least one signal threshold. Resetting all...'
+        try:
+            # try to extract lift_type
+            lift_thresh = thresh_dict[collar['lift_type']]
+            collar['a_thresh'] = lift_thresh['a_thresh']
+            collar['v_thresh'] = lift_thresh['v_thresh']
+            collar['pwr_thresh'] = lift_thresh['pwr_thresh']
+            collar['pos_thresh'] = lift_thresh['pos_thresh']
+        except KeyError:
+            print 'Couldnt find any thresholds for lift_type {}. Defaulting to 1.'.format(collar['lift_type'])
+            collar['a_thresh'], collar['v_thresh'], collar['pwr_thresh'], collar['pos_thresh'] = 1., 1., 1., 1.
+
+    if collar['lift_start'] == 'None':
+        collar['lift_start'] = dt.now()
+
+    #: Should only happen with default collar initialization
+    if collar['collar_id'] == 'None':
+        collar['collar_id'] = head['collar_id']
+
+    if 'athlete_id' in head.keys():
+        collar['athlete_id'] = head['athlete_id']
+
+    #: Left over from old collar format. Shouldn't need this forever - remove key "threshold" if exists
+    collar.pop('threshold', None)
+    return collar

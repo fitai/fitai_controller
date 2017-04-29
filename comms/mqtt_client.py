@@ -16,8 +16,8 @@ except NameError:
     print 'Working in Dev mode.'
 
 from databasing.database_push import push_to_db
-from databasing.redis_controls import establish_redis_client, retrieve_collar_by_id, update_collar_by_id, get_default_collar
-from processing.util import read_header_mqtt, read_content_mqtt, process_data
+from databasing.redis_controls import establish_redis_client, retrieve_collar_by_id, update_collar_by_id
+from processing.util import read_header_mqtt, read_content_mqtt, process_data, prep_collar
 from comms.ws_publisher import ws_pub
 from ml.thresh_learn import calc_reps, load_thresh_dict
 from databasing.conn_strings import redis_host
@@ -65,72 +65,21 @@ def mqtt_on_message(client, userdata, msg):
 
         head = read_header_mqtt(data)
 
-        # TODO: If collar returns without all necessary fields, what should happen??
-        collar = retrieve_collar_by_id(redis_client, head['collar_id'])
-        # Quick check that at least one expected field is in collar object
-        if 'pwr_thresh' not in collar.keys():
-            print 'Redis collar object {} appears broken. ' \
-                  'Will replace with default and update as needed.'.format(collar['collar_id'])
-            collar_tmp = collar.copy()
-            collar = get_default_collar()
-            collar.update(collar_tmp)
-
-        # The only piece of information from the device not provided by the frontend:
-        collar['sampling_rate'] = head['sampling_rate']
-
-        # TODO: Don't like doing all these checks. Think of a more efficient way...
-        # If collar is newly generated, threshold will be 'None'
-        if any([(collar[col] == 'None') for col in ['a_thresh', 'v_thresh', 'pwr_thresh', 'pos_thresh']]):
-            print 'Missing at least one signal threshold. Resetting all...'
-            try:
-                # try to extract lift_type
-                lift_thresh = thresh_dict[collar['lift_type']]
-                collar['a_thresh'] = lift_thresh['a_thresh']
-                collar['v_thresh'] = lift_thresh['v_thresh']
-                collar['pwr_thresh'] = lift_thresh['pwr_thresh']
-                collar['pos_thresh'] = lift_thresh['pos_thresh']
-            except KeyError:
-                print 'Couldnt find any thresholds for lift_type {}. Defaulting to 1.'.format(collar['lift_type'])
-                collar['a_thresh'], collar['v_thresh'], collar['pwr_thresh'], collar['pos_thresh'] = 1., 1., 1., 1.
-
-        if collar['lift_start'] == 'None':
-            collar['lift_start'] = dt.now()
-
-        #: Should only happen with default collar initialization
-        if collar['collar_id'] == 'None':
-            collar['collar_id'] = head['collar_id']
-
-        if 'athlete_id' in head.keys():
-            collar['athlete_id'] = head['athlete_id']
-
-        #: Left over from old collar format. Shouldn't need this forever - remove key "threshold" if exists
-        collar.pop('threshold', None)
+        collar = prep_collar(retrieve_collar_by_id(redis_client, head['collar_id']), head, thresh_dict)
 
         accel = read_content_mqtt(data, collar)
 
-        # Before taking the time to push to db, process the acceleration and push to PHP websocket
-        a, v, pwr, pos = process_data(collar, accel, RMS=False, highpass=True)
-        reps, curr_state, crossings = calc_reps(
-            a, v, pwr, pos, collar['calc_reps'], collar['curr_state'],
-            collar['a_thresh'], collar['v_thresh'], collar['pwr_thresh'], collar['pos_thresh'])
-
-        # Assign timepoints to crossings, if there are any
-        if crossings is not None:
-            if crossings.shape[0] > 0:
-                crossings['timepoint'] = (collar['max_t'] + crossings.index*(1./collar['sampling_rate'])).values
-                crossings['lift_id'] = collar['lift_id']
-
-        # update state of user via 'collar' dict
-        collar['calc_reps'] = reps
-        collar['curr_state'] = curr_state
-        collar['max_t'] += len(accel) * 1./collar['sampling_rate']  # track the last timepoint
+        # NOTE: process_data() returns accel, vel, power, position. All those returns are useful for
+        #       calc_reps(), but are re-calculated differently before being pushed to websocket,
+        #       so I decided just to pass them straight through to the calc_reps function
+        collar, crossings = calc_reps(process_data(collar, accel, RMS=False, highpass=True), collar)
 
         if 'active' not in collar.keys():
             # print 'collar {} has no Active field set. Will create and set to False'.format(collar['collar_id'])
             collar['active'] = False
 
         _, v_rms, p_rms, _ = process_data(collar, accel, RMS=True, highpass=True)
-        ws_pub(collar, v_rms['rms'], p_rms['rms'], reps)
+        ws_pub(collar, v_rms['rms'], p_rms['rms'], collar['calc_reps'])
 
         _ = update_collar_by_id(redis_client, collar, collar['collar_id'], verbose=True)
 
