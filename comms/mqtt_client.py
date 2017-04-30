@@ -74,8 +74,7 @@ def mqtt_on_message(client, userdata, msg):
         #       so I decided just to pass them straight through to the calc_reps function
         collar, crossings = calc_reps(process_data(collar, accel, RMS=False, highpass=True), collar)
 
-        _, v_rms, p_rms, _ = process_data(collar, accel, RMS=True, highpass=True)
-        ws_pub(collar, v_rms['rms'], p_rms['rms'], collar['calc_reps'])
+        ws_pub(collar, process_data(collar, accel, RMS=True, highpass=True))
 
         _ = update_collar_by_id(redis_client, collar, collar['collar_id'], verbose=True)
 
