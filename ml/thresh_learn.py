@@ -251,7 +251,7 @@ def learn_on_lift_id(lift_id, smooth, alpha, plot, verbose):
 
 
 # From an input power vector, detect any change in state and increment
-def calc_reps(acc, vel, pwr, pos, collar):
+def calc_reps((acc, vel, pwr, pos), collar):
     """
     Simple - a crossing of ALL the thresholds (a, v, p) indicates a change in state. From this, determine where the
     user was (in the state-space), and adjust accordingly.
