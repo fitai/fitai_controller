@@ -251,21 +251,19 @@ def learn_on_lift_id(lift_id, smooth, alpha, plot, verbose):
 
 
 # From an input power vector, detect any change in state and increment
-def calc_reps(acc, vel, pwr, pos, n_reps, state, a_thresh=1., v_thresh=1., pwr_thresh=1., pos_thresh=1.):
+def calc_reps((acc, vel, pwr, pos), collar):
     """
     Simple - a crossing of ALL the thresholds (a, v, p) indicates a change in state. From this, determine where the
-    user was (in the state-space), and adjust accordingly
+    user was (in the state-space), and adjust accordingly.
+
+    Takes determination of current state and calculated number of reps and updates collar object with info. Passes
+    back any crossings determined and the updated collar object.
 
     :param acc: list-like acceleration vector. will be converted to pandas Series
     :param vel: list-like velocity vector. will be converted to pandas Series
     :param pwr: list-like power vector. will be converted to pandas Series
     :param pos: list-like position vector. will be converted to pandas Series
-    :param n_reps: number of reps user is at before processing this power vector
-    :param state: state of user coming into processing step
-    :param a_thresh: threshold to apply to acceleration vector
-    :param v_thresh: threshold to apply to velocity vector
-    :param pwr_thresh: threshold to apply to power vector
-    :param pos_thresh: threshold to apply to position vector
+    :param collar: (dict) dictionary with relevant metadata for the collar collecting this data
     :return:
     """
 
@@ -273,6 +271,13 @@ def calc_reps(acc, vel, pwr, pos, n_reps, state, a_thresh=1., v_thresh=1., pwr_t
     # a_thresh = 1.
     # v_thresh = 1.
     # p_thresh = 1.
+
+    n_reps = collar['calc_reps']
+    state = collar['curr_state']
+    a_thresh = collar['a_thresh']
+    v_thresh = collar['v_thresh']
+    pwr_thresh = collar['pwr_thresh']
+    pos_thresh = collar['pos_thresh']
 
     diff_list = []
     for label, signal in [('acceleration', acc), ('velocity', vel), ('power', pwr), ('position', pos)]:
@@ -345,12 +350,20 @@ def calc_reps(acc, vel, pwr, pos, n_reps, state, a_thresh=1., v_thresh=1., pwr_t
         else:
             new_state = 'rest'
 
+        crossings['timepoint'] = (collar['max_t'] + crossings.index * (1. / collar['sampling_rate'])).values
+        crossings['lift_id'] = collar['lift_id']
+
     # If there aren't any crossings, then just return whatever came in
     else:
         new_state = state
         crossings = None
 
-    return n_reps, new_state, crossings
+    # update state of user via 'collar' dict
+    collar['calc_reps'] = n_reps
+    collar['curr_state'] = new_state
+    collar['max_t'] += len(acc) * 1. / collar['sampling_rate']  # track the last timepoint
+
+    return collar, crossings
 
 
 #: Plot error curve (distance between estimated reps and actual reps
