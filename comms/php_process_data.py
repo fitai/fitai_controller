@@ -9,7 +9,11 @@ from pandas import DataFrame
 # except NameError:
 #     print 'working in Dev mode.'
 
-from processing.util import parse_data, process_data
+from databasing.redis_controls import establish_redis_client, retrieve_collar_by_id, update_collar_by_id
+from processing.util import read_header_mqtt, read_content_mqtt, process_data, prep_collar
+from databasing.conn_strings import redis_host
+
+redis_client = establish_redis_client(hostname=redis_host, verbose=True)
 
 
 # This function should get called by calling the file
@@ -26,14 +30,18 @@ def main(argv):
             print 'test.py -d (--data) <JSON string>'
             sys.exit()
         elif opt in ("-d", "--data"):
-            json_data = arg
-    print 'received data {}'.format(json_data)
+            data = arg
+    print 'received data {}'.format(data)
 
-    if json_data is None:
+    if data is None:
         print 'Did not capture JSON data. Will exit..'
         sys.exit(100)
 
-    header, content = parse_data(json_data)
+    header = read_header_mqtt(data)
+
+    collar = prep_collar(retrieve_collar_by_id(redis_client, header['collar_id']), header, None)
+
+    accel = read_content_mqtt(data, collar)
 
     if header is None:
         print 'Could not read header data'
@@ -48,34 +56,20 @@ def main(argv):
             print 'Unexpected response {}. Exiting..'.format(response)
             sys.exit(20)
 
-    if content is None:
+    if accel is None:
         print 'Could not read content. Exiting...'
         sys.exit(30)
 
-<<<<<<< 51c0f7846dfeccaa2fee2fd84e72d766c8acbd4e
-    a, v, pwr, pos = process_data(header, content)
+    a, v, pwr, pos, force = process_data(header, accel, RMS=True)
 
     data_out = DataFrame(data={'lift_id': [header['lift_id']]*len(a),
-                               'timepoint': content['timepoint'],
+                               'timepoint': accel['timepoint'],
                                'a_rms': a,
                                'v_rms': v,
                                'pwr_rms': pwr,
-                               'pos_rms': pos},
+                               'pos_rms': pos,
+                               'force_rms': force},
                          index=a.index)
-=======
-    a, v, p = process_data(header, content, RMS=True)
-
-    data_out = a.join(v).join(p)
-    data_out['timepoint'] = content['timepoint']
-    data_out['lift_id'] = header['lift_id']
-
-    # data_out = DataFrame(data={'lift_id': [header['lift_id']]*len(a),
-    #                            'timepoint': content['timepoint'],
-    #                            'a_rms': a,
-    #                            'v_rms': v,
-    #                            'p_rms': p},
-    #                      index=a.index)
->>>>>>> adjusts util.process_data to handle multiple axes of data. updates handling of returned values from process_data to handle dataframes, not series. does not include any viz tools.
 
     print 'Processed headers into:\n{}'.format(json.dumps(list(data_out.columns)))
     print 'Processed data into:\n{}'.format(data_out.head().to_json(orient='values'))

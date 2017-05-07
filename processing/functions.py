@@ -69,3 +69,8 @@ def calc_rms(df, columns):
 def calc_power(a, v, weight):
     pwr = weight * a * v
     return Series(pwr, name='power')
+
+
+def calc_force(a, weight):
+    force = a * weight  # weight is in kg
+    return Series(force, name='force')

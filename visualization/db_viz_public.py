@@ -701,9 +701,9 @@ class LiftPlot(object):
                 header, data = pull_data_by_lift(int(self.lift_select.value))
 
                 for hp, lab in [(True, '_hp'), (False, '')]:
-                    a_rms, v_rms, pwr_rms, pos_rms = process_data(header, data, RMS=True, highpass=hp)
+                    a_rms, v_rms, pwr_rms, pos_rms, force_rms = process_data(header, data, RMS=True, highpass=hp)
 
-                    accel, vel, pwr, pos = process_data(header, data, RMS=False, highpass=hp)
+                    accel, vel, pwr, pos, force = process_data(header, data, RMS=False, highpass=hp)
                     accel = accel.drop(['timepoint', 'lift_id'], axis=1)
 
                     #: If first loop, instantiate empty dataframe dat with proper index
@@ -714,6 +714,7 @@ class LiftPlot(object):
                     vel = self._proc_non_rms(vel, lab, hp, sigtype='v_x')
                     pwr = self._proc_non_rms(pwr, lab, hp, sigtype='pwr_x')
                     pos = self._proc_non_rms(pos, lab, hp, sigtype='pos_x')
+                    force = self._proc_non_rms(force, lab, hp, sigtype='force_x')
 
                     # # for col in vel.columns:
                     # col = vel.name
@@ -744,9 +745,11 @@ class LiftPlot(object):
                             'pwr_rms'+lab: self.max_min_scale(pwr_rms['rms']),
                             'pwr_rms_raw'+lab: pwr_rms,
                             'pos_rms' + lab: self.max_min_scale(pos_rms['rms']),
-                            'pos_rms_raw' + lab: pos_rms
+                            'pos_rms_raw' + lab: pos_rms,
+                            'force_rms' + lab: self.max_min_scale(force_rms['rms']),
+                            'force_rms_raw' + lab: force_rms
                             },
-                        index=a_rms.index).join(accel).join(vel).join(pwr).join(pos))
+                        index=a_rms.index).join(accel).join(vel).join(pwr).join(pos).join(force))
 
                     #: Only want timepoint series once, so save until the end
                     if not hp:
