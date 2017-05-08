@@ -2,7 +2,7 @@ import sys
 from pandas import DataFrame, Series
 from datetime import datetime as dt
 
-from processing.functions import calc_integral, calc_rms, calc_power, calc_pos
+from processing.functions import calc_integral, calc_rms, calc_power, calc_force
 from processing.filters import filter_signal
 from databasing.redis_controls import get_default_collar
 
@@ -112,6 +112,7 @@ def process_data(collar_obj, content, RMS=False, highpass=True, verbose=False):
     vel_headers = ['v_' + x.split('_')[-1] for x in accel_headers]
     pwr_headers = ['pwr_' + x.split('_')[-1] for x in accel_headers]
     pos_headers = ['pos_' + x.split('_')[-1] for x in accel_headers]
+    force_headers = ['force_' + x.split('_')[-1] for x in accel_headers]
 
     # Try to impose high pass on acceleration - see if it will fix the velocity drift
     if highpass:
@@ -142,17 +143,22 @@ def process_data(collar_obj, content, RMS=False, highpass=True, verbose=False):
         for i, header in enumerate(accel_headers):
             pos[pos_headers[i]] = calc_integral(content[header], scale=1., fs=fs)
 
+        force = DataFrame(columns=force_headers)
+        for i, header in enumerate(accel_headers):
+            force[force_headers[i]] = calc_force(content[header], weight)
+
     if RMS:
         a = calc_rms(content, accel_headers).to_frame()
         v = calc_rms(vel, vel_headers).to_frame()
         pwr = calc_rms(pwr, pwr_headers).to_frame()
         pos = calc_rms(pos, pos_headers).to_frame()
+        force = calc_rms(force, force_headers).to_frame()
 
     else:
         a = content
         v = vel
 
-    return a, v, pwr, pos
+    return a, v, pwr, pos, force
 
 
 def prep_collar(collar, head, thresh_dict):
