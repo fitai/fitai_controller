@@ -19,7 +19,7 @@ from bokeh.layouts import Column, Row
 from bokeh.models.widgets import CheckboxGroup, Button, RadioButtonGroup
 from bokeh.models.widgets.inputs import Select
 from bokeh.models.widgets.markups import Div
-from bokeh.plotting import curdoc
+from bokeh.plotting import curdoc, show
 
 from databasing.conn_strings import db_conn_string
 from databasing.database_pull import pull_data_by_lift
@@ -50,14 +50,16 @@ class LiftPlot(object):
         #: rebuild the plot N times. To accommodate this, I will just update the alpha of the lines.
         #: Start by defaulting all lines to alpha = 0
         # TODO Confirm that app works when all_dims actually contains all possible dimensions
-        # all_dims = ['_x', '_y', '_z', '_rms']
-        all_dims = ['_x', '_rms']
+        all_dims = ['_x', '_y', '_z']
+        # all_dims = ['_x', '_rms']
         all_cols = ['a', 'v', 'pwr', 'pos']
         all_filts = ['_hp', '']
 
         all_suffix = [x+y for (x, y) in product(all_dims, all_filts)]
         all_opts = [x+y for (x, y) in product(all_cols, all_suffix)]
 
+        self.all_cols = all_cols
+        self.all_dims = all_dims
         self.all_signals = all_opts
         self.active_signals = list()  # to be filled in each time update_datasource() is called
 
@@ -97,10 +99,20 @@ class LiftPlot(object):
             name='signal_select',
             width=80,
             height=150,
-            labels=['a', 'v', 'pwr', 'pos', 'a_hp', 'v_hp', 'pwr_hp', 'pos_hp'],
+            labels=self.all_cols,
             active=[0]
         )
         self.signal_select.on_change('active', self._on_signal_change)
+
+        self.dim_select = CheckboxGroup(
+            name='dimension_select',
+            width=80,
+            height=150,
+            labels=self.all_dims,
+            active=range(len(self.all_dims))
+        )
+        self.dim_select.on_change('active', self._on_signal_change)
+
 
         #: Careful with this - button to delete all data associated with current lift
         #: For use in post-hoc data cleaning.
@@ -160,8 +172,8 @@ class LiftPlot(object):
         self.right_header.children = [self.lift_info, self.tap_select_row]
 
         #: plot_header contains all input tools, text boxes, etc that sit above the plot
-        self.plot_header = Row(width=self.plot_width, height=185)
-        self.plot_header.children = [self.lift_select, self.signal_select, self.right_header, self.del_header]
+        self.plot_header = Row(width=self.plot_width+100, height=185)
+        self.plot_header.children = [self.lift_select, self.signal_select, self.dim_select, self.right_header, self.del_header]
 
         # ## RMS PLOT ##
 
@@ -185,32 +197,24 @@ class LiftPlot(object):
 
         # Contains ALL panels
         self.panel_parent = Tabs(width=self.plot_width+10, height=self.plot_height, active=0)
-        self.panel_parent.tabs = [self.panel_raw, self.panel_rms]
+        self.panel_parent.tabs = [self.panel_raw]
 
         self.layout = Column(children=[self.plot_header, self.panel_parent], width=self.plot_width+20, height=self.plot_height)
 
     def _load_content(self):
         self.update_datasource()
-        self.rms_plot = self.make_RMS_plot(self.plot_source)
+        # self.rms_plot = self.make_RMS_plot(self.plot_source)
         self.raw_plot = self.make_raw_plot(self.plot_source, self.rep_start_source, self.rep_stop_source)
 
     #: Controls behavior of Checkboxgroup Selection tool
     def _on_signal_change(self, attr, old, new):
+        N = len(self.all_dims)  # number of dimensions per signal (x, y, z)
         for i in range(len(self.signal_select.labels)):
-            # print 'setting renderer {i} to {tf}'.format(
-            #     i=self.signal_select.labels[i], tf=i in self.signal_select.active)
-
-            #: If renderer i is in self.signal_select.active (list[0, 1, 2]), then set visible to true
-            #: Else visible is false and signal is plotted but not shown
-            # print [rend.name for rend in self.raw_plot.renderers]
-            self.raw_plot.renderers[i].visible = i in self.signal_select.active
-            # self.raw_plot.renderers[i+3].visible = i in self.signal_select.active
-
-            #: For now, raw plot has more renderers in it than the RMS plot does
-            if i > len(self.rms_plot.renderers)-1:
-                continue
-
-            self.rms_plot.renderers[i].visible = i in self.signal_select.active
+            is_active = i in self.signal_select.active  # whether this label (e.g. 'a', 'v' is active)
+            for ix in range(i*N, (i+1)*N):  # apply to all dims associated with this label
+                self.raw_plot.renderers[ix].visible = is_active & ((ix-i*N) in self.dim_select.active)
+                # if self.raw_plot.renderers[ix].visible:
+                #     print 'plotting {}'.format(self.raw_plot.renderers[ix].name)
 
     #: Controls behavior of dropdown Select tool
     def _on_lift_change(self, attr, old, new):
@@ -385,18 +389,88 @@ class LiftPlot(object):
 
         # print 'done updating plot datasource'
 
-    def make_RMS_plot(self, source):
-        tooltips = '''<div><span style="font-size: 12px;"> <b>time:</b> @timepoint s</span></div>
-                      <div><span style="font-size: 12px;"> <b>accel:</b> @a_rms_raw m/s^2</span></div>
-                      <div><span style="font-size: 12px;"> <b>vel:</b> @v_rms_raw m/s</span></div>
-                      <div><span style="font-size: 12px;"> <b>pwr:</b> @pwr_rms_raw W</span></div>
-                      <div><span style="font-size: 12px;"> <b>pos:</b> @pos_rms_raw W</span></div>'''
+    def make_raw_plot(self, source, rep_start_source, rep_stop_source):
+        tooltips = '''<div><span style="font-size: 12px;"> <b>time  :</b> @timepoint s</span></div>
+                      <div><span style="font-size: 12px;"> <b>acc   :</b> @a_x m/s^2</span></div>
+                      <div><span style="font-size: 12px;"> <b>acc HP:</b> @a_x_hp m/s^2</span></div>
+                      <div><span style="font-size: 12px;"> <b>vel HP:</b> @v_x_hp m/s</span></div>
+                      <div><span style="font-size: 12px;"> <b>pwr HP:</b> @pwr_x_hp W</span></div>
+                      <div><span style="font-size: 12px;"> <b>pos HP:</b> @pos_x_hp m</span></div>'''
+
+        #: Gold line that moves to where user clicks to show which timepoint will be logged on use of TapTool
+        src = ColumnDataSource(
+                dict(
+                    x=[0., 0.],
+                    y=[min(source.data['a_x']), max(source.data['a_x'])]
+                )
+            )
+
+        draw_line_cb = CustomJS(
+            args=dict(src=src, source=source),
+            code="""
+
+                // var path = document.location.pathname;
+                // console.log(path);
+
+
+                // package pg located at /usr/local/lib/node_modules/pg
+                // var pg = require("/usr/local/lib/node_modules/pg");
+
+                // var pg = require("pg");
+                // console.log(require.paths);
+
+                //var connectionString = "postgres://localhost:5432/fitai";
+                //var pgClient = new pg.Client(connectionString);
+                //pgClient.connect();
+                //var query = pgClient.query("SELECT * FROM athlete_lift WHERE lift_id = 1");
+
+                /*
+                query.on("row", function(row, result){
+                            result.addRow(row);
+                        });
+
+                pgClient.end()
+                */
+
+                // get data source from Callback args
+                // var data = src.data;
+
+                // bokeh TapTool callback object (cb_obj)
+                // console.log(cb_obj);
+
+                // 0d level specific to taptool - only returns one value, the index of the value tapped
+                // Use this index "idx" to extract the timepoint
+                var idx = cb_obj.selected['0d'].indices[0];
+
+                // Use idx to extract from timepoint array ts
+                var ts = source.data['timepoint'];
+                var t = ts[idx];
+                console.log("Registered hit at timepoint: " + t);
+
+                // timepoint is raw - need to scale to match x-axis scale of [0, 1]
+                // use datasource used to construct lines in plot to provide timepoint array
+                var t_scale = t/ts[ts.length-1];
+
+                // update data source
+                src.data['x'] = [t_scale, t_scale];
+
+                // Upper/Lower bounds of plot determined by a_x signal
+                // data['y'] = [min(data['a_x']), max(data['a_x']);
+                // DON'T WANT TO UPDATE y-vals
+
+                // print data source "src" with updated data
+                // console.log(src.data);
+
+                // trigger update of data source "src"
+                src.trigger('change');
+                """
+            )
 
         plot = Plot(
             title=None,
             x_range=Range1d(min(source.data['x_axis']), max(source.data['x_axis'])),
             # y_range=Range1d(min(self.plot_source.data['a_rms']), max(self.plot_source.data['a_rms'])),
-            y_range=Range1d(0, 1),
+            y_range=Range1d(min(source.data['a_x']), max(source.data['a_x'])),
             plot_width=self.plot_width,
             plot_height=self.plot_height,
             h_symmetry=False,
@@ -407,41 +481,77 @@ class LiftPlot(object):
         )
 
         rends = list()
-        # for y_val in [x for x in self.all_signals if 'rms' in x]:
-        for y_val in ['a_rms', 'v_rms', 'pwr_rms', 'pos_rms']:
+        for sig in ['a_', 'v_', 'pwr_', 'pos_']:
+            for dim in ['x_hp', 'y_hp', 'z_hp']:
+                y_val = sig + dim
 
-            if 'a' in y_val:
-                c = 'black'
-            elif 'v' in y_val:
-                c = 'blue'
-            elif 'pwr' in y_val:
-                c = 'purple'
-            elif 'pos' in y_val:
-                c = 'brown'
-            else:
-                c = 'red'
+                #: Split out signal type (a/v/p) by color
+                if 'a' in y_val:
+                    c = 'black'
+                elif 'v' in y_val:
+                    c = 'blue'
+                elif 'pwr' in y_val:
+                    c = 'purple'
+                elif 'pos' in y_val:
+                    c = 'brown'
+                else:
+                    #: Uncaught line type here - make red so we can see it easily
+                    c = 'red'
 
-            l = Line(x='x_axis', y=y_val, name=y_val, line_color=c, line_alpha=1)
-            rend = GlyphRenderer(data_source=source, glyph=l, name=y_val)
-            rends.append(rend)
+                #: Differentiate between high-passed signal and non-HP signal
+                if dim == 'x_hp':
+                    style = 'dashed'
+                elif dim == 'y_hp':
+                    style = 'solid'
+                elif dim == 'z_hp':
+                    style = 'dotted'
+                else:  # dim == z
+                    style = 'dashdot'
 
-            if y_val == 'a_rms':
-                h_rends = [rend]
+                l = Line(x='x_axis', y=y_val, name=y_val, line_color=c, line_dash=style, line_alpha=1)
+                rend = GlyphRenderer(data_source=source, glyph=l, name=y_val)
+                rends.append(rend)
 
-        # axis_theme = dict(
-        #     axis_label=None, axis_label_text_font_size='0pt', minor_tick_line_alpha=0.0,
-        #     axis_line_alpha=0.0, major_tick_line_alpha=0.0, major_label_text_color='grey',
-        #     major_label_text_font_size='0pt')
-        #
-        # plot.add_layout(LinearAxis(**axis_theme), 'left')
-        # plot.add_layout(LinearAxis(**axis_theme), 'below')
+                if y_val == 'a_x_hp':
+                    #: Explicitly set the a_x glyph to be the basis of the hover tool
+                    h_rends = [rend]
 
-        hover = HoverTool(renderers=h_rends, tooltips=tooltips, point_policy='follow_mouse')
+        hover = HoverTool(renderers=h_rends,tooltips=tooltips, point_policy='follow_mouse')
+
+        # #: Build renderer for lines generated by tap tool
+        tap_line = Line(x='x', y='y', name='rep_tool', line_color='gold', line_dash='dashed', line_alpha=1., line_width=2)
+        tap_line_renderer = GlyphRenderer(data_source=src, glyph=tap_line, name='tap_line')
+        rends.append(tap_line_renderer)
+
+        #: Plot responsive (e.g. updates) multiline glyphs for all start points and stop points
+        rep_starts_glyph = MultiLine(xs='xs', ys='ys', line_color='green', line_dash='dashed', line_width=2)
+        rep_starts_rend = GlyphRenderer(data_source=rep_start_source, glyph=rep_starts_glyph, name='rep_starts')
+        rends.append(rep_starts_rend)
+
+        rep_stops_glyph = MultiLine(xs='xs', ys='ys', line_color='red', line_dash='dashed', line_width=2)
+        rep_stops_rend = GlyphRenderer(data_source=rep_stop_source, glyph=rep_stops_glyph, name='rep_stops')
+        rends.append(rep_stops_rend)
+
+        # tap_lines = MultiLine(xs='xs', ys='ys', line_color=['red'], line_dash='dashed', line_width=2)
+        # tap_lines_renderer = GlyphRenderer(data_source=src, glyph=tap_lines, name='tap_lines')
+
+        # tap_rends = [tap_line_renderer] + h_rends
+        taptool = TapTool(renderers=h_rends, callback=draw_line_cb)
+
+        #: can this be moved??
+        source.on_change('selected', self.tap_callback)
+
+        #: Build renderer for default zero line; useful as reference
+        zero_line = Line(x='x_axis', y='zero', name='zero', line_color='red', line_dash='dashed', line_alpha=1)
+        zero_line_renderer = GlyphRenderer(data_source=source, glyph=zero_line, name='zero_rend')
+
+        rends.append(zero_line_renderer)
+
         zoom = BoxZoomTool()
         reset = ResetTool()
         pan = PanTool()
         plot.renderers.extend(rends)
-        plot.tools.extend([zoom, reset, pan, hover])
+        plot.tools.extend([hover, zoom, reset, pan, taptool])
         # TODO figure out legend
         # plot.legend.append([a_line])
         # plot.legend.location = 'upper_left'
@@ -544,174 +654,12 @@ class LiftPlot(object):
 
         conn.execute(query)
 
-    def make_raw_plot(self, source, rep_start_source, rep_stop_source):
-        tooltips = '''<div><span style="font-size: 12px;"> <b>time  :</b> @timepoint s</span></div>
-                      <div><span style="font-size: 12px;"> <b>acc   :</b> @a_x_raw m/s^2</span></div>
-                      <div><span style="font-size: 12px;"> <b>acc HP:</b> @a_x_hp m/s^2</span></div>
-                      <div><span style="font-size: 12px;"> <b>vel HP:</b> @v_x_hp m/s</span></div>
-                      <div><span style="font-size: 12px;"> <b>pwr HP:</b> @pwr_x_hp W</span></div>
-                      <div><span style="font-size: 12px;"> <b>pos HP:</b> @pos_x_hp m</span></div>'''
-
-        #: Gold line that moves to where user clicks to show which timepoint will be logged on use of TapTool
-        src = ColumnDataSource(
-                dict(
-                    x=[0., 0.],
-                    y=[min(source.data['a_x']), max(source.data['a_x'])]
-                )
-            )
-
-        draw_line_cb = CustomJS(
-            args=dict(src=src, source=source),
-            code="""
-
-                // var path = document.location.pathname;
-                // console.log(path);
-
-
-                // package pg located at /usr/local/lib/node_modules/pg
-                // var pg = require("/usr/local/lib/node_modules/pg");
-
-                // var pg = require("pg");
-                // console.log(require.paths);
-
-                //var connectionString = "postgres://localhost:5432/fitai";
-                //var pgClient = new pg.Client(connectionString);
-                //pgClient.connect();
-                //var query = pgClient.query("SELECT * FROM athlete_lift WHERE lift_id = 1");
-
-                /*
-                query.on("row", function(row, result){
-                            result.addRow(row);
-                        });
-
-                pgClient.end()
-                */
-
-                // get data source from Callback args
-                // var data = src.data;
-
-                // bokeh TapTool callback object (cb_obj)
-                // console.log(cb_obj);
-
-                // 0d level specific to taptool - only returns one value, the index of the value tapped
-                // Use this index "idx" to extract the timepoint
-                var idx = cb_obj.selected['0d'].indices[0];
-
-                // Use idx to extract from timepoint array ts
-                var ts = source.data['timepoint'];
-                var t = ts[idx];
-                console.log("Registered hit at timepoint: " + t);
-
-                // timepoint is raw - need to scale to match x-axis scale of [0, 1]
-                // use datasource used to construct lines in plot to provide timepoint array
-                var t_scale = t/ts[ts.length-1];
-
-                // update data source
-                src.data['x'] = [t_scale, t_scale];
-
-                // Upper/Lower bounds of plot determined by a_x signal
-                // data['y'] = [min(data['a_x']), max(data['a_x']);
-                // DON'T WANT TO UPDATE y-vals
-
-                // print data source "src" with updated data
-                // console.log(src.data);
-
-                // trigger update of data source "src"
-                src.trigger('change');
-                """
-            )
-
-        plot = Plot(
-            title=None,
-            x_range=Range1d(min(source.data['x_axis']), max(source.data['x_axis'])),
-            # y_range=Range1d(min(self.plot_source.data['a_rms']), max(self.plot_source.data['a_rms'])),
-            y_range=Range1d(min(source.data['a_x']), max(source.data['a_x'])),
-            plot_width=self.plot_width,
-            plot_height=self.plot_height,
-            h_symmetry=False,
-            v_symmetry=False,
-            min_border=0,
-            toolbar_location='right',
-            logo=None
-        )
-
-        rends = list()
-        for y_val in ['a_x', 'v_x', 'pwr_x', 'pos_x', 'a_x_hp', 'v_x_hp', 'pwr_x_hp', 'pos_x_hp']:
-            #: Split out signal type (a/v/p) by color
-            if 'a' in y_val:
-                c = 'black'
-            elif 'v' in y_val:
-                c = 'blue'
-            elif 'pwr' in y_val:
-                c = 'purple'
-            elif 'pos' in y_val:
-                c = 'brown'
-            else:
-                #: Uncaught line type here - make red so we can see it easily
-                c = 'red'
-
-            #: Differentiate between high-passed signal and non-HP signal
-            if 'hp' in y_val:
-                style = 'dashed'
-            else:
-                style = 'solid'
-
-            l = Line(x='x_axis', y=y_val, name=y_val, line_color=c, line_dash=style, line_alpha=1)
-            rend = GlyphRenderer(data_source=source, glyph=l, name=y_val)
-            rends.append(rend)
-
-            if y_val == 'a_x':
-                #: Explicitly set the a_x glyph to be the basis of the hover tool
-                h_rends = [rend]
-
-        hover = HoverTool(renderers=h_rends,tooltips=tooltips, point_policy='follow_mouse')
-
-        # #: Build renderer for lines generated by tap tool
-        tap_line = Line(x='x', y='y', name='rep_tool', line_color='gold', line_dash='dashed', line_alpha=1., line_width=2)
-        tap_line_renderer = GlyphRenderer(data_source=src, glyph=tap_line, name='tap_line')
-        rends.append(tap_line_renderer)
-
-        #: Plot responsive (e.g. updates) multiline glyphs for all start points and stop points
-        rep_starts_glyph = MultiLine(xs='xs', ys='ys', line_color='green', line_dash='dashed', line_width=2)
-        rep_starts_rend = GlyphRenderer(data_source=rep_start_source, glyph=rep_starts_glyph, name='rep_starts')
-        rends.append(rep_starts_rend)
-
-        rep_stops_glyph = MultiLine(xs='xs', ys='ys', line_color='red', line_dash='dashed', line_width=2)
-        rep_stops_rend = GlyphRenderer(data_source=rep_stop_source, glyph=rep_stops_glyph, name='rep_stops')
-        rends.append(rep_stops_rend)
-
-        # tap_lines = MultiLine(xs='xs', ys='ys', line_color=['red'], line_dash='dashed', line_width=2)
-        # tap_lines_renderer = GlyphRenderer(data_source=src, glyph=tap_lines, name='tap_lines')
-
-        # tap_rends = [tap_line_renderer] + h_rends
-        taptool = TapTool(renderers=h_rends, callback=draw_line_cb)
-
-        #: can this be moved??
-        source.on_change('selected', self.tap_callback)
-
-        #: Build renderer for default zero line; useful as reference
-        zero_line = Line(x='x_axis', y='zero', name='zero', line_color='red', line_dash='dashed', line_alpha=1)
-        zero_line_renderer = GlyphRenderer(data_source=source, glyph=zero_line, name='zero_rend')
-
-        rends.append(zero_line_renderer)
-
-        zoom = BoxZoomTool()
-        reset = ResetTool()
-        pan = PanTool()
-        plot.renderers.extend(rends)
-        plot.tools.extend([hover, zoom, reset, pan, taptool])
-        # TODO figure out legend
-        # plot.legend.append([a_line])
-        # plot.legend.location = 'upper_left'
-
-        return plot
-
     def _proc_non_rms(self, signal, label, hp, sigtype):
         # for col in accel.columns:
         #: Because I changed process_data to return a Series regardless of whether or not RMS is True,
         #: some logic downstream has been impacted and needed to be updated.
         col = sigtype
-        raw_col = str(col) + '_raw' + label
+        raw_col = str(col) + label
         signal[raw_col] = signal[col]
         signal[col + label] = self.max_min_scale(signal[col])
         #: If highpass, a_x will be present (cause the column won't be overwritten; a new column is
@@ -758,17 +706,19 @@ class LiftPlot(object):
 
                     accel, vel, pwr, pos, force = process_data(header, data, RMS=False, highpass=hp)
                     accel = accel.drop(['timepoint', 'lift_id'], axis=1)
+                    if 'millis' in accel.columns:
+                        accel.drop('millis', axis=1, inplace=True)
 
                     #: If first loop, instantiate empty dataframe dat with proper index
                     if hp:
                         dat = DataFrame(index=a_rms.index)
 
-
-                    accel = self._proc_non_rms(accel, lab, hp, sigtype='a_x')
-                    vel = self._proc_non_rms(vel, lab, hp, sigtype='v_x')
-                    pwr = self._proc_non_rms(pwr, lab, hp, sigtype='pwr_x')
-                    pos = self._proc_non_rms(pos, lab, hp, sigtype='pos_x')
-                    force = self._proc_non_rms(force, lab, hp, sigtype='force_x')
+                    for dim in ['x', 'y', 'z']:
+                        accel = self._proc_non_rms(accel, lab, hp, sigtype='a_'+dim)
+                        vel = self._proc_non_rms(vel, lab, hp, sigtype='v_'+dim)
+                        pwr = self._proc_non_rms(pwr, lab, hp, sigtype='pwr_'+dim)
+                        pos = self._proc_non_rms(pos, lab, hp, sigtype='pos_'+dim)
+                        force = self._proc_non_rms(force, lab, hp, sigtype='force_'+dim)
 
                     # # for col in accel.columns:
                     # #: Because I changed process_data to return a Series regardless of whether or not RMS is True,
