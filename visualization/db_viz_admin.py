@@ -49,7 +49,6 @@ class LiftPlot(object):
         #: By default, all signals must be plotted because I only want to update the ColumnDataSource, not
         #: rebuild the plot N times. To accommodate this, I will just update the alpha of the lines.
         #: Start by defaulting all lines to alpha = 0
-        # TODO Confirm that app works when all_dims actually contains all possible dimensions
         all_dims = ['_x', '_y', '_z']
         # all_dims = ['_x', '_rms']
         all_cols = ['a', 'v', 'pwr', 'pos']
@@ -112,7 +111,6 @@ class LiftPlot(object):
             active=range(len(self.all_dims))
         )
         self.dim_select.on_change('active', self._on_signal_change)
-
 
         #: Careful with this - button to delete all data associated with current lift
         #: For use in post-hoc data cleaning.
@@ -780,8 +778,6 @@ class LiftPlot(object):
                     #: Only want timepoint series once, so save until the end
                     if not hp:
                         dat = dat.join(data['timepoint'])
-
-                # print dat.head()
 
                 storage[(int(self.lift_select.value), 'data')] = dat
                 storage[(int(self.lift_select.value), 'header')] = header
