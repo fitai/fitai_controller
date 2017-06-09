@@ -13,7 +13,7 @@ except NameError:
 
 from databasing.database_pull import lift_to_json, pull_max_lift_id
 from databasing.database_push import update_calc_reps
-from databasing.redis_controls import establish_redis_client, update_collar_by_id
+from databasing.redis_controls import establish_redis_client, update_collar_by_id, get_default_collar
 from databasing.conn_strings import redis_host
 
 
@@ -117,7 +117,11 @@ def main(args):
     try:
         if verbose:
             print 'Found collar_id {}'.format(dat['collar_id'])
-        collar = loads(redis_client.get(dat['collar_id']))
+
+        try:
+            collar = loads(redis_client.get(dat['collar_id']))
+        except TypeError:
+            collar = get_default_collar()
 
         next_lift_id = redis_client.get('lift_id')
         # In case redis can't be reached, can move forward assuming that the content of athlete_lift table
