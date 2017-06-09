@@ -120,7 +120,7 @@ def main(args):
 
         try:
             collar = loads(redis_client.get(dat['collar_id']))
-        except TypeError:
+        except TypeError:  # if loading from redis fails, expect to get TypeError
             collar = get_default_collar()
 
         next_lift_id = redis_client.get('lift_id')
