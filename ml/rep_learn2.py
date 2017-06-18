@@ -6,18 +6,32 @@ import matplotlib.pyplot as plt
 
 from sqlalchemy import create_engine
 
-from databasing.db_conn_strings import conn_string
+from sklearn.ensemble import RandomForestRegressor
+from sklearn.linear_model import Ridge, Lasso
+
+from databasing.conn_strings import db_conn_string
 from databasing.database_pull import pull_data_by_lift
 from processing.util import process_data
 
 #: Step 1 - Pull all rep_start and rep_stop events
-conn = create_engine(conn_string)
+conn = create_engine(db_conn_string)
 
 events_sql = '''
-SELECT * FROM lift_event
-WHERE event IN ('rep_start', 'rep_stop')
+SELECT
+    lift_id
+    , ROUND(timepoint::NUMERIC, 2) AS timepoint
+    , event
+FROM lift_event
+WHERE event IN ('onset', 'offset')
 '''
 events = pd.read_sql(events_sql, conn)
+
+
+def clean_event_times(events):
+    events['timepoint'] = [x if round(x*100, 2) % 2 == 0 else round(x, 2)-0.01 for x in events['timepoint']]
+    return events
+
+events = clean_event_times(events)
 
 # pull data and metadata for all lifts in events df
 lift_ids = events['lift_id'].unique()
@@ -28,9 +42,9 @@ id = lift_ids[0]
 
 header, data = pull_data_by_lift(id)
 
-a, v, pwr, pos = process_data(header, data, RMS=False, verbose=True)
+a, v, pwr, pos, force = process_data(header, data, RMS=False, highpass=True, verbose=True)
 
-d = a.join(v).join(pwr).join(pos)
+d = a.join(v).join(pwr).join(pos).join(force)
 d['timepoint'] = data['timepoint']
 d['lift_id'] = header['lift_id']
 
@@ -53,8 +67,8 @@ events = pd.merge(events, metadata, on='lift_id', how='left')
 
 
 #: Split into starts and stops - for use later
-starts = events.loc[events['event'].eq('rep_start')].reset_index(drop=True)
-stops = events.loc[events['event'].eq('rep_stop')].reset_index(drop=True)
+starts = events.loc[events['event'].eq('onset')].reset_index(drop=True)
+stops = events.loc[events['event'].eq('offset')].reset_index(drop=True)
 
 
 def build_rep_prob_signal(t, sampling, t_window):
@@ -84,6 +98,12 @@ def build_rep_prob_signal(t, sampling, t_window):
     return g_x
 
 
+# Prep split into test/train
+N = len(dat)
+N1 = int(float(N)*3/5)
+
+tr_idx, te_idx = dat.loc[:N1, 'timepoint'], dat.loc[N1:, 'timepoint']
+
 #: Build probability signals
 #: NOTE: p0 = prob(stop), p1 = prob(start)
 
@@ -91,7 +111,6 @@ def build_rep_prob_signal(t, sampling, t_window):
 probs = pd.Series()
 for i, row in starts.iterrows():
     probs = probs.append(build_rep_prob_signal(row['timepoint'], row['sampling_rate'], t_window=1.))
-
 
 zeros = pd.Series(0., index=dat['timepoint'])
 p1 = (zeros + probs).fillna(0.)
@@ -107,33 +126,32 @@ p0.name = 'p0'
 # plt.plot(p0, 'r', p1, 'g')
 
 #: Prep inputs
-X = dat.drop(['lift_id', 'timepoint'], axis=1).copy()
+X = dat.drop(['lift_id', 'millis'], axis=1).copy().set_index('timepoint')
 
-#: Train model on each
 
-from sklearn.linear_model import LinearRegression, Ridge
+def run_model(X, tr, te, p0, p1, model_type='rf'):
+    if model_type == 'rf':
+        m0, m1 = RandomForestRegressor(n_estimators=200), RandomForestRegressor(n_estimators=200)
+    elif model_type == 'ridge':
+        m0, m1 = Ridge(), Ridge()
+    elif model_type == 'lasso':
+        m0, m1 = Lasso(), Lasso()
 
-start_model = LinearRegression()
-start_model = Ridge()
-start_model.fit(X, y=p1.reset_index(drop=True))
+    m1.fit(X.ix[tr], p1.ix[tr])
+    y_hat = pd.Series(m1.predict(X.ix[te]), index=te)
 
-y_hat = start_model.predict(X)
+    plt.plot(p1.ix[te], 'black')
+    plt.plot(y_hat, 'blue')
 
-plt.plot(p1.reset_index(drop=True), 'black')
-plt.plot(y_hat, 'blue')
+    return m0, m1
 
-from sklearn.neural_network import MLPRegressor
+# from sklearn.neural_network import MLPRegressor
+#
+# mlp = MLPRegressor(hidden_layer_sizes=(10, 10), activation='tanh')
+# mlp.fit(X, p1.reset_index(drop=True))
+# y_hat = mlp.predict(X)
+#
+# plt.plot(p1.reset_index(drop=True), 'black')
+# plt.plot(y_hat, 'blue')
 
-mlp = MLPRegressor(hidden_layer_sizes=(10, 10), activation='tanh')
-mlp.fit(X, p1.reset_index(drop=True))
-y_hat = mlp.predict(X)
-
-plt.plot(p1.reset_index(drop=True), 'black')
-plt.plot(y_hat, 'blue')
-
-from sklearn.ensemble import RandomForestRegressor
-
-rf = RandomForestRegressor(n_estimators=200)
-
-rf.fit(X, p1.reset_index(drop=True))
-y_hat = rf.predict(X)
+_, _ = run_model(X, tr_idx, te_idx, p0, p1, 'ridge')
