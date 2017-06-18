@@ -4,7 +4,6 @@ from sys import argv, path as syspath, exit
 from os.path import dirname, abspath
 from optparse import OptionParser
 from json import loads
-from datetime import datetime as dt
 from pandas import DataFrame
 
 try:
