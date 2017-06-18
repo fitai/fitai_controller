@@ -4,7 +4,6 @@ from sys import argv, path as syspath, exit
 from os.path import dirname, abspath
 from optparse import OptionParser
 from json import loads
-from datetime import datetime as dt
 from pandas import DataFrame
 
 try:
@@ -18,7 +17,6 @@ except NameError:
 from databasing.database_push import push_to_db
 from databasing.redis_controls import establish_redis_client, retrieve_collar_by_id, update_collar_by_id
 from processing.util import read_header_mqtt, read_content_mqtt, process_data, prep_collar
-from comms.ws_publisher import ws_pub
 from ml.thresh_learn import calc_reps, load_thresh_dict
 from databasing.conn_strings import redis_host
 from comms.redis_pubsub import redis_pub
