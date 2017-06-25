@@ -14,7 +14,7 @@ def push_to_db(header, content, crossings):
     if header is not None:
         print 'pushing collar metadata to db...'
         try:
-            header.to_sql('athlete_lift', conn, if_exists='append', index=False, index_label='lift_id')
+            header.to_sql('lifts', conn, if_exists='append', index=False, index_label='lift_id')
         except OperationalError, e:
             print '!!!!!Could not push collar metadata to database!!!!'
             print 'Likely because PostgreSQL server not running.\nError message: {}'.format(e)
@@ -87,7 +87,7 @@ def update_calc_reps(collar):
     tmp_conn = create_engine(db_conn_string)
 
     sql = '''
-    UPDATE athlete_lift SET calc_reps = {cr}::NUMERIC
+    UPDATE lifts SET calc_reps = {cr}::NUMERIC
     WHERE lift_id = {l}::INT;
     '''.format(cr=collar['calc_reps'], l=collar['lift_id'])
 
