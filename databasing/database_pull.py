@@ -25,7 +25,7 @@ conn = create_engine(db_conn_string)
 
 # Utility function for other functions. Won't be seen by anything in database_pull.py
 def pull_max_lift_id():
-    query = 'SELECT MAX(lift_id) FROM athlete_lift'
+    query = 'SELECT MAX(lift_id) FROM lifts'
     lift_id = read_sql(query, conn).iloc[0][0]
     return lift_id
 
@@ -69,7 +69,7 @@ def pull_data_by_lift(lift_id):
     header_query = '''
     SELECT
         *
-    FROM athlete_lift
+    FROM lifts
     WHERE lift_id = {}
     '''.format(lift_id)
     try:
@@ -96,8 +96,8 @@ def pull_lift_ids(user=None):
         SELECT
             al.lift_type,
             ARRAY_AGG(al.lift_id) AS lift_ids
-        FROM athlete_lift AS al
-        INNER JOIN athlete_info AS ai
+        FROM lifts AS al
+        INNER JOIN athletes AS ai
             ON al.athlete_id = ai.athlete_id
         '''
     if user is not None:
