@@ -39,20 +39,27 @@ def lift_to_json(lift_id):
     # Retrieve data from last lift, process into vel and power, push to frontend
     # print 'pulling data for lift_id {}...'.format(lift_id)
     header, data = pull_data_by_lift(lift_id)
-    a, v, pwr, pos, force = process_data(header, data, RMS=False)
-    a.drop('lift_id', axis=1, inplace=True)
+    if (header is not None) & (data is not None):
+        a, v, pwr, pos, force = process_data(header, data, RMS=False)
+        a.drop('lift_id', axis=1, inplace=True)
 
-    # data_out = DataFrame(data={'a_rms': a['rms'],
-    #                            'v_rms': v['rms'],
-    #                            'pwr_rms': pwr['rms'],
-    #                            # 'pos_rms': pos['rms'],
-    #                            'timepoint': data['timepoint']},
-    #                      index=a.index)
+        # data_out = DataFrame(data={'a_rms': a['rms'],
+        #                            'v_rms': v['rms'],
+        #                            'pwr_rms': pwr['rms'],
+        #                            # 'pos_rms': pos['rms'],
+        #                            'timepoint': data['timepoint']},
+        #                      index=a.index)
 
-    # when ready, use this:
-    data_out = a.join(v).join(pwr).join(pos)
+        # when ready, use this:
+        data_out = a.join(v).join(pwr).join(pos)
 
-    return data_out.to_json(orient='split')
+        return data_out.to_json(orient='split')
+    elif header is not None:
+        print 'Found header but NO DATA for lift_id {}. Returning None...'.format(lift_id)
+        return None
+    elif data is not None:
+        print 'Found data but NO HEADER for lift_id {}. Returning None...'.format(lift_id)
+        return None
 
 
 #: The workhorse function - pulls all acceleration data by lift_id
