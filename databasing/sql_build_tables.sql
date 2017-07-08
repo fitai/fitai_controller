@@ -52,6 +52,9 @@ CREATE TABLE lift_data_temp (
     , a_x         DOUBLE PRECISION
     , a_y         DOUBLE PRECISION
     , a_z         DOUBLE PRECISION
+    , g_x         DOUBLE PRECISION
+    , g_y         DOUBLE PRECISION
+    , g_z         DOUBLE PRECISION
     , timepoint   DOUBLE PRECISION
     , millis      BIGINT
 );
@@ -62,6 +65,9 @@ CREATE TABLE lift_data (
     , a_x         DOUBLE PRECISION
     , a_y         DOUBLE PRECISION
     , a_z         DOUBLE PRECISION
+    , g_x         DOUBLE PRECISION
+    , g_y         DOUBLE PRECISION
+    , g_z         DOUBLE PRECISION
     , timepoint   DOUBLE PRECISION
     , millis      BIGINT
     , CONSTRAINT  series_id PRIMARY KEY(lift_id, timepoint)
@@ -73,6 +79,9 @@ CREATE TABLE lift_data_backup (
     , a_x         DOUBLE PRECISION
     , a_y         DOUBLE PRECISION
     , a_z         DOUBLE PRECISION
+    , g_x         DOUBLE PRECISION
+    , g_y         DOUBLE PRECISION
+    , g_z         DOUBLE PRECISION
     , timepoint   DOUBLE PRECISION
     , millis      BIGINT
     , CONSTRAINT  backup_series_id PRIMARY KEY(lift_id, timepoint)
@@ -85,6 +94,9 @@ CREATE TABLE lift_data_storage (
     , a_x         FLOAT[]
     , a_y         FLOAT[]
     , a_z         FLOAT[]
+    , g_x         FLOAT[]
+    , g_y         FLOAT[]
+    , g_z         FLOAT[]
     , timepoint   FLOAT[]
 );
 

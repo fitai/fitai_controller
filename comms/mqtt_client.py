@@ -4,7 +4,7 @@ from sys import argv, path as syspath, exit
 from os.path import dirname, abspath
 from optparse import OptionParser
 from json import loads
-from pandas import DataFrame
+from pandas import DataFrame, merge
 
 try:
     path = dirname(dirname(abspath(__file__)))
@@ -66,7 +66,7 @@ def mqtt_on_message(client, userdata, msg):
 
         collar = prep_collar(retrieve_collar_by_id(redis_client, head['collar_id']), head, thresh_dict)
 
-        accel = read_content_mqtt(data, collar)
+        accel, gyro = read_content_mqtt(data, collar)
 
         # NOTE: process_data() returns accel, vel, power, position. All those returns are useful for
         #       calc_reps(), but are re-calculated differently before being pushed to websocket,
@@ -83,7 +83,8 @@ def mqtt_on_message(client, userdata, msg):
                 ['active', 'collar_id', 'curr_state', 'a_thresh', 'v_thresh', 'pwr_thresh', 'pos_thresh', 'max_t'],
                 axis=1)
             # print 'would push to db here'
-            push_to_db(header, accel, crossings)
+            content = merge(accel, gyro, on='timepoint', how='left').fillna(0.)
+            push_to_db(header, content, crossings)
         else:
             print 'Received and processed data for collar {}, but collar is not active...'.format(collar['collar_id'])
 

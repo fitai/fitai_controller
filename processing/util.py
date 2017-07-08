@@ -19,18 +19,25 @@ def read_header_mqtt(data):
 
 def read_content_mqtt(data, collar_obj):
     try:
-        accel = DataFrame(data['content'])
-        accel = accel.reset_index().rename(columns={'index': 'timepoint'})
+        dat = DataFrame(data['content'])
     except AttributeError:
         print 'No "content" field. Returning None'
-        return None
+        return None, None
+    else:
+        dat = dat.reset_index().rename(columns={'index': 'timepoint'})
+        a_cols = [x for x in dat.columns if 'a_' in x]
+        g_cols = [x for x in dat.columns if 'g_' in x]
+        accel = dat[a_cols + ['timpeoint']]
+        gyro = dat[g_cols + ['timepoint']]
 
     try:
         # Scale timepoint values
-        accel.timepoint = accel.timepoint.astype(float) / float(collar_obj['sampling_rate'])
+        accel['timepoint'] = accel['timepoint'].astype(float) / float(collar_obj['sampling_rate'])
+        gyro['timepoint'] = gyro['timepoint'].astype(float) / float(collar_obj['sampling_rate'])
     except KeyError:
         print 'Couldnt extract sample rate from header. Defaulting to 20 Hz'
-        accel.timepoint = accel.timepoint.astype(float) / 20.
+        accel['timepoint'] = accel['timepoint'].astype(float) / 20.
+        gyro['timepoint'] = gyro['timepoint'].astype(float) / 20.
 
     try:
         accel['lift_id'] = collar_obj['lift_id']
@@ -38,7 +45,7 @@ def read_content_mqtt(data, collar_obj):
         print 'Couldnt extract lift_id from header'
         accel['lift_id'] = 0
 
-    return accel
+    return accel, gyro
 
 
 # def read_content_fitai(data, content_key='content'):
