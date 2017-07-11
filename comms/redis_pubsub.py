@@ -15,12 +15,18 @@ def prep_message(collar_obj, vel, pwr):
     return msg
 
 
-def redis_pub(redis_client, collar_obj, vals):
-    vel, pwr = vals[1], vals[2]  # pull out relevant entries
+def redis_pub(redis_client, redis_channel, collar_obj, vals, source):
 
-    msg = prep_message(collar_obj, vel, pwr)
+    if source == 'real_time':
+        vel, pwr = vals[1], vals[2]  # pull out relevant entries
+        msg = prep_message(collar_obj, vel, pwr)
+    elif source == 'rfid':
+        msg = vals  # pass message payload directly
+    else:
+        print 'Unsure what source of message is: {}'.format(source)
+        raise NotImplementedError
 
     if redis_client is not None:
-	redis_client.publish('lifts', msg)
+        redis_client.publish(redis_channel, msg)
     else:
         print 'Redis connection not established. Cannot publish message.'
