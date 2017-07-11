@@ -21,6 +21,6 @@ def redis_pub(redis_client, collar_obj, vals):
     msg = prep_message(collar_obj, vel, pwr)
 
     if redis_client is not None:
-	redis_client.publish('lifts', msg)
+        redis_client.publish('lifts', msg)
     else:
         print 'Redis connection not established. Cannot publish message.'
