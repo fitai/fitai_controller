@@ -20,6 +20,7 @@ from processing.util import read_header_mqtt, read_content_mqtt, process_data, p
 from ml.thresh_learn import calc_reps, load_thresh_dict
 from databasing.conn_strings import redis_host
 from comms.redis_pubsub import redis_pub
+from ws_publisher import ws_pub
 
 # TODO: Turn this entire file into a class. Will allow us to use objects like the redis_client
 # TODO: Push thresh_dict load into separate file
