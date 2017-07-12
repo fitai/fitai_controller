@@ -4,7 +4,6 @@ from sys import argv, path as syspath, exit
 from os.path import dirname, abspath
 from optparse import OptionParser
 from json import loads
-from pandas import DataFrame
 
 try:
     path = dirname(dirname(abspath(__file__)))
@@ -14,27 +13,14 @@ except NameError:
     syspath.append('/Users/kyle/PycharmProjects/fitai_controller')
     print 'Working in Dev mode.'
 
-from databasing.database_push import push_to_db
-from databasing.redis_controls import establish_redis_client, retrieve_collar_by_id, update_collar_by_id
-from processing.util import read_header_mqtt, read_content_mqtt, process_data, prep_collar
-from ml.thresh_learn import calc_reps, load_thresh_dict
+from databasing.redis_controls import establish_redis_client
 from databasing.conn_strings import redis_host
 from comms.redis_pubsub import redis_pub
 
 # TODO: Turn this entire file into a class. Will allow us to use objects like the redis_client
-# TODO: Push thresh_dict load into separate file
-# as class attributes instead of forcing us to keep them global
-#: Alpha = learning rate - make smaller to learn slower and take more iterations, make larger to learn faster and
-#: risk non-convergence
-
-#: Optional arg fname, defaults to thresh_dict.txt
-thresh_dict = load_thresh_dict(fname='thresh_dict.txt')
-
-# NOTE TO SELF: NEED A BETTER WAY TO MAKE THIS GLOBAL
-# should probably turn the entire script into an object....
+# TODO: NEED A BETTER WAY TO MAKE THIS GLOBAL
 # Attempt to connect to redis server
 redis_client = establish_redis_client(hostname=redis_host, verbose=True)
-# redis_client = establish_redis_client(hostname='52.204.229.101', verbose=True)  # in case conn to server is needed
 
 # If connection fails, MQTT client will not be able to update collar object, and will be useless. Kill and try again
 if redis_client is None:
@@ -44,10 +30,6 @@ if redis_client is None:
 
 # The callback for when the client successfully connects to the broker
 def mqtt_on_connect(client, userdata, rc):
-    ''' We subscribe on_connect() so that if we lose the connection
-        and reconnect, subscriptions will be renewed. '''
-
-    # client.subscribe('fitai')
     print 'connected'
 
 
@@ -60,32 +42,12 @@ def mqtt_on_message(client, userdata, msg):
     print 'Received message from topic "{}"'.format(topic)
 
     try:
-        data = loads(msg.payload)
+        print 'Pushing message through to redis pubsub...'
+        redis_pub(redis_client, 'rfid', None, msg.payload, source='rfid')
 
-        head = read_header_mqtt(data)
-
-        collar = prep_collar(retrieve_collar_by_id(redis_client, head['collar_id']), head, thresh_dict)
-
-        accel = read_content_mqtt(data, collar)
-
-        # NOTE: process_data() returns accel, vel, power, position. All those returns are useful for
-        #       calc_reps(), but are re-calculated differently before being pushed to websocket,
-        #       so I decided just to pass them straight through to the calc_reps function
-        collar, crossings = calc_reps(process_data(collar, accel, RMS=False, highpass=True), collar)
-
-        # ws_pub(collar, process_data(collar, accel, RMS=True, highpass=True))
-        redis_pub(redis_client, 'lifts', collar, process_data(collar, accel, RMS=True, highpass=True), source='real_time')
-
-        _ = update_collar_by_id(redis_client, collar, collar['collar_id'], verbose=True)
-
-        if collar['active']:
-            header = DataFrame(data=collar, index=[0]).drop(
-                ['active', 'curr_state', 'a_thresh', 'v_thresh', 'pwr_thresh', 'pos_thresh', 'max_t'],
-                axis=1)
-            # print 'would push to db here'
-            push_to_db(header, accel, crossings)
-        else:
-            print 'Received and processed data for collar {}, but collar is not active...'.format(collar['collar_id'])
+        # Don't need to do this, but it would be good to confirm the payload is properly formatted
+        # data = loads(msg.payload)
+        # print 'Received data: {}'.format(data)
 
     except KeyError, e:
         print 'Key not found in data header. ' \
@@ -131,7 +93,7 @@ def establish_cli_parser():
                       help='Port on server hosting MQTT')
     parser.add_option('-i', '--ip', dest='host_ip', default='localhost',
                       help='IP address of server hosting MQTT')
-    parser.add_option('-t', '--topic', dest='mqtt_topic', default='fitai',
+    parser.add_option('-t', '--topic', dest='mqtt_topic', default='rfid',
                       help='MQTT topic messages are to be received from')
     parser.add_option('-v', '--verbose', dest='verbose', default=False, action='store_true',
                       help='Increase console outputs (good for dev purposes)')
