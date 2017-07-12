@@ -27,7 +27,7 @@ def read_content_mqtt(data, collar_obj):
         dat = dat.reset_index().rename(columns={'index': 'timepoint'})
         a_cols = [x for x in dat.columns if 'a_' in x]
         g_cols = [x for x in dat.columns if 'g_' in x]
-        accel = dat[a_cols + ['timpeoint']]
+        accel = dat[a_cols + ['timepoint']]
         gyro = dat[g_cols + ['timepoint']]
 
     try:
