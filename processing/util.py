@@ -188,8 +188,15 @@ def prep_collar(collar, head, thresh_dict):
             print 'Couldnt find any thresholds for lift_type {}. Defaulting to 1.'.format(collar['lift_type'])
             collar['a_thresh'], collar['v_thresh'], collar['pwr_thresh'], collar['pos_thresh'] = 1., 1., 1., 1.
 
-    if collar['lift_start'] == 'None':
-        collar['lift_start'] = dt.now()
+    # start of the lift
+    if collar['created_at'] == 'None':
+        collar['created_at'] = dt.now()
+        # for compatibility, leave this in
+        collar['lift_start'] = collar['created_at']
+
+    # added for patrick
+    if collar['updated_at'] == 'None':
+        collar['updated_at'] = dt.now()
 
     #: Should only happen with default collar initialization
     if collar['collar_id'] == 'None':

@@ -8,7 +8,7 @@ def get_default_collar():
     return {"collar_id": 'None',  # Needs to be "None"
             "athlete_id": 0,
             "lift_id": 'None',  # Needs to be "None"
-            "lift_start": "None",  # Needs to be "None"
+            "created_at": "None",  # Needs to be "None"
             "lift_type": "Barbell Deadlift",
             "lift_weight": 100,
             "weight_units": "lbs",
@@ -21,7 +21,8 @@ def get_default_collar():
             "pos_thresh": "None",
             "curr_state": 'rest',
             "max_t": 0.,
-            "sampling_rate": 20.
+            "sampling_rate": 20.,
+            "updated_at": "None"
             }
 
 
