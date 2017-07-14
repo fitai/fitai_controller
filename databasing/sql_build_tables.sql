@@ -34,6 +34,8 @@ CREATE TABLE athlete_lift (
     , lift_id             BIGINT PRIMARY KEY
     , sampling_rate       INT
     , lift_start          TIMESTAMP
+    , created_at          TIMESTAMP
+    , updated_at          TIMESTAMP
     , lift_type           TEXT
     , lift_weight         INT
     , weight_units        VARCHAR(5)
