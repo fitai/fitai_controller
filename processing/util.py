@@ -162,6 +162,7 @@ def process_data(collar_obj, content, RMS=False, highpass=True, verbose=False):
 
 
 def prep_collar(collar, head, thresh_dict):
+
     # Quick check that at least one expected field is in collar object
     if 'pwr_thresh' not in collar.keys():
         print 'Redis collar object {} appears broken. ' \
@@ -191,8 +192,6 @@ def prep_collar(collar, head, thresh_dict):
     # start of the lift
     if collar['created_at'] == 'None':
         collar['created_at'] = dt.now()
-        # for compatibility, leave this in
-        collar['lift_start'] = collar['created_at']
 
     # added for patrick
     if collar['updated_at'] == 'None':

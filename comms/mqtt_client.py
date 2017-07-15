@@ -82,6 +82,9 @@ def mqtt_on_message(client, userdata, msg):
             header = DataFrame(data=collar, index=[0]).drop(
                 ['active', 'curr_state', 'a_thresh', 'v_thresh', 'pwr_thresh', 'pos_thresh', 'max_t'],
                 axis=1)
+            if 'lift_start' in header.columns:
+                print 'lift_start FOUND in header columns!!'
+                header = header.drop('lift_start', axis=1)
             # print 'would push to db here'
             push_to_db(header, accel, crossings)
         else:
