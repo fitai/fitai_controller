@@ -189,11 +189,6 @@ def prep_collar(collar, head, thresh_dict):
             print 'Couldnt find any thresholds for lift_type {}. Defaulting to 1.'.format(collar['lift_type'])
             collar['a_thresh'], collar['v_thresh'], collar['pwr_thresh'], collar['pos_thresh'] = 1., 1., 1., 1.
 
-    # TODO figure out a better way to handle these fields - update hardware code
-    # map fields
-    collar['created_at'] = head['lift_start']
-    collar['updated_at'] = head['lift_start']
-
     # start of the lift
     if collar['created_at'] == 'None':
         collar['created_at'] = dt.now()
