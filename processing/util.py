@@ -191,6 +191,8 @@ def prep_collar(collar, head, thresh_dict):
     # start of the lift
     if collar['created_at'] == 'None':
         collar['created_at'] = dt.now()
+
+    if collar['lift_start'] == 'None':
         # for compatibility, leave this in
         collar['lift_start'] = collar['created_at']
 
