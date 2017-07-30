@@ -15,6 +15,7 @@ from databasing.database_pull import lift_to_json, pull_max_lift_id
 from databasing.database_push import update_calc_reps
 from databasing.redis_controls import establish_redis_client, update_collar_by_id, get_default_collar
 from databasing.conn_strings import redis_host
+from comms.mqtt_client import redis_client
 
 
 # Establish default behaviors of command-line call
@@ -106,7 +107,7 @@ def main(args):
     if verbose:
         print 'Received json: {}'.format(dat)
 
-    redis_client = establish_redis_client(hostname=redis_host, verbose=verbose)
+    # redis_client = establish_redis_client(hostname=redis_host, verbose=verbose)
     # redis_client = establish_redis_client(hostname='52.204.229.101', verbose=True)
 
     if redis_client is None:
@@ -152,11 +153,11 @@ def main(args):
             update_lift_id = True
             for key in dat.keys():
                 #: Temporary workaround until patrick renames this field
-                if key == 'lift_num_reps':
-                    collar['init_num_reps'] = dat[key]
-                else:
-                    collar[key] = dat[key]
-            collar['active'] = True
+                # if key == 'lift_num_reps':
+                #     collar['init_num_reps'] = dat[key]
+                # else:
+                collar[key] = dat[key]
+            # collar['active'] = True  # shouldn't be necessary
             collar['lift_id'] = next_lift_id
         else:
             if verbose:
@@ -164,7 +165,7 @@ def main(args):
             update_lift_id = False
             collar = dat
 
-        response = update_collar_by_id(redis_client, collar, collar['collar_id'], verbose)
+        response = update_collar_by_id(redis_client, collar, collar['collar_id'], verbose, retry=True)
 
         #: Switching logic to dictate whether or not the script should call up the info stored
         #: for whatever lift just ended.

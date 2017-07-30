@@ -4,7 +4,7 @@ from sys import argv, path as syspath, exit
 from os.path import dirname, abspath
 from optparse import OptionParser
 from json import loads
-from pandas import DataFrame
+from pandas import DataFrame, merge
 
 try:
     path = dirname(dirname(abspath(__file__)))
@@ -26,9 +26,6 @@ from comms.redis_pubsub import redis_pub
 # as class attributes instead of forcing us to keep them global
 #: Alpha = learning rate - make smaller to learn slower and take more iterations, make larger to learn faster and
 #: risk non-convergence
-
-#: Optional arg fname, defaults to thresh_dict.txt
-thresh_dict = load_thresh_dict(fname='thresh_dict.txt')
 
 # NOTE TO SELF: NEED A BETTER WAY TO MAKE THIS GLOBAL
 # should probably turn the entire script into an object....
@@ -64,16 +61,15 @@ def mqtt_on_message(client, userdata, msg):
 
         head = read_header_mqtt(data)
 
-        collar = prep_collar(retrieve_collar_by_id(redis_client, head['collar_id']), head, thresh_dict)
+        collar = prep_collar(retrieve_collar_by_id(redis_client, head['collar_id']), head, client.thresh_dict)
 
-        accel = read_content_mqtt(data, collar)
+        accel, gyro = read_content_mqtt(data, collar)
 
         # NOTE: process_data() returns accel, vel, power, position. All those returns are useful for
         #       calc_reps(), but are re-calculated differently before being pushed to websocket,
         #       so I decided just to pass them straight through to the calc_reps function
         collar, crossings = calc_reps(process_data(collar, accel, RMS=False, highpass=True), collar)
 
-        # ws_pub(collar, process_data(collar, accel, RMS=True, highpass=True))
         redis_pub(redis_client, 'lifts', collar, process_data(collar, accel, RMS=True, highpass=True), source='real_time')
 
         _ = update_collar_by_id(redis_client, collar, collar['collar_id'], verbose=True)
@@ -86,7 +82,8 @@ def mqtt_on_message(client, userdata, msg):
                 print 'lift_start FOUND in header columns!!'
                 header = header.drop('lift_start', axis=1)
             # print 'would push to db here'
-            push_to_db(header, accel, crossings)
+            content = merge(accel, gyro, on='timepoint', how='left').fillna(0.)
+            push_to_db(header, content, crossings)
         else:
             print 'Received and processed data for collar {}, but collar is not active...'.format(collar['collar_id'])
 
@@ -104,6 +101,7 @@ def mqtt_on_message(client, userdata, msg):
 
 def establish_mqtt_client(ip, port, topic):
     client = mqtt.Client()
+    client.thresh_dict = load_thresh_dict(fname='thresh_dict.txt')
     client.on_connect = mqtt_on_connect
     client.on_message = mqtt_on_message
 
