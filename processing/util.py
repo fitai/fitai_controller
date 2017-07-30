@@ -211,6 +211,9 @@ def prep_collar(collar, head, thresh_dict):
     if 'athlete_id' in head.keys():
         collar['athlete_id'] = head['athlete_id']
 
+    if collar['init_num_reps'] is None:
+        collar['init_num_reps'] = 0
+
     #: Left over from old collar format. Shouldn't need this forever - remove key "threshold" if exists
     collar.pop('threshold', None)
 

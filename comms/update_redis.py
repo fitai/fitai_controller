@@ -165,7 +165,9 @@ def main(args):
             update_lift_id = False
             collar = dat
 
-        response = update_collar_by_id(redis_client, collar, collar['collar_id'], verbose, retry=True)
+        response = update_collar_by_id(redis_client, collar, collar['collar_id'], verbose)
+        collar_stat = str(collar['collar_id']) + '_status'
+        redis_client.set(collar_stat, 'stale')
 
         #: Switching logic to dictate whether or not the script should call up the info stored
         #: for whatever lift just ended.

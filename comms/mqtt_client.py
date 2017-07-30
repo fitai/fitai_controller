@@ -48,6 +48,12 @@ def mqtt_on_connect(client, userdata, rc):
     print 'connected'
 
 
+def update_collar_obj(client, collar_id):
+    print('Updating collar {}'.format(collar_id))
+    client.collars.update({collar_id: retrieve_collar_by_id(redis_client, collar_id)})
+    return client
+
+
 #: The callback for when a PUBLISH message is received from the broker
 #: There will need to be a lot of logic wrappers here; a lot could go wrong, and it should all be handled
 #: as gracefully as possible
@@ -61,26 +67,39 @@ def mqtt_on_message(client, userdata, msg):
 
         head = read_header_mqtt(data)
 
-        collar = prep_collar(retrieve_collar_by_id(redis_client, head['collar_id']), head, client.thresh_dict)
+        collar_id = str(head['collar_id'])
+        # if client doesn't contain collar object for this collar_id, create a holder for it
+        if collar_id not in client.collars.keys():
+            client.collars.update({collar_id: None})
+
+        collar_stat = collar_id + '_status'
+        # Check status of this object (separate stored item in redis). status == 'stale', means
+        #   that the object has been updated elsewhere and needs to be refreshed
+        if (client.collars[collar_id] is None) or (redis_client.get(collar_stat) == 'stale'):
+            client = update_collar_obj(client, collar_id)
+            redis_client.set(collar_stat, 'fresh')
+
+        collar = prep_collar(client.collars[collar_id], head, client.thresh_dict)
 
         accel, gyro = read_content_mqtt(data, collar)
 
         # NOTE: process_data() returns accel, vel, power, position. All those returns are useful for
-        #       calc_reps(), but are re-calculated differently before being pushed to websocket,
+        #       calc_reps(), but are re-calculated differently before being pushed to redis pubsub,
         #       so I decided just to pass them straight through to the calc_reps function
         collar, crossings = calc_reps(process_data(collar, accel, RMS=False, highpass=True), collar)
 
         redis_pub(redis_client, 'lifts', collar, process_data(collar, accel, RMS=True, highpass=True), source='real_time')
 
-        _ = update_collar_by_id(redis_client, collar, collar['collar_id'], verbose=True)
+        # _ = update_collar_by_id(redis_client, collar, collar['collar_id'], verbose=True)
+        client.collars[collar_id] = collar  # update stored collar object
 
         if collar['active']:
+            if 'lift_start' in collar.keys():
+                collar.pop('lift_start')
+
             header = DataFrame(data=collar, index=[0]).drop(
                 ['active', 'curr_state', 'a_thresh', 'v_thresh', 'pwr_thresh', 'pos_thresh', 'max_t'],
                 axis=1)
-            if 'lift_start' in header.columns:
-                print 'lift_start FOUND in header columns!!'
-                header = header.drop('lift_start', axis=1)
             # print 'would push to db here'
             content = merge(accel, gyro, on='timepoint', how='left').fillna(0.)
             push_to_db(header, content, crossings)
@@ -101,7 +120,10 @@ def mqtt_on_message(client, userdata, msg):
 
 def establish_mqtt_client(ip, port, topic):
     client = mqtt.Client()
+    # custom additions
     client.thresh_dict = load_thresh_dict(fname='thresh_dict.txt')
+    client.collars = {}
+
     client.on_connect = mqtt_on_connect
     client.on_message = mqtt_on_message
 
@@ -130,7 +152,7 @@ def establish_cli_parser():
     parser = OptionParser()
     parser.add_option('-p', '--port', dest='host_port', default=1883,
                       help='Port on server hosting MQTT')
-    parser.add_option('-i', '--ip', dest='host_ip', default='localhost',
+    parser.add_option('-i', '--ip', dest='host_ip', default='52.15.200.179',
                       help='IP address of server hosting MQTT')
     parser.add_option('-t', '--topic', dest='mqtt_topic', default='fitai',
                       help='MQTT topic messages are to be received from')
@@ -162,3 +184,14 @@ def main(args):
 # Receives initial ping to file
 if __name__ == '__main__':
     main(argv[1:])
+
+#     Sample data packet from device
+#
+#  data = {"header": {"collar_id": 555,"lift_id": "None","sampling_rate":50},"content":{
+# "a_x": [0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00],
+# "a_y":[0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00],
+# "a_z":[0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00],
+# "g_x":[-1.75,-1.83,-1.87,-1.85,-1.87,-1.97,-1.83,-1.82,-1.72,-1.79,-1.81,-1.84,-1.85,-1.82,-1.91],
+# "g_y":[1.49,1.46,1.46,1.54,1.53,1.57,1.73,1.63,1.60,1.60,1.64,1.63,1.59,1.56,1.61],
+# "g_z":[0.77,0.74,0.76,0.84,0.89,0.88,0.85,0.87,0.80,0.82,0.85,0.82,0.83,0.85,0.85],
+# "millis":[8808,8813,8818,8823,8828,8833,8844,8849,8854,8859,8864,8869,8874,8880,8885]}}

@@ -69,7 +69,7 @@ def retrieve_collar_by_id(redis_client=None, collar_id=None, verbose=True):
 
 
 #: Sets redis object that matches collar_id to a JSON string version of 'dat' - the dataframe passed in
-def update_collar_by_id(redis_client=None, dat=None, collar_id=None, verbose=True, retry=False):
+def update_collar_by_id(redis_client=None, dat=None, collar_id=None, verbose=True):
 
     if redis_client is None:
         print 'No redis client passed??'
@@ -82,12 +82,7 @@ def update_collar_by_id(redis_client=None, dat=None, collar_id=None, verbose=Tru
         return None
 
     # update storage
-    if retry:  # TODO - find a better way to handle this
-        for i in range(5):
-            # hope that 1 in 5 updates go through
-            response = redis_client.set(collar_id, dumps(dat))
-    else:
-        response = redis_client.set(collar_id, dumps(dat))
+    response = redis_client.set(collar_id, dumps(dat))
 
     if response & verbose:
         print 'Successfully updated collar {c} redis object on host {r}.'.format(c=collar_id, r=redis_client.connection_pool._available_connections[0].host)
