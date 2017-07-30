@@ -20,16 +20,12 @@ from processing.util import read_header_mqtt, read_content_mqtt, process_data, p
 from ml.thresh_learn import calc_reps, load_thresh_dict
 from databasing.conn_strings import redis_host
 from comms.redis_pubsub import redis_pub
-from comms.ws_publisher import ws_pub
 
 # TODO: Turn this entire file into a class. Will allow us to use objects like the redis_client
 # TODO: Push thresh_dict load into separate file
 # as class attributes instead of forcing us to keep them global
 #: Alpha = learning rate - make smaller to learn slower and take more iterations, make larger to learn faster and
 #: risk non-convergence
-
-#: Optional arg fname, defaults to thresh_dict.txt
-thresh_dict = load_thresh_dict(fname='thresh_dict.txt')
 
 # NOTE TO SELF: NEED A BETTER WAY TO MAKE THIS GLOBAL
 # should probably turn the entire script into an object....
@@ -65,7 +61,7 @@ def mqtt_on_message(client, userdata, msg):
 
         head = read_header_mqtt(data)
 
-        collar = prep_collar(retrieve_collar_by_id(redis_client, head['collar_id']), head, thresh_dict)
+        collar = prep_collar(retrieve_collar_by_id(redis_client, head['collar_id']), head, client.thresh_dict)
 
         accel, gyro = read_content_mqtt(data, collar)
 
@@ -74,7 +70,6 @@ def mqtt_on_message(client, userdata, msg):
         #       so I decided just to pass them straight through to the calc_reps function
         collar, crossings = calc_reps(process_data(collar, accel, RMS=False, highpass=True), collar)
 
-        # ws_pub(collar, process_data(collar, accel, RMS=True, highpass=True))
         redis_pub(redis_client, 'lifts', collar, process_data(collar, accel, RMS=True, highpass=True), source='real_time')
 
         _ = update_collar_by_id(redis_client, collar, collar['collar_id'], verbose=True)
@@ -106,6 +101,7 @@ def mqtt_on_message(client, userdata, msg):
 
 def establish_mqtt_client(ip, port, topic):
     client = mqtt.Client()
+    client.thresh_dict = load_thresh_dict(fname='thresh_dict.txt')
     client.on_connect = mqtt_on_connect
     client.on_message = mqtt_on_message
 
