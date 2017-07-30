@@ -152,7 +152,7 @@ def establish_cli_parser():
     parser = OptionParser()
     parser.add_option('-p', '--port', dest='host_port', default=1883,
                       help='Port on server hosting MQTT')
-    parser.add_option('-i', '--ip', dest='host_ip', default='52.15.200.179',
+    parser.add_option('-i', '--ip', dest='host_ip', default='localhost',
                       help='IP address of server hosting MQTT')
     parser.add_option('-t', '--topic', dest='mqtt_topic', default='fitai',
                       help='MQTT topic messages are to be received from')
