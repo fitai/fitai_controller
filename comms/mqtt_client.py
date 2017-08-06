@@ -5,6 +5,7 @@ from os.path import dirname, abspath
 from optparse import OptionParser
 from json import loads
 from pandas import DataFrame, merge
+from multiprocessing import Process as mp_process
 
 try:
     path = dirname(dirname(abspath(__file__)))
@@ -102,7 +103,11 @@ def mqtt_on_message(client, userdata, msg):
                 axis=1)
             # print 'would push to db here'
             content = merge(accel, gyro, on='timepoint', how='left').fillna(0.)
-            push_to_db(header, content, crossings)
+
+            # create new thread for the db push
+            process = mp_process(target=push_to_db, args=(header, content, crossings))
+            process.start()  # execute
+            # push_to_db(header, content, crossings)
         else:
             print 'Received and processed data for collar {}, but collar is not active...'.format(collar['collar_id'])
 
