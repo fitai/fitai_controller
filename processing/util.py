@@ -173,7 +173,7 @@ def prep_collar(collar, head, thresh_dict):
     # Quick check that at least one expected field is in collar object
     if 'pwr_thresh' not in collar.keys():
         print 'Redis collar object {} appears broken. ' \
-              'Will replace with default and update as needed.'.format(collar['collar_id'])
+              'Will replace with default and update as needed.'.format(collar['tracker_id'])
         collar_tmp = collar.copy()
         collar = get_default_collar()
         collar.update(collar_tmp)
@@ -205,8 +205,8 @@ def prep_collar(collar, head, thresh_dict):
         collar['updated_at'] = dt.now()
 
     #: Should only happen with default collar initialization
-    if collar['collar_id'] == 'None':
-        collar['collar_id'] = head['collar_id']
+    if collar['tracker_id'] == 'None':
+        collar['tracker_id'] = head['tracker_id']
 
     if 'athlete_id' in head.keys():
         collar['athlete_id'] = head['athlete_id']

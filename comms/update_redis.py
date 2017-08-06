@@ -38,15 +38,15 @@ def main(args):
     Via Submit form:
     ---------------
 
-    python comms/update_redis.py -v -j '{"collar_id": "555", "athlete_id": "1", "lift_id": "None", ... "active": True}'
+    python comms/update_redis.py -v -j '{"tracker_id": "555", "athlete_id": "1", "lift_id": "None", ... "active": True}'
 
-    :param args: (-j) JSON string containing a lot of fields, most notably "collar_id", "active", and "lift_id"
+    :param args: (-j) JSON string containing a lot of fields, most notably "tracker_id", "active", and "lift_id"
 
     The fields listed are what are relevant to the switching logic in update_redis.py. There are more fields in the
     JSON string: they are pieces of metadata that needs to be attached to the lift, and are updated in the
     collar object, but do not impact anything here (other than getting incorporated into the collar object).
 
-    The "collar_id" field tells update_redis.py which collar to grab/update. The "active" field doesn't have
+    The "tracker_id" field tells update_redis.py which collar to grab/update. The "active" field doesn't have
     an impact in this script, but it tells update_redis.py to change the active state of the collar,
     which mqtt_client.py will interpret as a sign to START pushing any data received for that collar to the
     database. The "athlete_id" field also has no impact on update_redis.py, but will impact which PHP frontend
@@ -75,11 +75,11 @@ def main(args):
     Via End Lift button
     -------------------
 
-    python comms/update_redis.py -v -j '{"collar_id":"555","active":false}'
+    python comms/update_redis.py -v -j '{"tracker_id":"555","active":false}'
 
-    :param args: (-j) JSON string containing "collar_id" and "active"
+    :param args: (-j) JSON string containing "tracker_id" and "active"
 
-    The "collar_id" field tells update_redis.py which collar to grab/update, and the "active" field
+    The "tracker_id" field tells update_redis.py which collar to grab/update, and the "active" field
     tells update_redis.py to change the active state of the collar, which mqtt_client.py will interpret as
     a sign to STOP pushing any data received for that collar to the database.
 
@@ -117,10 +117,10 @@ def main(args):
 
     try:
         if verbose:
-            print 'Found collar_id {}'.format(dat['collar_id'])
+            print 'Found tracker_id {}'.format(dat['tracker_id'])
 
         try:
-            collar = loads(redis_client.get(dat['collar_id']))
+            collar = loads(redis_client.get(dat['tracker_id']))
         except TypeError:  # if loading from redis fails, expect to get TypeError
             collar = get_default_collar()
 
@@ -165,8 +165,8 @@ def main(args):
             update_lift_id = False
             collar = dat
 
-        response = update_collar_by_id(redis_client, collar, collar['collar_id'], verbose)
-        collar_stat = str(collar['collar_id']) + '_status'
+        response = update_collar_by_id(redis_client, collar, collar['tracker_id'], verbose)
+        collar_stat = str(collar['tracker_id']) + '_status'
         redis_client.set(collar_stat, 'stale')
 
         #: Switching logic to dictate whether or not the script should call up the info stored
@@ -201,7 +201,7 @@ def main(args):
 
     except KeyError, e:
         if verbose:
-            print 'Couldnt extract collar_id from json object. Cannot update.'
+            print 'Couldnt extract tracker_id from json object. Cannot update.'
             print 'Error message: \n{}'.format(e)
         # exit(200)
 

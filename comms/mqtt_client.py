@@ -49,9 +49,9 @@ def mqtt_on_connect(client, userdata, rc):
     print 'connected'
 
 
-def update_collar_obj(client, collar_id):
-    print('Updating collar {}'.format(collar_id))
-    client.collars.update({collar_id: retrieve_collar_by_id(redis_client, collar_id)})
+def update_collar_obj(client, tracker_id):
+    print('Updating collar {}'.format(tracker_id))
+    client.collars.update({tracker_id: retrieve_collar_by_id(redis_client, tracker_id)})
     return client
 
 
@@ -68,19 +68,19 @@ def mqtt_on_message(client, userdata, msg):
 
         head = read_header_mqtt(data)
 
-        collar_id = str(head['collar_id'])
-        # if client doesn't contain collar object for this collar_id, create a holder for it
-        if collar_id not in client.collars.keys():
-            client.collars.update({collar_id: None})
+        tracker_id = str(head['tracker_id'])
+        # if client doesn't contain collar object for this tracker_id, create a holder for it
+        if tracker_id not in client.collars.keys():
+            client.collars.update({tracker_id: None})
 
-        collar_stat = collar_id + '_status'
+        collar_stat = tracker_id + '_status'
         # Check status of this object (separate stored item in redis). status == 'stale', means
         #   that the object has been updated elsewhere and needs to be refreshed
-        if (client.collars[collar_id] is None) or (redis_client.get(collar_stat) == 'stale'):
-            client = update_collar_obj(client, collar_id)
+        if (client.collars[tracker_id] is None) or (redis_client.get(collar_stat) == 'stale'):
+            client = update_collar_obj(client, tracker_id)
             redis_client.set(collar_stat, 'fresh')
 
-        collar = prep_collar(client.collars[collar_id], head, client.thresh_dict)
+        collar = prep_collar(client.collars[tracker_id], head, client.thresh_dict)
 
         accel, gyro = read_content_mqtt(data, collar)
 
@@ -91,8 +91,8 @@ def mqtt_on_message(client, userdata, msg):
 
         redis_pub(redis_client, 'lifts', collar, process_data(collar, accel, RMS=True, highpass=True), source='real_time')
 
-        # _ = update_collar_by_id(redis_client, collar, collar['collar_id'], verbose=True)
-        client.collars[collar_id] = collar  # update stored collar object
+        # _ = update_collar_by_id(redis_client, collar, collar['tracker_id'], verbose=True)
+        client.collars[tracker_id] = collar  # update stored collar object
 
         if collar['active']:
             if 'lift_start' in collar.keys():
@@ -109,7 +109,7 @@ def mqtt_on_message(client, userdata, msg):
             process.start()  # execute
             # push_to_db(header, content, crossings)
         else:
-            print 'Received and processed data for collar {}, but collar is not active...'.format(collar['collar_id'])
+            print 'Received and processed data for collar {}, but collar is not active...'.format(collar['tracker_id'])
 
     except KeyError, e:
         print 'Key not found in data header. ' \
@@ -192,7 +192,7 @@ if __name__ == '__main__':
 
 #     Sample data packet from device
 #
-#  data = {"header": {"collar_id": 555,"lift_id": "None","sampling_rate":50},"content":{
+#  data = {"header": {"tracker_id": 555,"lift_id": "None","sampling_rate":50},"content":{
 # "a_x": [0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00],
 # "a_y":[0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00],
 # "a_z":[0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00],
