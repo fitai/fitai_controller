@@ -91,7 +91,6 @@ def mqtt_on_message(client, userdata, msg):
 
         redis_pub(redis_client, 'lifts', collar, process_data(collar, accel, RMS=True, highpass=True), source='real_time')
 
-        # _ = update_collar_by_id(redis_client, collar, collar['tracker_id'], verbose=True)
         client.collars[tracker_id] = collar  # update stored collar object
 
         if collar['active']:
@@ -101,13 +100,11 @@ def mqtt_on_message(client, userdata, msg):
             header = DataFrame(data=collar, index=[0]).drop(
                 ['active', 'curr_state', 'a_thresh', 'v_thresh', 'pwr_thresh', 'pos_thresh', 'max_t'],
                 axis=1)
-            # print 'would push to db here'
             content = merge(accel, gyro, on='timepoint', how='left').fillna(0.)
 
-            # create new thread for the db push
+            # create new process for the db push; won't interfere with main process
             process = mp_process(target=push_to_db, args=(header, content, crossings))
             process.start()  # execute
-            # push_to_db(header, content, crossings)
         else:
             print 'Received and processed data for collar {}, but collar is not active...'.format(collar['tracker_id'])
 
