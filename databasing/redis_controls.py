@@ -22,7 +22,8 @@ def get_default_collar():
             "curr_state": 'rest',
             "max_t": 0.,
             "sampling_rate": 20.,
-            "updated_at": "None"
+            "updated_at": "None",
+            "push_header": False
             }
 
 

@@ -60,8 +60,8 @@ def update_collar_obj(client, tracker_id):
 #: as gracefully as possible
 def mqtt_on_message(client, userdata, msg):
 
-    topic = msg.topic
-    print 'Received message from topic "{}"'.format(topic)
+    # topic = msg.topic
+    # print 'Received message from topic "{}"'.format(topic)
 
     try:
         data = loads(msg.payload)
@@ -79,6 +79,7 @@ def mqtt_on_message(client, userdata, msg):
         if (client.collars[tracker_id] is None) or (redis_client.get(collar_stat) == 'stale'):
             client = update_collar_obj(client, tracker_id)
             redis_client.set(collar_stat, 'fresh')
+            client.collars[tracker_id]['push_header'] = True  # on first collar update, push header to db
 
         collar = prep_collar(client.collars[tracker_id], head, client.thresh_dict)
 
@@ -105,6 +106,8 @@ def mqtt_on_message(client, userdata, msg):
             # create new process for the db push; won't interfere with main process
             process = mp_process(target=push_to_db, args=(header, content, crossings))
             process.start()  # execute
+            if client.collars[tracker_id]['push_header']:  # assume push was done
+                client.collars[tracker_id]['push_header'] = False  # skip the header push to db on all subsequent loops
         else:
             print 'Received and processed data for collar {}, but collar is not active...'.format(collar['tracker_id'])
 
