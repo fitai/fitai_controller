@@ -12,7 +12,7 @@ conn = create_engine(db_conn_string)
 
 def push_to_db(header, content, crossings):
     if header is not None:
-        if header['push_header']:
+        if header['push_header'].iloc[0]:
             print 'pushing collar metadata to db...'
             try:
                 header.to_sql('lifts', conn, if_exists='append', index=False, index_label='lift_id')
