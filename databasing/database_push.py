@@ -15,7 +15,7 @@ def push_to_db(header, content, crossings):
         if header['push_header'].iloc[0]:
             print 'pushing collar metadata to db...'
             try:
-                header.to_sql('lifts', conn, if_exists='append', index=False, index_label='lift_id')
+                header.drop('push_header', axis=1).to_sql('lifts', conn, if_exists='append', index=False, index_label='lift_id')
             except OperationalError, e:
                 print '!!!!!Could not push collar metadata to database!!!!'
                 print 'Likely because PostgreSQL server not running.\nError message: {}'.format(e)
