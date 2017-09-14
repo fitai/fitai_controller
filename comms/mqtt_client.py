@@ -90,7 +90,9 @@ def mqtt_on_message(client, userdata, msg):
         #       so I decided just to pass them straight through to the calc_reps function
         collar, crossings = calc_reps(process_data(collar, accel, RMS=False, highpass=True), collar)
 
-        redis_pub(redis_client, 'lifts', collar, process_data(collar, accel, RMS=True, highpass=True), source='real_time')
+        # redis_pub(redis_client, 'lifts', collar, process_data(collar, accel, RMS=True, highpass=True), source='real_time')
+        rp = mp_process(target=redis_pub, args=(redis_client, 'lifts', collar, process_data(collar, accel, RMS=True, highpass=True), 'real_time') )
+        rp.start()
 
         client.collars[tracker_id] = collar  # update stored collar object
 
