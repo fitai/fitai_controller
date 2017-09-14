@@ -6,6 +6,7 @@ from optparse import OptionParser
 from json import loads
 from pandas import DataFrame, merge
 from multiprocessing import Process as mp_process
+from threading import Thread
 
 try:
     path = dirname(dirname(abspath(__file__)))
@@ -90,9 +91,10 @@ def mqtt_on_message(client, userdata, msg):
         #       so I decided just to pass them straight through to the calc_reps function
         collar, crossings = calc_reps(process_data(collar, accel, RMS=False, highpass=True), collar)
 
-        # redis_pub(redis_client, 'lifts', collar, process_data(collar, accel, RMS=True, highpass=True), source='real_time')
-        rp = mp_process(target=redis_pub, args=(redis_client, 'lifts', collar, process_data(collar, accel, RMS=True, highpass=True), 'real_time') )
-        rp.start()
+        redis_pub(redis_client, 'lifts', collar, process_data(collar, accel, RMS=True, highpass=True), source='real_time')
+        # rp = mp_process(target=redis_pub, args=(redis_client, 'lifts', collar,
+        # process_data(collar, accel, RMS=True, highpass=True), 'real_time') )
+        # rp.start()
 
         client.collars[tracker_id] = collar  # update stored collar object
 
@@ -106,8 +108,11 @@ def mqtt_on_message(client, userdata, msg):
             content = merge(accel, gyro, on='timepoint', how='left').fillna(0.)
 
             # create new process for the db push; won't interfere with main process
-            process = mp_process(target=push_to_db, args=(header, content, crossings))
-            process.start()  # execute
+            # process = mp_process(target=push_to_db, args=(header, content, crossings))
+            # process.start()  # execute
+            db_thread = Thread(target=push_to_db, args=(header, content, crossings))
+            db_thread.start()
+
             if client.collars[tracker_id]['push_header']:  # assume push was done
                 client.collars[tracker_id]['push_header'] = False  # skip the header push to db on all subsequent loops
         else:
