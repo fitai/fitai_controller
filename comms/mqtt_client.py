@@ -5,6 +5,8 @@ from os.path import dirname, abspath
 from optparse import OptionParser
 from json import loads
 from pandas import DataFrame, merge
+from multiprocessing import Process as mp_process
+from threading import Thread
 
 try:
     path = dirname(dirname(abspath(__file__)))
@@ -48,44 +50,73 @@ def mqtt_on_connect(client, userdata, rc):
     print 'connected'
 
 
+def update_collar_obj(client, tracker_id):
+    print('Updating collar {}'.format(tracker_id))
+    client.collars.update({tracker_id: retrieve_collar_by_id(redis_client, tracker_id)})
+    return client
+
+
 #: The callback for when a PUBLISH message is received from the broker
 #: There will need to be a lot of logic wrappers here; a lot could go wrong, and it should all be handled
 #: as gracefully as possible
 def mqtt_on_message(client, userdata, msg):
 
-    topic = msg.topic
-    print 'Received message from topic "{}"'.format(topic)
+    # topic = msg.topic
+    # print 'Received message from topic "{}"'.format(topic)
 
     try:
         data = loads(msg.payload)
 
         head = read_header_mqtt(data)
 
-        collar = prep_collar(retrieve_collar_by_id(redis_client, head['collar_id']), head, client.thresh_dict)
+        tracker_id = str(head['tracker_id'])
+        # if client doesn't contain collar object for this tracker_id, create a holder for it
+        if tracker_id not in client.collars.keys():
+            client.collars.update({tracker_id: None})
+
+        collar_stat = tracker_id + '_status'
+        # Check status of this object (separate stored item in redis). status == 'stale', means
+        #   that the object has been updated elsewhere and needs to be refreshed
+        if (client.collars[tracker_id] is None) or (redis_client.get(collar_stat) == 'stale'):
+            client = update_collar_obj(client, tracker_id)
+            redis_client.set(collar_stat, 'fresh')
+            client.collars[tracker_id]['push_header'] = True  # on first collar update, push header to db
+
+        collar = prep_collar(client.collars[tracker_id], head, client.thresh_dict)
 
         accel, gyro = read_content_mqtt(data, collar)
 
         # NOTE: process_data() returns accel, vel, power, position. All those returns are useful for
-        #       calc_reps(), but are re-calculated differently before being pushed to websocket,
+        #       calc_reps(), but are re-calculated differently before being pushed to redis pubsub,
         #       so I decided just to pass them straight through to the calc_reps function
         collar, crossings = calc_reps(process_data(collar, accel, RMS=False, highpass=True), collar)
 
         redis_pub(redis_client, 'lifts', collar, process_data(collar, accel, RMS=True, highpass=True), source='real_time')
+        # rp = mp_process(target=redis_pub, args=(redis_client, 'lifts', collar,
+        # process_data(collar, accel, RMS=True, highpass=True), 'real_time') )
+        # rp.start()
 
-        _ = update_collar_by_id(redis_client, collar, collar['collar_id'], verbose=True)
+        client.collars[tracker_id] = collar  # update stored collar object
 
         if collar['active']:
+            if 'lift_start' in collar.keys():
+                collar.pop('lift_start')
+
             header = DataFrame(data=collar, index=[0]).drop(
                 ['active', 'curr_state', 'a_thresh', 'v_thresh', 'pwr_thresh', 'pos_thresh', 'max_t'],
                 axis=1)
-            if 'lift_start' in header.columns:
-                print 'lift_start FOUND in header columns!!'
-                header = header.drop('lift_start', axis=1)
-            # print 'would push to db here'
             content = merge(accel, gyro, on='timepoint', how='left').fillna(0.)
-            push_to_db(header, content, crossings)
+
+            # create new process for the db push; won't interfere with main process
+            # process = mp_process(target=push_to_db, args=(header, content, crossings))
+            # process.start()  # execute
+            db_thread = Thread(target=push_to_db, args=(header, content, crossings))
+            db_thread.start()
+
+            if client.collars[tracker_id]['push_header']:  # assume push was done
+                client.collars[tracker_id]['push_header'] = False  # skip the header push to db on all subsequent loops
         else:
-            print 'Received and processed data for collar {}, but collar is not active...'.format(collar['collar_id'])
+            print 'Received and processed data for collar {}, but collar is not active...'.format(collar['tracker_id'])
 
     except KeyError, e:
         print 'Key not found in data header. ' \
@@ -101,7 +132,10 @@ def mqtt_on_message(client, userdata, msg):
 
 def establish_mqtt_client(ip, port, topic):
     client = mqtt.Client()
+    # custom additions
     client.thresh_dict = load_thresh_dict(fname='thresh_dict.txt')
+    client.collars = {}
+
     client.on_connect = mqtt_on_connect
     client.on_message = mqtt_on_message
 
@@ -162,3 +196,14 @@ def main(args):
 # Receives initial ping to file
 if __name__ == '__main__':
     main(argv[1:])
+
+#     Sample data packet from device
+#
+#  data = {"header": {"tracker_id": 555,"lift_id": "None","sampling_rate":50},"content":{
+# "a_x": [0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00],
+# "a_y":[0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00],
+# "a_z":[0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00],
+# "g_x":[-1.75,-1.83,-1.87,-1.85,-1.87,-1.97,-1.83,-1.82,-1.72,-1.79,-1.81,-1.84,-1.85,-1.82,-1.91],
+# "g_y":[1.49,1.46,1.46,1.54,1.53,1.57,1.73,1.63,1.60,1.60,1.64,1.63,1.59,1.56,1.61],
+# "g_z":[0.77,0.74,0.76,0.84,0.89,0.88,0.85,0.87,0.80,0.82,0.85,0.82,0.83,0.85,0.85],
+# "millis":[8808,8813,8818,8823,8828,8833,8844,8849,8854,8859,8864,8869,8874,8880,8885]}}

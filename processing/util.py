@@ -27,7 +27,7 @@ def read_content_mqtt(data, collar_obj):
         dat = dat.reset_index().rename(columns={'index': 'timepoint'})
         a_cols = [x for x in dat.columns if 'a_' in x]
         g_cols = [x for x in dat.columns if 'g_' in x]
-        accel = dat[a_cols + ['timepoint']]
+        accel = dat[a_cols + ['timepoint', 'millis']]
         gyro = dat[g_cols + ['timepoint']]
 
     try:
@@ -173,7 +173,7 @@ def prep_collar(collar, head, thresh_dict):
     # Quick check that at least one expected field is in collar object
     if 'pwr_thresh' not in collar.keys():
         print 'Redis collar object {} appears broken. ' \
-              'Will replace with default and update as needed.'.format(collar['collar_id'])
+              'Will replace with default and update as needed.'.format(collar['tracker_id'])
         collar_tmp = collar.copy()
         collar = get_default_collar()
         collar.update(collar_tmp)
@@ -205,11 +205,14 @@ def prep_collar(collar, head, thresh_dict):
         collar['updated_at'] = dt.now()
 
     #: Should only happen with default collar initialization
-    if collar['collar_id'] == 'None':
-        collar['collar_id'] = head['collar_id']
+    if collar['tracker_id'] == 'None':
+        collar['tracker_id'] = head['tracker_id']
 
     if 'athlete_id' in head.keys():
         collar['athlete_id'] = head['athlete_id']
+
+    if collar['init_num_reps'] is None:
+        collar['init_num_reps'] = 0
 
     #: Left over from old collar format. Shouldn't need this forever - remove key "threshold" if exists
     collar.pop('threshold', None)

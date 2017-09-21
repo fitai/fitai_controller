@@ -12,20 +12,21 @@ conn = create_engine(db_conn_string)
 
 def push_to_db(header, content, crossings):
     if header is not None:
-        print 'pushing collar metadata to db...'
-        try:
-            header.to_sql('lifts', conn, if_exists='append', index=False, index_label='lift_id')
-        except OperationalError, e:
-            print '!!!!!Could not push collar metadata to database!!!!'
-            print 'Likely because PostgreSQL server not running.\nError message: {}'.format(e)
-            print 'skipping push to athlete_lift and resuming MQTT listening'
-            return None
-        except IntegrityError, e:
-            print '!!!!! Could not push collar metadata to database !!!!!'
-            print 'Likely because lift_id already exists in athlete_lift. \nError message: {}'.format(e)
-            print 'Moving forward without pushing header into athlete_lift...'
-        else:
-            print 'collar metadata push successful. moving on to pushing content...'
+        if header['push_header'].iloc[0]:
+            print 'pushing collar metadata to db...'
+            try:
+                header.drop('push_header', axis=1).to_sql('lifts', conn, if_exists='append', index=False, index_label='lift_id')
+            except OperationalError, e:
+                print '!!!!!Could not push collar metadata to database!!!!'
+                print 'Likely because PostgreSQL server not running.\nError message: {}'.format(e)
+                print 'skipping push to athlete_lift and resuming MQTT listening'
+                return None
+            except IntegrityError, e:
+                print '!!!!! Could not push collar metadata to database !!!!!'
+                print 'Likely because lift_id already exists in athlete_lift. \nError message: {}'.format(e)
+                print 'Moving forward without pushing header into athlete_lift...'
+            else:
+                print 'collar metadata push successful. moving on to pushing content...'
 
     if content is not None:
         lift_id = content.lift_id.unique()[0]
