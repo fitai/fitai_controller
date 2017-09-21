@@ -678,8 +678,8 @@ class LiftPlot(object):
                 al.lift_type,
                 ai.athlete_last_name || ', ' || ai.athlete_first_name AS athlete_name,
                 ai.athlete_id
-            FROM athlete_lift AS al
-            INNER JOIN athlete_info AS ai
+            FROM lifts AS al
+            INNER JOIN athletes AS ai
                 ON al.athlete_id = ai.athlete_id
             ORDER BY al.lift_type, al.lift_id DESC
             '''
