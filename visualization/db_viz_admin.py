@@ -343,7 +343,8 @@ class LiftPlot(object):
         header, data = self.get_data('lift_data')
 
         # Lift metadata to display
-        header['lift_start'] = header['lift_start'].strftime('%Y-%m-%d')
+        header['created_at'] = header['created_at'].strftime('%Y-%m-%d')
+        header['updated_at'] = header['updated_at'].strftime('%Y-%m-%d')
         self.lift_info.text = dumps(header)
 
         # It's unknown ahead of time which raw dimensions will be present in each lift, so we need to find
@@ -703,7 +704,8 @@ class LiftPlot(object):
                     a_rms, v_rms, pwr_rms, pos_rms, force_rms = process_data(header, data, RMS=True, highpass=hp)
 
                     accel, vel, pwr, pos, force = process_data(header, data, RMS=False, highpass=hp)
-                    accel = accel.drop(['timepoint', 'lift_id'], axis=1)
+                    gyro = accel[['g_x', 'g_y', 'g_z']]
+                    accel = accel.drop(['timepoint', 'lift_id'] + list(gyro.columns), axis=1)
                     if 'millis' in accel.columns:
                         accel.drop('millis', axis=1, inplace=True)
 
