@@ -183,18 +183,16 @@ def prep_collar(collar, head, thresh_dict):
 
     # TODO: Don't like doing all these checks. Think of a more efficient way...
     # If collar is newly generated, threshold will be 'None'
-    if any([(collar[col] == 'None') for col in ['a_thresh', 'v_thresh', 'pwr_thresh', 'pos_thresh']]):
+    # Don't want to check all 15 possible fields being 'None', so just check a couple
+    if any([(collar[col] == 'None') for col in ['a_x_thresh', 'v_x_thresh', 'pwr_x_thresh', 'pos_x_thresh']]):
         print 'Missing at least one signal threshold. Resetting all...'
         try:
             # try to extract lift_type
-            lift_thresh = thresh_dict[collar['lift_type']]
-            collar['a_thresh'] = lift_thresh['a_thresh']
-            collar['v_thresh'] = lift_thresh['v_thresh']
-            collar['pwr_thresh'] = lift_thresh['pwr_thresh']
-            collar['pos_thresh'] = lift_thresh['pos_thresh']
+            collar.update(thresh_dict[collar['lift_type']].copy())
         except KeyError:
             print 'Couldnt find any thresholds for lift_type {}. Defaulting to 1.'.format(collar['lift_type'])
-            collar['a_thresh'], collar['v_thresh'], collar['pwr_thresh'], collar['pos_thresh'] = 1., 1., 1., 1.
+            for k in thresh_dict[thresh_dict.keys()[0]]:
+                collar[k] = 1.
 
     # start of the lift
     if collar['created_at'] == 'None':

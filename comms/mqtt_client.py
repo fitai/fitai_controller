@@ -8,6 +8,7 @@ from pandas import DataFrame, merge
 from multiprocessing import Process as mp_process
 from threading import Thread
 
+
 try:
     path = dirname(dirname(abspath(__file__)))
     print 'Adding {} to sys.path'.format(path)
