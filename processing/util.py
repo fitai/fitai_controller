@@ -1,8 +1,8 @@
 import sys
-from pandas import DataFrame, Series
+from pandas import DataFrame
 from datetime import datetime as dt
 
-from processing.functions import calc_integral, calc_rms, calc_power, calc_force
+from processing.functions import calc_integral, calc_rms, calc_power, calc_force, calc_pos
 from processing.filters import filter_signal
 from databasing.redis_controls import get_default_collar
 
@@ -46,29 +46,6 @@ def read_content_mqtt(data, collar_obj):
         accel['lift_id'] = 0
 
     return accel, gyro
-
-
-# def read_content_fitai(data, content_key='content'):
-#     try:
-#         for key in data['content'].keys():
-#             data[content_key][key] = [float(x) for x in data[content_key][key][0].split(',')]
-#         accel = DataFrame(data[content_key], index=data[content_key]['timepoint']).reset_index(drop=True)
-#     except AttributeError:
-#         print 'No "content" field. Returning None'
-#         return None
-#
-#     return accel
-
-
-# def parse_data(json_string):
-#     # try:
-#     data = json.loads(json_string)
-#     # What should the except statement be??
-#
-#     header = read_header_mqtt(data)
-#     content = read_content_fitai(data)
-#
-#     return header, content
 
 
 def extract_weight(header, verbose):
@@ -148,7 +125,7 @@ def process_data(collar_obj, content, RMS=False, highpass=True, verbose=False):
 
         pos = DataFrame(columns=pos_headers)
         for i, header in enumerate(accel_headers):
-            pos[pos_headers[i]] = calc_integral(content[header], scale=1., fs=fs)
+            pos[pos_headers[i]] = calc_pos(content[header], scale=1., fs=fs)
 
         force = DataFrame(columns=force_headers)
         for i, header in enumerate(accel_headers):

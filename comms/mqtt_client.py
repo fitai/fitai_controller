@@ -5,7 +5,6 @@ from os.path import dirname, abspath
 from optparse import OptionParser
 from json import loads
 from pandas import DataFrame, merge
-from multiprocessing import Process as mp_process
 from threading import Thread
 
 
@@ -93,9 +92,6 @@ def mqtt_on_message(client, userdata, msg):
         collar, crossings = calc_reps(process_data(collar, accel, RMS=False, highpass=True), collar)
 
         redis_pub(redis_client, 'lifts', collar, process_data(collar, accel, RMS=True, highpass=True), source='real_time')
-        # rp = mp_process(target=redis_pub, args=(redis_client, 'lifts', collar,
-        # process_data(collar, accel, RMS=True, highpass=True), 'real_time') )
-        # rp.start()
 
         client.collars[tracker_id] = collar  # update stored collar object
 
@@ -108,9 +104,7 @@ def mqtt_on_message(client, userdata, msg):
                 axis=1)
             content = merge(accel, gyro, on='timepoint', how='left').fillna(0.)
 
-            # create new process for the db push; won't interfere with main process
-            # process = mp_process(target=push_to_db, args=(header, content, crossings))
-            # process.start()  # execute
+            # create new thread for the db push
             db_thread = Thread(target=push_to_db, args=(header, content, crossings))
             db_thread.start()
 
@@ -165,7 +159,7 @@ def establish_cli_parser():
     parser = OptionParser()
     parser.add_option('-p', '--port', dest='host_port', default=1883,
                       help='Port on server hosting MQTT')
-    parser.add_option('-i', '--ip', dest='host_ip', default='localhost',
+    parser.add_option('-i', '--ip', dest='host_ip', default='localhost',  # '52.15.200.179' - fitai-dev
                       help='IP address of server hosting MQTT')
     parser.add_option('-t', '--topic', dest='mqtt_topic', default='fitai',
                       help='MQTT topic messages are to be received from')
@@ -198,7 +192,7 @@ def main(args):
 if __name__ == '__main__':
     main(argv[1:])
 
-#     Sample data packet from device
+# Sample data packet from device
 #
 # data = {"header": {"tracker_id": 555,"lift_id": "None","sampling_rate":50},"content":{
 # "a_x": [0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00],
