@@ -1,4 +1,4 @@
-from numpy import std, cumsum, diff, sum, sqrt
+from numpy import std, cumsum, diff, sum, sqrt, insert
 from scipy.integrate import cumtrapz
 from pandas import Series
 
@@ -35,8 +35,8 @@ def calc_integral(signal, scale=1., fs=20.):
 def calc_pos(signal, scale=1., fs=20.):
     delta_t = scale / fs
     integral = cumsum(0.5 * (signal[1:] + diff(signal) / 2.) * (delta_t**2))
-    integral[0] = 0.  # because of the use of diff() above, the first value as cut off. insert it here
-    return integral.sort_index(axis=0)
+    integral = insert(integral, 0, [0])  # because of the use of diff() above, the first value as cut off. insert it here
+    return integral
 
 
 #: Scipy's trapezoid method

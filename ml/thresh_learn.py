@@ -101,9 +101,10 @@ def learn_on_lift_id(lift_id, smooth, alpha, plot, verbose):
             force_dim = 'force_' + dim
 
             # Overwrite data points with re-calculated points
-            data[acc_dim] = array(acc_rms)
-            data[vel_dim] = array(calc_integral(acc_rms, scale=bin_size, fs=fs))
-            data[pwr_dim] = array(acc_rms * weight * data[vel_dim])
+            acc_rms = array(acc_rms)
+            data[acc_dim] = acc_rms
+            data[vel_dim] = calc_integral(acc_rms, scale=bin_size, fs=fs)
+            data[pwr_dim] = acc_rms * weight * data[vel_dim]
             data[pos_dim] = calc_pos(acc_rms, scale=bin_size, fs=fs)
             data[force_dim] = calc_force(acc_rms, weight)
 
