@@ -63,7 +63,7 @@ def find_threshold(alpha=0.1, smooth=False, plot=False, verbose=False):
 
 def learn_on_lift_id(lift_id, smooth, alpha, plot, verbose):
     header, dat = pull_data_by_lift(lift_id)
-    a, v, pwr, pos = process_data(header, dat, RMS=False, highpass=True, verbose=verbose)
+    a, v, pwr, pos, force = process_data(header, dat, RMS=False, highpass=True, verbose=verbose)
 
     data = a.join(v).join(pwr).join(pos)
 
