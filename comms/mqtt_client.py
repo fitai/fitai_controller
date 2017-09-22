@@ -17,7 +17,7 @@ except NameError:
     print 'Working in Dev mode.'
 
 from databasing.database_push import push_to_db
-from databasing.redis_controls import establish_redis_client, retrieve_collar_by_id, update_collar_by_id
+from databasing.redis_controls import establish_redis_client, retrieve_collar_by_id
 from processing.util import read_header_mqtt, read_content_mqtt, process_data, prep_collar
 from ml.thresh_learn import calc_reps, load_thresh_dict
 from databasing.conn_strings import redis_host
@@ -65,8 +65,8 @@ def mqtt_on_message(client, userdata, msg):
     # print 'Received message from topic "{}"'.format(topic)
 
     try:
-        data = loads(msg.payload)
-
+        # data = loads(msg.payload)
+        data = loads(dat)
         head = read_header_mqtt(data)
 
         tracker_id = str(head['tracker_id'])
@@ -78,6 +78,7 @@ def mqtt_on_message(client, userdata, msg):
         # Check status of this object (separate stored item in redis). status == 'stale', means
         #   that the object has been updated elsewhere and needs to be refreshed
         if (client.collars[tracker_id] is None) or (redis_client.get(collar_stat) == 'stale'):
+            print 'refreshing collar'
             client = update_collar_obj(client, tracker_id)
             redis_client.set(collar_stat, 'fresh')
             client.collars[tracker_id]['push_header'] = True  # on first collar update, push header to db
@@ -159,7 +160,7 @@ def establish_cli_parser():
     parser = OptionParser()
     parser.add_option('-p', '--port', dest='host_port', default=1883,
                       help='Port on server hosting MQTT')
-    parser.add_option('-i', '--ip', dest='host_ip', default='localhost',  # '52.15.200.179' - fitai-dev
+    parser.add_option('-i', '--ip', dest='host_ip', default='52.15.200.179',  # - fitai-dev
                       help='IP address of server hosting MQTT')
     parser.add_option('-t', '--topic', dest='mqtt_topic', default='fitai',
                       help='MQTT topic messages are to be received from')
@@ -202,3 +203,5 @@ if __name__ == '__main__':
 # "g_y":[1.49,1.46,1.46,1.54,1.53,1.57,1.73,1.63,1.60,1.60,1.64,1.63,1.59,1.56,1.61],
 # "g_z":[0.77,0.74,0.76,0.84,0.89,0.88,0.85,0.87,0.80,0.82,0.85,0.82,0.83,0.85,0.85],
 # "millis":[8808,8813,8818,8823,8828,8833,8844,8849,8854,8859,8864,8869,8874,8880,8885]}}
+
+# dat = '{"header": {"tracker_id": 556,"lift_id": "None" ,"sampling_rate":50},"content":{"a_x": [0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00],"a_y":[0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00],"a_z":[0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00],"g_x":[-2.17,-2.17,-2.09,-2.02,-1.88,-1.59,-2.09,-2.16,-2.04,-1.87,-1.75,-1.69,-1.87,-1.90,-1.90],"g_y":[1.28,1.35,1.40,1.44,1.57,1.75,1.53,1.42,1.50,1.50,1.59,1.65,1.47,1.48,1.48],"g_z":[0.75,0.74,0.80,0.72,0.67,0.73,0.80,0.72,0.66,0.70,0.72,0.77,0.69,0.72,0.72],"millis":[134164,134169,134175,134180,134185,134190,134202,134207,134212,134217,134222,134227,134232,134237,134242]}}'
