@@ -171,7 +171,7 @@ def process_data(collar_obj, content, RMS=False, highpass=True, verbose=False):
 def prep_collar(collar, head, thresh_dict):
 
     # Quick check that at least one expected field is in collar object
-    if 'pwr_thresh' not in collar.keys():
+    if 'pwr_x_thresh' not in collar.keys():
         print 'Redis collar object {} appears broken. ' \
               'Will replace with default and update as needed.'.format(collar['tracker_id'])
         collar_tmp = collar.copy()
