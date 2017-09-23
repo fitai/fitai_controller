@@ -33,7 +33,7 @@ from comms.redis_pubsub import redis_pub
 # should probably turn the entire script into an object....
 # Attempt to connect to redis server
 redis_client = establish_redis_client(hostname=redis_host, verbose=True)
-# redis_client = establish_redis_client(hostname='52.204.229.101', verbose=True)  # in case conn to server is needed
+# redis_client = establish_redis_client(hostname='18.221.103.145', verbose=True)  # in case conn to server is needed
 
 # If connection fails, MQTT client will not be able to update collar object, and will be useless. Kill and try again
 if redis_client is None:
@@ -65,8 +65,8 @@ def mqtt_on_message(client, userdata, msg):
     # print 'Received message from topic "{}"'.format(topic)
 
     try:
-        # data = loads(msg.payload)
-        data = loads(dat)
+        data = loads(msg.payload)
+
         head = read_header_mqtt(data)
 
         tracker_id = str(head['tracker_id'])
@@ -160,7 +160,7 @@ def establish_cli_parser():
     parser = OptionParser()
     parser.add_option('-p', '--port', dest='host_port', default=1883,
                       help='Port on server hosting MQTT')
-    parser.add_option('-i', '--ip', dest='host_ip', default='52.15.200.179',  # - fitai-dev
+    parser.add_option('-i', '--ip', dest='host_ip', default='18.221.103.145',  # - fitai-dev
                       help='IP address of server hosting MQTT')
     parser.add_option('-t', '--topic', dest='mqtt_topic', default='fitai',
                       help='MQTT topic messages are to be received from')
