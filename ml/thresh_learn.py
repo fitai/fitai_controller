@@ -13,7 +13,7 @@ from databasing.database_pull import pull_data_by_lift, pull_lift_ids
 bin_size = 1.  # Number of samples to collect before processing the signal (float)
 
 ALL_SIGS = [x + y for (x, y) in product(['a', 'v', 'pwr', 'pos', 'force'], ['_x', '_y', '_z'])]
-
+ALL_THRESH = [x+'_thresh' for x in ALL_SIGS]
 
 #: Returns dict of lift_type: adjusted_thresholds
 #: Where adjusted_thresholds is a dict of a/v/p_thresh: threshold_value

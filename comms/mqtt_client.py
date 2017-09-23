@@ -19,7 +19,7 @@ except NameError:
 from databasing.database_push import push_to_db
 from databasing.redis_controls import establish_redis_client, retrieve_collar_by_id
 from processing.util import read_header_mqtt, read_content_mqtt, process_data, prep_collar
-from ml.thresh_learn import calc_reps, load_thresh_dict
+from ml.thresh_learn import calc_reps, load_thresh_dict, ALL_THRESH
 from databasing.conn_strings import redis_host
 from comms.redis_pubsub import redis_pub
 
@@ -99,9 +99,8 @@ def mqtt_on_message(client, userdata, msg):
         if collar['active']:
             if 'lift_start' in collar.keys():
                 collar.pop('lift_start')
-
             header = DataFrame(data=collar, index=[0]).drop(
-                ['active', 'curr_state', 'a_thresh', 'v_thresh', 'pwr_thresh', 'pos_thresh', 'max_t'],
+                ['active', 'curr_state', 'max_t'] + ALL_THRESH,
                 axis=1)
             content = merge(accel, gyro, on='timepoint', how='left').fillna(0.)
 
