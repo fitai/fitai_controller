@@ -79,8 +79,8 @@ def establish_cli_parser():
                       help='Specific lift_id to use as data source.')
     parser.add_option('-s', '--sleep', dest='sleep_time', default=None,
                       help='Delay between sending packets (in seconds).')
-    parser.add_option('-c', '--collar', dest='collar_id', default='555',
-                      help='Specify a collar to use, other than 555 (default)')
+    parser.add_option('-c', '--collar', dest='tracker_id', default='555',
+                      help='Specify a tracker to use, other than 555 (default)')
     parser.add_option('-a', '--athlete', dest='athlete_id', default=None,
                       help='Specify an athlete_id to pass in')
     return parser
@@ -99,7 +99,7 @@ def main(args):
     N = cli_options.num_packets
     lift_id = cli_options.lift_id
     sleep_time = cli_options.sleep_time
-    collar_id = cli_options.collar_id
+    tracker_id = cli_options.tracker_id
     athlete_id = cli_options.athlete_id
 
     if verbose:
@@ -108,8 +108,8 @@ def main(args):
 
     mqtt_client = establish_client(host_ip, host_port, mqtt_topic)
 
-    #: Set collar_id to default values
-    reset_collar_by_id(collar_id)
+    #: Set tracker_id to default values
+    reset_collar_by_id(tracker_id)
 
     #: Delay between packets, in seconds
     if sleep_time is None:
@@ -123,7 +123,7 @@ def main(args):
         header, dat = pull_data_by_lift(lift_id)
         send_head = {"header": {"lift_id": "None",
                                 "sampling_rate": header['sampling_rate'],
-                                "collar_id": collar_id}
+                                "tracker_id": tracker_id}
                      }
 
         if athlete_id is not None:
@@ -159,10 +159,10 @@ def main(args):
             print 'Loop {}'.format(i)
             a_test = [random.normal(mu, var) for _ in range(30)]
             if (i % (10./sleep_time) == 0) & (N > 1):
-                header = {"header": {"lift_id": '-1', "sampling_rate": 20., "collar_id": collar_id}}
+                header = {"header": {"lift_id": '-1', "sampling_rate": 20., "tracker_id": tracker_id}}
                 data = {"content": {"a_x": [0, 0, 0, 0]}}
             else:
-                header = {"header": {"lift_id": "None", "sampling_rate": 20., "collar_id": collar_id}}
+                header = {"header": {"lift_id": "None", "sampling_rate": 20., "tracker_id": tracker_id}}
                 data = {"content": {"a_x": a_test}}
 
             packet = dict(dict(**header), **data)

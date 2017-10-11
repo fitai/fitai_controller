@@ -34,6 +34,8 @@ CREATE TABLE athlete_lift (
     , lift_id             BIGINT PRIMARY KEY
     , sampling_rate       INT
     , lift_start          TIMESTAMP
+    , created_at          TIMESTAMP
+    , updated_at          TIMESTAMP
     , lift_type           TEXT
     , lift_weight         INT
     , weight_units        VARCHAR(5)
@@ -52,7 +54,11 @@ CREATE TABLE lift_data_temp (
     , a_x         DOUBLE PRECISION
     , a_y         DOUBLE PRECISION
     , a_z         DOUBLE PRECISION
+    , g_x         DOUBLE PRECISION
+    , g_y         DOUBLE PRECISION
+    , g_z         DOUBLE PRECISION
     , timepoint   DOUBLE PRECISION
+    , millis      BIGINT
 );
 
 -- Long-term storage for all "good" data
@@ -61,7 +67,11 @@ CREATE TABLE lift_data (
     , a_x         DOUBLE PRECISION
     , a_y         DOUBLE PRECISION
     , a_z         DOUBLE PRECISION
+    , g_x         DOUBLE PRECISION
+    , g_y         DOUBLE PRECISION
+    , g_z         DOUBLE PRECISION
     , timepoint   DOUBLE PRECISION
+    , millis      BIGINT
     , CONSTRAINT  series_id PRIMARY KEY(lift_id, timepoint)
 );
 
@@ -71,7 +81,11 @@ CREATE TABLE lift_data_backup (
     , a_x         DOUBLE PRECISION
     , a_y         DOUBLE PRECISION
     , a_z         DOUBLE PRECISION
+    , g_x         DOUBLE PRECISION
+    , g_y         DOUBLE PRECISION
+    , g_z         DOUBLE PRECISION
     , timepoint   DOUBLE PRECISION
+    , millis      BIGINT
     , CONSTRAINT  backup_series_id PRIMARY KEY(lift_id, timepoint)
 );
 
@@ -82,6 +96,9 @@ CREATE TABLE lift_data_storage (
     , a_x         FLOAT[]
     , a_y         FLOAT[]
     , a_z         FLOAT[]
+    , g_x         FLOAT[]
+    , g_y         FLOAT[]
+    , g_z         FLOAT[]
     , timepoint   FLOAT[]
 );
 

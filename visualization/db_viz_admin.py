@@ -25,6 +25,17 @@ from databasing.conn_strings import db_conn_string
 from databasing.database_pull import pull_data_by_lift
 from processing.util import process_data
 
+# ### Effectively a global value - all possible signals that could be passed in ###
+#: By default, all signals must be plotted because I only want to update the ColumnDataSource, not
+#: rebuild the plot N times. To accommodate this, I will just update the alpha of the lines.
+#: Start by defaulting all lines to alpha = 0
+ALL_DIMS = ['_x', '_y', '_z']
+# all_dims = ['_x', '_rms']
+ALL_COLS = ['a', 'v', 'pwr', 'pos']
+ALL_FILTS = ['_hp', '']
+
+PLOT_Y_MIN = -0.75
+PLOT_Y_MAX = 0.75
 
 storage = dict()
 
@@ -45,20 +56,11 @@ class LiftPlot(object):
 
         self.raw_dims = list()
 
-        # ### Effectively a global value - all possible signals that could be passed in ###
-        #: By default, all signals must be plotted because I only want to update the ColumnDataSource, not
-        #: rebuild the plot N times. To accommodate this, I will just update the alpha of the lines.
-        #: Start by defaulting all lines to alpha = 0
-        all_dims = ['_x', '_y', '_z']
-        # all_dims = ['_x', '_rms']
-        all_cols = ['a', 'v', 'pwr', 'pos']
-        all_filts = ['_hp', '']
+        all_suffix = [x+y for (x, y) in product(ALL_DIMS, ALL_FILTS)]
+        all_opts = [x+y for (x, y) in product(ALL_COLS, all_suffix)]
 
-        all_suffix = [x+y for (x, y) in product(all_dims, all_filts)]
-        all_opts = [x+y for (x, y) in product(all_cols, all_suffix)]
-
-        self.all_cols = all_cols
-        self.all_dims = all_dims
+        self.all_cols = ALL_COLS
+        self.all_dims = ALL_DIMS
         self.all_signals = all_opts
         self.active_signals = list()  # to be filled in each time update_datasource() is called
 
@@ -343,7 +345,8 @@ class LiftPlot(object):
         header, data = self.get_data('lift_data')
 
         # Lift metadata to display
-        header['lift_start'] = header['lift_start'].strftime('%Y-%m-%d')
+        header['created_at'] = header['created_at'].strftime('%Y-%m-%d')
+        header['updated_at'] = header['updated_at'].strftime('%Y-%m-%d')
         self.lift_info.text = dumps(header)
 
         # It's unknown ahead of time which raw dimensions will be present in each lift, so we need to find
@@ -363,8 +366,11 @@ class LiftPlot(object):
         e_type = self._get_e_type()
 
         if rep_dat is not None:
+            # start_dat, stop_dat = self.format_lift_event_data(
+            #     rep_dat, e_type, min(data['a_x']), max(data['a_x']), max(data['timepoint']))
             start_dat, stop_dat = self.format_lift_event_data(
-                rep_dat, e_type, min(data['a_x']), max(data['a_x']), max(data['timepoint']))
+                rep_dat, e_type, PLOT_Y_MIN, PLOT_Y_MAX, max(data['timepoint'])
+            )
             start_src = ColumnDataSource(start_dat)
             stop_src = ColumnDataSource(stop_dat)
         else:
@@ -399,7 +405,8 @@ class LiftPlot(object):
         src = ColumnDataSource(
                 dict(
                     x=[0., 0.],
-                    y=[min(source.data['a_x']), max(source.data['a_x'])]
+                    # y=[min(source.data['a_x']), max(source.data['a_x'])]
+                    y=[PLOT_Y_MIN, PLOT_Y_MAX]
                 )
             )
 
@@ -468,7 +475,7 @@ class LiftPlot(object):
             title=None,
             x_range=Range1d(min(source.data['x_axis']), max(source.data['x_axis'])),
             # y_range=Range1d(min(self.plot_source.data['a_rms']), max(self.plot_source.data['a_rms'])),
-            y_range=Range1d(min(source.data['a_x']), max(source.data['a_x'])),
+            y_range=Range1d(PLOT_Y_MIN, PLOT_Y_MAX),  # all signals have been max-min normalized
             plot_width=self.plot_width,
             plot_height=self.plot_height,
             h_symmetry=False,
@@ -678,8 +685,8 @@ class LiftPlot(object):
                 al.lift_type,
                 ai.athlete_last_name || ', ' || ai.athlete_first_name AS athlete_name,
                 ai.athlete_id
-            FROM athlete_lift AS al
-            INNER JOIN athlete_info AS ai
+            FROM lifts AS al
+            INNER JOIN athletes AS ai
                 ON al.athlete_id = ai.athlete_id
             ORDER BY al.lift_type, al.lift_id DESC
             '''
@@ -703,7 +710,8 @@ class LiftPlot(object):
                     a_rms, v_rms, pwr_rms, pos_rms, force_rms = process_data(header, data, RMS=True, highpass=hp)
 
                     accel, vel, pwr, pos, force = process_data(header, data, RMS=False, highpass=hp)
-                    accel = accel.drop(['timepoint', 'lift_id'], axis=1)
+                    gyro = accel[['g_x', 'g_y', 'g_z']]
+                    accel = accel.drop(['timepoint', 'lift_id'] + list(gyro.columns), axis=1)
                     if 'millis' in accel.columns:
                         accel.drop('millis', axis=1, inplace=True)
 

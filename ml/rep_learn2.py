@@ -6,63 +6,69 @@ import matplotlib.pyplot as plt
 
 from sqlalchemy import create_engine
 
-from databasing.db_conn_strings import conn_string
+from sklearn.ensemble import RandomForestRegressor
+from sklearn.linear_model import Ridge, Lasso
+
+from databasing.conn_strings import db_conn_string
 from databasing.database_pull import pull_data_by_lift
 from processing.util import process_data
 
 #: Step 1 - Pull all rep_start and rep_stop events
-conn = create_engine(conn_string)
+conn = create_engine(db_conn_string)
 
 events_sql = '''
-SELECT * FROM lift_event
-WHERE event IN ('rep_start', 'rep_stop')
+SELECT
+    lift_id
+    , ROUND(timepoint::NUMERIC, 2) AS timepoint
+    , event
+FROM lift_event
+WHERE event IN ('onset', 'offset')
 '''
 events = pd.read_sql(events_sql, conn)
+
+
+# make sure that all even timepoints occur on an even point (multiple of 0.02)
+# if the point is odd, then subtract 0.01 from it to make it even
+def clean_event_times(events):
+    events['timepoint'] = [x if round(x*100, 2) % 2 == 0 else round(x, 2)-0.01 for x in events['timepoint']]
+    return events
+
+events = clean_event_times(events)
 
 # pull data and metadata for all lifts in events df
 lift_ids = events['lift_id'].unique()
 
 metadata, dat = pd.DataFrame(), pd.DataFrame()
+
 # for id in lift_ids:
 id = lift_ids[0]
 
+# pull unprocessed lift header (metadata) and data (acceleration values)
 header, data = pull_data_by_lift(id)
 
-a, v, pwr, pos = process_data(header, data, RMS=False, verbose=True)
+# process acceleration and calculate a/v/pwr/pos/f
+a, v, pwr, pos, force = process_data(header, data, RMS=False, highpass=True, verbose=True)
 
-d = a.join(v).join(pwr).join(pos)
+# build entire input data set; join in all data signals
+d = a.join(v).join(pwr).join(pos).join(force)
 d['timepoint'] = data['timepoint']
 d['lift_id'] = header['lift_id']
 
 dat = dat.append(d, ignore_index=True)
-metadata = metadata.append(pd.Series(header), ignore_index=True)
+# metadata = metadata.append(pd.Series(header), ignore_index=True)
+metadata = header.to_frame()
 
 # Temp filter for events from single lift
 events = events.loc[events['lift_id'].eq(id)]
 #: Join in relevant data
 events = pd.merge(events, metadata, on='lift_id', how='left')
 
-# ts = 1.
-# event_dat = pd.DataFrame()
-# for i, row in events.iterrows():
-#     #: everything within +/- ts of event timepoint
-#     tmp = dat.loc[(dat['timepoint'] >= row['timepoint'] - ts) & (dat['timepoint'] <= row['timepoint'] + ts)]
-#     tmp['event_id'] = i
-#
-#     event_dat = event_dat.append(tmp.drop('lift_id', axis=1), ignore_index=True)
-
-
 #: Split into starts and stops - for use later
-starts = events.loc[events['event'].eq('rep_start')].reset_index(drop=True)
-stops = events.loc[events['event'].eq('rep_stop')].reset_index(drop=True)
+starts = events.loc[events['event'].eq('onset')].reset_index(drop=True)
+stops = events.loc[events['event'].eq('offset')].reset_index(drop=True)
 
 
 def build_rep_prob_signal(t, sampling, t_window):
-    # print 'row as passed (type{t}): \n{v}'.format(t=type(row), v=row)
-    # # i, s = row
-    # t = row['timepoint']
-    # sampling = row['sampling_rate']
-
     #: Based on input t_range (e.g. number seconds of signal to include), calculate
     #: appropriate mean, std
     #: Where mean = t_start (or t_stop) ( = t)
@@ -84,16 +90,21 @@ def build_rep_prob_signal(t, sampling, t_window):
     return g_x
 
 
+# Prep split into test/train
+# NOTE: the "timepoint" field will be used as index
+N = len(dat)
+N1 = int(float(N)*3/5)
+
+tr_idx, te_idx = dat.loc[:N1, 'timepoint'], dat.loc[N1:, 'timepoint']
+
 #: Build probability signals
 #: NOTE: p0 = prob(stop), p1 = prob(start)
-
-# starts.apply(lambda row: build_prob_signal(row['timepoint'], row['sampling_rate'], t_range=1.), axis=1)
 probs = pd.Series()
 for i, row in starts.iterrows():
     probs = probs.append(build_rep_prob_signal(row['timepoint'], row['sampling_rate'], t_window=1.))
 
-
-zeros = pd.Series(0., index=dat['timepoint'])
+# everything point outside of +/- 1/2 t_window is set to probability 0
+zeros = pd.Series(0., index=dat['timepoint'])  # signal of zeros
 p1 = (zeros + probs).fillna(0.)
 p1.name = 'p1'
 
@@ -104,36 +115,44 @@ for i, row in stops.iterrows():
 p0 = (zeros + probs).fillna(0.)
 p0.name = 'p0'
 
-# plt.plot(p0, 'r', p1, 'g')
-
 #: Prep inputs
-X = dat.drop(['lift_id', 'timepoint'], axis=1).copy()
+X = dat.drop(['lift_id', 'millis'], axis=1).copy().set_index('timepoint')
 
-#: Train model on each
 
-from sklearn.linear_model import LinearRegression, Ridge
+def run_model(X, tr, te, p0, p1, model_type='rf'):
+    if model_type == 'rf':
+        m0, m1 = RandomForestRegressor(n_estimators=200), RandomForestRegressor(n_estimators=200)
+    elif model_type == 'ridge':
+        m0, m1 = Ridge(), Ridge()
+    elif model_type == 'lasso':
+        m0, m1 = Lasso(), Lasso()
 
-start_model = LinearRegression()
-start_model = Ridge()
-start_model.fit(X, y=p1.reset_index(drop=True))
+    # predict starts
+    m1.fit(X.ix[tr], p1.ix[tr])
+    p1_pred = pd.Series(m1.predict(X.ix[te]), index=te)
 
-y_hat = start_model.predict(X)
+    fig = plt.figure(0)
+    plt.plot(p1.ix[te], 'black', label='testing')
+    plt.plot(p1_pred, 'blue', label='prediction')
+    fig.legend()
 
-plt.plot(p1.reset_index(drop=True), 'black')
-plt.plot(y_hat, 'blue')
+    m0.fit(X.ix[tr], p0.ix[tr])
+    p0_pred = pd.Series(m0.predict(X.ix[te]), index=te)
 
-from sklearn.neural_network import MLPRegressor
+    # fig = plt.figure(1)
+    # plt.plot(p0.ix[te], 'black', label='testing')
+    # plt.plot(p0_pred, 'blue', label='prediction')
+    # fig.legend()
 
-mlp = MLPRegressor(hidden_layer_sizes=(10, 10), activation='tanh')
-mlp.fit(X, p1.reset_index(drop=True))
-y_hat = mlp.predict(X)
+    return m0, m1
 
-plt.plot(p1.reset_index(drop=True), 'black')
-plt.plot(y_hat, 'blue')
+_, _ = run_model(X, tr_idx, te_idx, p0, p1, 'ridge')
 
-from sklearn.ensemble import RandomForestRegressor
-
-rf = RandomForestRegressor(n_estimators=200)
-
-rf.fit(X, p1.reset_index(drop=True))
-y_hat = rf.predict(X)
+# from sklearn.neural_network import MLPRegressor
+#
+# mlp = MLPRegressor(hidden_layer_sizes=(10, 10), activation='tanh')
+# mlp.fit(X, p1.reset_index(drop=True))
+# y_hat = mlp.predict(X)
+#
+# plt.plot(p1.reset_index(drop=True), 'black')
+# plt.plot(y_hat, 'blue')

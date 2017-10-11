@@ -39,7 +39,7 @@ def main(argv):
 
     header = read_header_mqtt(data)
 
-    collar = prep_collar(retrieve_collar_by_id(redis_client, header['collar_id']), header, None)
+    collar = prep_collar(retrieve_collar_by_id(redis_client, header['tracker_id']), header, None)
 
     accel = read_content_mqtt(data, collar)
 
