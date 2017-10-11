@@ -13,8 +13,8 @@ def get_default_collar():
             "lift_weight": 100,
             "weight_units": "lbs",
             "init_num_reps": 0,
-            "final_num_reps": 0,
-            "calc_reps": 0,
+            "final_num_reps": None,
+            "calc_reps": None,
             "a_x_thresh": "None",
             "v_x_thresh": "None",
             "pwr_x_thresh": "None",  # Needs to be "None"

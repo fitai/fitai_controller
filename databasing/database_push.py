@@ -85,14 +85,12 @@ def push_to_db(header, content, crossings):
 
 
 def update_calc_reps(collar):
-    tmp_conn = create_engine(db_conn_string)
-
     sql = '''
     UPDATE lifts SET calc_reps = {cr}::NUMERIC
     WHERE lift_id = {l}::INT;
     '''.format(cr=collar['calc_reps'], l=collar['lift_id'])
 
     try:
-        _ = tmp_conn.execute(sql)
+        _ = conn.execute(sql)
     except ResourceClosedError:
         print 'update?'

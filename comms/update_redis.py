@@ -122,6 +122,7 @@ def main(args):
         try:
             collar = loads(redis_client.get(dat['tracker_id']))
         except TypeError:  # if loading from redis fails, expect to get TypeError
+            print 'Unable to find redis object for tracker {}. Loading default'.format(dat['tracker_id'])
             collar = get_default_collar()
 
         next_lift_id = redis_client.get('lift_id')
