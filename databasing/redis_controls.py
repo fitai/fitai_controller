@@ -14,7 +14,7 @@ def get_default_collar():
             "weight_units": "lbs",
             "init_num_reps": 0,
             "final_num_reps": None,
-            "calc_reps": None,
+            "calc_reps": 0,
             "a_x_thresh": "None",
             "v_x_thresh": "None",
             "pwr_x_thresh": "None",  # Needs to be "None"
