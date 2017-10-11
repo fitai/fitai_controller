@@ -1,8 +1,8 @@
 import sys
-from pandas import DataFrame, Series
+from pandas import DataFrame
 from datetime import datetime as dt
 
-from processing.functions import calc_integral, calc_rms, calc_power, calc_force
+from processing.functions import calc_integral, calc_rms, calc_power, calc_force, calc_pos
 from processing.filters import filter_signal
 from databasing.redis_controls import get_default_collar
 
@@ -46,29 +46,6 @@ def read_content_mqtt(data, collar_obj):
         accel['lift_id'] = 0
 
     return accel, gyro
-
-
-# def read_content_fitai(data, content_key='content'):
-#     try:
-#         for key in data['content'].keys():
-#             data[content_key][key] = [float(x) for x in data[content_key][key][0].split(',')]
-#         accel = DataFrame(data[content_key], index=data[content_key]['timepoint']).reset_index(drop=True)
-#     except AttributeError:
-#         print 'No "content" field. Returning None'
-#         return None
-#
-#     return accel
-
-
-# def parse_data(json_string):
-#     # try:
-#     data = json.loads(json_string)
-#     # What should the except statement be??
-#
-#     header = read_header_mqtt(data)
-#     content = read_content_fitai(data)
-#
-#     return header, content
 
 
 def extract_weight(header, verbose):
@@ -148,7 +125,7 @@ def process_data(collar_obj, content, RMS=False, highpass=True, verbose=False):
 
         pos = DataFrame(columns=pos_headers)
         for i, header in enumerate(accel_headers):
-            pos[pos_headers[i]] = calc_integral(content[header], scale=1., fs=fs)
+            pos[pos_headers[i]] = calc_pos(content[header], scale=1., fs=fs)
 
         force = DataFrame(columns=force_headers)
         for i, header in enumerate(accel_headers):
@@ -171,7 +148,7 @@ def process_data(collar_obj, content, RMS=False, highpass=True, verbose=False):
 def prep_collar(collar, head, thresh_dict):
 
     # Quick check that at least one expected field is in collar object
-    if 'pwr_thresh' not in collar.keys():
+    if 'pwr_x_thresh' not in collar.keys():
         print 'Redis collar object {} appears broken. ' \
               'Will replace with default and update as needed.'.format(collar['tracker_id'])
         collar_tmp = collar.copy()
@@ -183,18 +160,16 @@ def prep_collar(collar, head, thresh_dict):
 
     # TODO: Don't like doing all these checks. Think of a more efficient way...
     # If collar is newly generated, threshold will be 'None'
-    if any([(collar[col] == 'None') for col in ['a_thresh', 'v_thresh', 'pwr_thresh', 'pos_thresh']]):
+    # Don't want to check all 15 possible fields being 'None', so just check a couple
+    if any([(collar[col] == 'None') for col in ['a_x_thresh', 'v_x_thresh', 'pwr_x_thresh', 'pos_x_thresh']]):
         print 'Missing at least one signal threshold. Resetting all...'
         try:
             # try to extract lift_type
-            lift_thresh = thresh_dict[collar['lift_type']]
-            collar['a_thresh'] = lift_thresh['a_thresh']
-            collar['v_thresh'] = lift_thresh['v_thresh']
-            collar['pwr_thresh'] = lift_thresh['pwr_thresh']
-            collar['pos_thresh'] = lift_thresh['pos_thresh']
+            collar.update(thresh_dict[collar['lift_type']].copy())
         except KeyError:
             print 'Couldnt find any thresholds for lift_type {}. Defaulting to 1.'.format(collar['lift_type'])
-            collar['a_thresh'], collar['v_thresh'], collar['pwr_thresh'], collar['pos_thresh'] = 1., 1., 1., 1.
+            for k in thresh_dict[thresh_dict.keys()[0]]:
+                collar[k] = 1.
 
     # start of the lift
     if collar['created_at'] == 'None':

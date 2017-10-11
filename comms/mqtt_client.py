@@ -5,8 +5,8 @@ from os.path import dirname, abspath
 from optparse import OptionParser
 from json import loads
 from pandas import DataFrame, merge
-from multiprocessing import Process as mp_process
 from threading import Thread
+
 
 try:
     path = dirname(dirname(abspath(__file__)))
@@ -17,9 +17,9 @@ except NameError:
     print 'Working in Dev mode.'
 
 from databasing.database_push import push_to_db
-from databasing.redis_controls import establish_redis_client, retrieve_collar_by_id, update_collar_by_id
+from databasing.redis_controls import establish_redis_client, retrieve_collar_by_id
 from processing.util import read_header_mqtt, read_content_mqtt, process_data, prep_collar
-from ml.thresh_learn import calc_reps, load_thresh_dict
+from ml.thresh_learn import calc_reps, load_thresh_dict, ALL_THRESH
 from databasing.conn_strings import redis_host
 from comms.redis_pubsub import redis_pub
 
@@ -33,7 +33,7 @@ from comms.redis_pubsub import redis_pub
 # should probably turn the entire script into an object....
 # Attempt to connect to redis server
 redis_client = establish_redis_client(hostname=redis_host, verbose=True)
-# redis_client = establish_redis_client(hostname='52.204.229.101', verbose=True)  # in case conn to server is needed
+# redis_client = establish_redis_client(hostname='18.221.103.145', verbose=True)  # in case conn to server is needed
 
 # If connection fails, MQTT client will not be able to update collar object, and will be useless. Kill and try again
 if redis_client is None:
@@ -78,6 +78,7 @@ def mqtt_on_message(client, userdata, msg):
         # Check status of this object (separate stored item in redis). status == 'stale', means
         #   that the object has been updated elsewhere and needs to be refreshed
         if (client.collars[tracker_id] is None) or (redis_client.get(collar_stat) == 'stale'):
+            print 'refreshing collar'
             client = update_collar_obj(client, tracker_id)
             redis_client.set(collar_stat, 'fresh')
             client.collars[tracker_id]['push_header'] = True  # on first collar update, push header to db
@@ -92,24 +93,18 @@ def mqtt_on_message(client, userdata, msg):
         collar, crossings = calc_reps(process_data(collar, accel, RMS=False, highpass=True), collar)
 
         redis_pub(redis_client, 'lifts', collar, process_data(collar, accel, RMS=True, highpass=True), source='real_time')
-        # rp = mp_process(target=redis_pub, args=(redis_client, 'lifts', collar,
-        # process_data(collar, accel, RMS=True, highpass=True), 'real_time') )
-        # rp.start()
 
         client.collars[tracker_id] = collar  # update stored collar object
 
         if collar['active']:
             if 'lift_start' in collar.keys():
                 collar.pop('lift_start')
-
             header = DataFrame(data=collar, index=[0]).drop(
-                ['active', 'curr_state', 'a_thresh', 'v_thresh', 'pwr_thresh', 'pos_thresh', 'max_t'],
+                ['active', 'curr_state', 'max_t'] + ALL_THRESH,
                 axis=1)
             content = merge(accel, gyro, on='timepoint', how='left').fillna(0.)
 
-            # create new process for the db push; won't interfere with main process
-            # process = mp_process(target=push_to_db, args=(header, content, crossings))
-            # process.start()  # execute
+            # create new thread for the db push
             db_thread = Thread(target=push_to_db, args=(header, content, crossings))
             db_thread.start()
 
@@ -164,7 +159,7 @@ def establish_cli_parser():
     parser = OptionParser()
     parser.add_option('-p', '--port', dest='host_port', default=1883,
                       help='Port on server hosting MQTT')
-    parser.add_option('-i', '--ip', dest='host_ip', default='localhost',
+    parser.add_option('-i', '--ip', dest='host_ip', default='localhost',  # -18.221.103.145 fitai-dev
                       help='IP address of server hosting MQTT')
     parser.add_option('-t', '--topic', dest='mqtt_topic', default='fitai',
                       help='MQTT topic messages are to be received from')
@@ -197,9 +192,9 @@ def main(args):
 if __name__ == '__main__':
     main(argv[1:])
 
-#     Sample data packet from device
+# Sample data packet from device
 #
-#  data = {"header": {"tracker_id": 555,"lift_id": "None","sampling_rate":50},"content":{
+# data = {"header": {"tracker_id": 555,"lift_id": "None","sampling_rate":50},"content":{
 # "a_x": [0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00],
 # "a_y":[0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00],
 # "a_z":[0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00],
@@ -207,3 +202,5 @@ if __name__ == '__main__':
 # "g_y":[1.49,1.46,1.46,1.54,1.53,1.57,1.73,1.63,1.60,1.60,1.64,1.63,1.59,1.56,1.61],
 # "g_z":[0.77,0.74,0.76,0.84,0.89,0.88,0.85,0.87,0.80,0.82,0.85,0.82,0.83,0.85,0.85],
 # "millis":[8808,8813,8818,8823,8828,8833,8844,8849,8854,8859,8864,8869,8874,8880,8885]}}
+
+# dat = '{"header": {"tracker_id": 556,"lift_id": "None" ,"sampling_rate":50},"content":{"a_x": [0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00],"a_y":[0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00],"a_z":[0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00],"g_x":[-2.17,-2.17,-2.09,-2.02,-1.88,-1.59,-2.09,-2.16,-2.04,-1.87,-1.75,-1.69,-1.87,-1.90,-1.90],"g_y":[1.28,1.35,1.40,1.44,1.57,1.75,1.53,1.42,1.50,1.50,1.59,1.65,1.47,1.48,1.48],"g_z":[0.75,0.74,0.80,0.72,0.67,0.73,0.80,0.72,0.66,0.70,0.72,0.77,0.69,0.72,0.72],"millis":[134164,134169,134175,134180,134185,134190,134202,134207,134212,134217,134222,134227,134232,134237,134242]}}'
