@@ -145,8 +145,8 @@ def main(args):
             collar['active'] = False  # stop pushing data to db
 
             # Update calc_reps in database with final calculated value
-            if ('calc_reps' in collar.keys()) & (collar['calc_reps'] is not None):
-                update_calc_reps(collar)
+            # if ('calc_reps' in collar.keys()) & (collar['calc_reps'] is not None):
+            #     update_calc_reps(collar)
 
         elif dat['lift_id'] == 'None':
             # lift_id = 'None' is sent to trigger new workout, which means lift_id needs to be updated.
