@@ -4,9 +4,10 @@ from json import dumps
 
 # TODO - clean this up, too much overhead
 def prep_message(collar_obj, vel, pwr):
-    if isinstance(collar_obj['created_at'], type(dt.now())):
+    now = dt.now()
+    if isinstance(collar_obj['created_at'], type(now)):
         collar_obj['created_at'] = dt.strftime(collar_obj['created_at'], '%Y-%m-%d %H:%M:%S')
-    if isinstance(collar_obj['updated_at'], type(dt.now())):
+    if isinstance(collar_obj['updated_at'], type(now)):
         collar_obj['updated_at'] = dt.strftime(collar_obj['updated_at'], '%Y-%m-%d %H:%M:%S')
 
     msg_dict = {"header": collar_obj,
