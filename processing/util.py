@@ -172,12 +172,13 @@ def prep_collar(collar, head, thresh_dict):
                 collar[k] = 1.
 
     # start of the lift
+    now = dt.now()  # returns local time, i.e. EST
     if collar['created_at'] == 'None':
-        collar['created_at'] = dt.now()
+        collar['created_at'] = now
 
     # added for patrick
     if collar['updated_at'] == 'None':
-        collar['updated_at'] = dt.now()
+        collar['updated_at'] = now
 
     #: Should only happen with default collar initialization
     if collar['tracker_id'] == 'None':
