@@ -23,4 +23,4 @@ thresh_dict.txt
 db_archive
 
 # not necessary
-.ipynb_checkpoints
+.ipynb_checkpoints/*
