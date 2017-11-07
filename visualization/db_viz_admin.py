@@ -346,6 +346,7 @@ class LiftPlot(object):
 
         # Lift metadata to display
         header['created_at'] = header['created_at'].strftime('%Y-%m-%d')
+        header['ended_at'] = header['ended_at'].strftime('%Y-%m-%d')
         header['updated_at'] = header['updated_at'].strftime('%Y-%m-%d')
         self.lift_info.text = dumps(header)
 
@@ -725,46 +726,6 @@ class LiftPlot(object):
                         pwr = self._proc_non_rms(pwr, lab, hp, sigtype='pwr_'+dim)
                         pos = self._proc_non_rms(pos, lab, hp, sigtype='pos_'+dim)
                         force = self._proc_non_rms(force, lab, hp, sigtype='force_'+dim)
-
-                    # # for col in accel.columns:
-                    # #: Because I changed process_data to return a Series regardless of whether or not RMS is True,
-                    # #: some logic downstream has been impacted and needed to be updated.
-                    # col = 'a_x'
-                    # # accel = accel.to_frame()
-                    # raw_col = str(col) + '_raw' + lab
-                    # accel[raw_col] = accel[col]
-                    # accel[col+lab] = self.max_min_scale(accel[col])
-                    # #: If highpass, a_x will be present (cause the column won't be overwritten; a new column is
-                    # #: created), but we don't want to keep it.
-                    # if hp:
-                    #     accel = accel.drop(col, axis=1)
-                    #
-                    # # for col in vel.columns:
-                    # col = 'v_x'
-                    # # vel = vel.to_frame()
-                    # raw_col = str(col) + '_raw' + lab
-                    # vel[raw_col] = vel[col]
-                    # vel[col+lab] = self.max_min_scale(vel[col])
-                    # if hp:
-                    #     vel = vel.drop(col, axis=1)
-                    #
-                    # # for col in pwr.columns:
-                    # col = 'p_x'
-                    # # pwr = pwr.to_frame()
-                    # raw_col = str(col) + '_raw' + lab
-                    # pwr[raw_col] = pwr[col]
-                    # pwr[col+lab] = self.max_min_scale(pwr[col])
-                    # if hp:
-                    #     pwr = pwr.drop(col, axis=1)
-                    #
-                    # # for col in pos.columns:
-                    # col = pos.name
-                    # pos = pos.to_frame()
-                    # raw_col = str(col) + '_raw' + lab
-                    # pos[raw_col] = pos[col]
-                    # pos[col+lab] = self.max_min_scale(pos[col])
-                    # if hp:
-                    #     pos = pos.drop(col, axis=1)
 
                     #: On first loop, dat should be empty dataframe with overlapping indices,
                     #: so these joins should be fine. On second loop, dat will already have half the data.
