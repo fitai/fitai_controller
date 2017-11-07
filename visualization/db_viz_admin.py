@@ -508,9 +508,9 @@ class LiftPlot(object):
                 if dim == 'x_hp':
                     style = 'dashed'
                 elif dim == 'y_hp':
-                    style = 'solid'
-                elif dim == 'z_hp':
                     style = 'dotted'
+                elif dim == 'z_hp':
+                    style = 'solid'
                 else:  # dim == z
                     style = 'dashdot'
 
@@ -518,7 +518,7 @@ class LiftPlot(object):
                 rend = GlyphRenderer(data_source=source, glyph=l, name=y_val)
                 rends.append(rend)
 
-                if y_val == 'a_x_hp':
+                if y_val == 'a_z_hp':
                     #: Explicitly set the a_x glyph to be the basis of the hover tool
                     h_rends = [rend]
 
