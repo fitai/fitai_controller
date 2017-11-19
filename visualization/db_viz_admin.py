@@ -20,10 +20,15 @@ from bokeh.models.widgets import CheckboxGroup, Button, RadioButtonGroup
 from bokeh.models.widgets.inputs import Select
 from bokeh.models.widgets.markups import Div
 from bokeh.plotting import curdoc, show
+from collections import OrderedDict
 
 from databasing.conn_strings import db_conn_string
 from databasing.database_pull import pull_data_by_lift
 from processing.util import process_data
+
+# Header fields to print on top of plot
+HEADER_PRINT = ['athlete_id', 'calc_reps', 'created_at', 'final_num_reps', 'lift_id', 'lift_type',
+                'test_lift', 'user_comment']
 
 # ### Effectively a global value - all possible signals that could be passed in ###
 #: By default, all signals must be plotted because I only want to update the ColumnDataSource, not
@@ -190,16 +195,19 @@ class LiftPlot(object):
         self.raw_panel_box = Column(width=self.plot_width, height=self.plot_height)
         self.raw_panel_box.children = [self.raw_plot]
 
-        self.panel_raw = Panel(
-            child=self.raw_plot, title='Raw Plot', closable=False, width=self.plot_width, height=self.plot_height)
+        # self.panel_raw = Column(
+        #     child=self.raw_plot, title='Raw Plot', closable=False, width=self.plot_width, height=self.plot_height)
+        self.panel_raw = Column(children=[self.raw_plot], width=self.plot_width, height=self.plot_height)
 
         # ##
 
         # Contains ALL panels
-        self.panel_parent = Tabs(width=self.plot_width+10, height=self.plot_height, active=0)
-        self.panel_parent.tabs = [self.panel_raw]
+        # self.panel_parent = Tabs(width=self.plot_width+10, height=self.plot_height, active=0)
+        # self.panel_parent.tabs = [self.panel_raw]
+        self.panel_parent = Column(width=self.plot_width+10, height=self.plot_height)
+        self.panel_parent.children = [self.panel_raw]
 
-        self.layout = Column(children=[self.plot_header, self.panel_parent], width=self.plot_width+20, height=self.plot_height)
+        self.layout = Column(children=[self.plot_header, self.panel_raw], width=self.plot_width+20, height=self.plot_height)
 
     def _load_content(self):
         self.update_datasource()
@@ -348,7 +356,6 @@ class LiftPlot(object):
         header['created_at'] = header['created_at'].strftime('%Y-%m-%d')
         header['ended_at'] = header['ended_at'].strftime('%Y-%m-%d')
         header['updated_at'] = header['updated_at'].strftime('%Y-%m-%d')
-        self.lift_info.text = dumps(header)
 
         # It's unknown ahead of time which raw dimensions will be present in each lift, so we need to find
         # them all dynamically. We known RMS will be present for a, v, p.
@@ -378,6 +385,16 @@ class LiftPlot(object):
             #: Empty column data source for lines to be drawn onto plot
             start_src = ColumnDataSource({'xs': [], 'ys': []})
             stop_src = ColumnDataSource({'xs': [], 'ys': []})
+
+        # update number of starts and stops present
+        # TODO - figure out where to put these??
+        n_starts = len(start_src.data['xs'])
+        n_stops = len(stop_src.data['xs'])
+
+        # subset header data
+        print_header = OrderedDict([(k, header[k]) for k in HEADER_PRINT])
+        print_header.update({'starts': n_starts, 'stops': n_stops})
+        self.lift_info.text = dumps(print_header)
 
         # ### Update the data sources ###
 
