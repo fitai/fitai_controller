@@ -165,7 +165,8 @@ class LiftPlot(object):
 
         #: del_header contains the delete button and a text field
         self.del_header = Column(width=150, height=80)
-        self.del_header.children = [self.del_button, self.del_rep_button, self.del_button_info]
+        # self.del_header.children = [self.del_button, self.del_rep_button, self.del_button_info]
+        self.del_header.children = [self.del_button_info]
 
         #: calc_header contains calc_button and a text field for the outputs
         self.calc_header = Column(width=300, height=100)
@@ -183,6 +184,10 @@ class LiftPlot(object):
         #: plot_header contains all input tools, text boxes, etc that sit above the plot
         self.plot_header = Row(width=self.plot_width+100, height=185)
         self.plot_header.children = [self.lift_select, self.signal_select, self.dim_select, self.right_header, self.del_header]
+
+        #: plot_footer contains sensitive buttons
+        self.plot_footer = Row(width=self.plot_width+100, height=100)
+        self.plot_footer.children = [self.del_button, self.del_rep_button]
 
         # ## RMS PLOT ##
 
@@ -211,7 +216,8 @@ class LiftPlot(object):
         self.panel_parent = Column(width=self.plot_width+10, height=self.plot_height)
         self.panel_parent.children = [self.panel_raw]
 
-        self.layout = Column(children=[self.plot_header, self.panel_raw], width=self.plot_width+20, height=self.plot_height)
+        self.layout = Column(children=[self.plot_header, self.panel_raw, self.plot_footer],
+                             width=self.plot_width+20, height=self.plot_height)
 
     def _load_content(self):
         self.update_datasource()
