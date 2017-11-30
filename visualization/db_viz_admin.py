@@ -623,9 +623,10 @@ class LiftPlot(object):
             filt_events = events.loc[event_mask, :].reset_index(drop=True)
 
             if filt_events.shape[0] > 0:
-                # sort so that min(timepoint) comes first
-                filt_events = filt_events.sort_values(by='timepoint', ascending=True).reset_index(drop=True)
-                nearest_event = filt_events.ix[0]  # returns a pandas Series
+                filt_events['dist'] = abs(t - filt_events['timepoint'])  # calc distance from click
+                # sort so that min(dist) comes first
+                filt_events = filt_events.sort_values(by='dist', ascending=True).reset_index(drop=True)
+                nearest_event = filt_events.iloc[0]  # returns a pandas Series
             else:
                 nearest_event = None
                 text = 'No events of type {e} within {lim} seconds of tap at {t}'.format(e=e_type, lim=t_lim, t=t)
