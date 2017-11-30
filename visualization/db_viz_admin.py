@@ -231,6 +231,7 @@ class LiftPlot(object):
     #: Controls behavior of dropdown Select tool
     def _on_lift_change(self, attr, old, new):
         print 'Updating plot with lift_id: {}'.format(new)
+        self.rep_info_text = ''  # clear rep_info text when update_datasource() gets called
         self._reset_tap_buttons()
         self.update_datasource()
 
