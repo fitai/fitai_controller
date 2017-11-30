@@ -1,6 +1,6 @@
 from itertools import product
 from sqlalchemy import create_engine
-from pandas import read_sql, DataFrame
+from pandas import read_sql, DataFrame, concat
 from os.path import dirname, abspath
 from sys import path as sys_path
 from json import dumps
@@ -163,60 +163,55 @@ class LiftPlot(object):
 
     def _create_layout(self):
 
-        #: del_header contains the delete button and a text field
-        self.del_header = Column(width=150, height=80)
-        # self.del_header.children = [self.del_button, self.del_rep_button, self.del_button_info]
-        self.del_header.children = [self.del_button_info]
-
         #: calc_header contains calc_button and a text field for the outputs
         self.calc_header = Column(width=300, height=100)
         self.calc_header.children = [self.calc_button, self.calc_button_info]
 
         #: Format the row that the tap_select tool will be in
-        self.h_filler = Div(width=5, height=100)
-        self.tap_select_row = Row(width=600, height=100)
-        self.tap_select_row.children = [self.h_filler, self.tap_select, self.tap_action, self.rep_info, self.calc_header]
+        self.h_filler = Column(width=20, height=100)
+        self.v_filler = Row(width=100, height=100)
+        self.tap_select_row = Row(width=self.plot_width+100, height=100)
+        self.tap_select_row.children = [self.tap_select, self.tap_action,
+                                        self.rep_info, self.h_filler, self.calc_header]
 
         #: right_header contains the text box with lift metadata and the tap_select buttongroup
         self.right_header = Column(width=500, height=150)
         self.right_header.children = [self.lift_info, self.tap_select_row]
 
         #: plot_header contains all input tools, text boxes, etc that sit above the plot
-        self.plot_header = Row(width=self.plot_width+100, height=185)
-        self.plot_header.children = [self.lift_select, self.signal_select, self.dim_select, self.right_header, self.del_header]
+        self.plot_header = Row(width=self.plot_width+100, height=170)
+        self.plot_header.children = [self.lift_select, self.signal_select, self.dim_select, self.right_header]
+
+        # ## RAW PLOT PANEL ##
+
+        self.panel_raw = Panel(
+            child=self.raw_plot, title='Raw Plot', closable=False, width=self.plot_width, height=self.plot_height)
+
+        # ## DELETE PANEL ###
+
+        #: del_header contains the delete button and a text field
+        self.del_header = Column(width=150, height=80)
+        # self.del_header.children = [self.del_button, self.del_rep_button, self.del_button_info]
+        self.del_header.children = [self.del_button_info]
 
         #: plot_footer contains sensitive buttons
-        self.plot_footer = Row(width=self.plot_width+100, height=100)
-        self.plot_footer.children = [self.del_button, self.del_rep_button]
+        self.del_buttons = Column(width=200, height=self.plot_height)
+        self.del_buttons.children = [self.del_rep_button, self.v_filler, self.del_button]
 
-        # ## RMS PLOT ##
+        self.del_tab = Row(width=self.plot_width, height=self.plot_height, children=[self.del_buttons, self.del_header])
 
-        # Box that contains the RMS plot (Box may be unnecessary)
-        self.rms_panel_box = Column(width=self.plot_width, height=self.plot_height)
-        self.rms_panel_box.children = [self.rms_plot]
-
-        # Panel that contains the RMS box
-        self.panel_rms = Panel(
-            child=self.rms_plot, title='RMS Plot', closable=False, width=self.plot_width, height=self.plot_height)
-
-        # ## RAW PLOT ##
-
-        self.raw_panel_box = Column(width=self.plot_width, height=self.plot_height)
-        self.raw_panel_box.children = [self.raw_plot]
-
-        # self.panel_raw = Column(
-        #     child=self.raw_plot, title='Raw Plot', closable=False, width=self.plot_width, height=self.plot_height)
-        self.panel_raw = Column(children=[self.raw_plot], width=self.plot_width, height=self.plot_height)
+        self.panel_del = Panel(
+            child=self.del_tab, title='DELETE BUTTONS', closable=False, width=self.plot_width, height=200)
 
         # ##
 
         # Contains ALL panels
-        # self.panel_parent = Tabs(width=self.plot_width+10, height=self.plot_height, active=0)
-        # self.panel_parent.tabs = [self.panel_raw]
-        self.panel_parent = Column(width=self.plot_width+10, height=self.plot_height)
-        self.panel_parent.children = [self.panel_raw]
+        self.panel_parent = Tabs(width=self.plot_width+10, height=self.plot_height, active=0)
+        self.panel_parent.tabs = [self.panel_raw, self.panel_del]
+        # self.panel_parent = Column(width=self.plot_width+10, height=self.plot_height)
+        # self.panel_parent.children = [self.panel_raw]
 
-        self.layout = Column(children=[self.plot_header, self.panel_raw, self.plot_footer],
+        self.layout = Column(children=[self.plot_header, self.panel_parent],
                              width=self.plot_width+20, height=self.plot_height)
 
     def _load_content(self):
@@ -301,7 +296,7 @@ class LiftPlot(object):
 
         #: Retrieve all rep events for this lift
         sql = '''
-        SELECT * FROM lift_event WHERE lift_id = {};
+        SELECT * FROM lift_event WHERE lift_id = {} ORDER BY timepoint ASC;
         '''.format(lift_id)
 
         conn = create_engine(self.connection_string)
@@ -340,23 +335,24 @@ class LiftPlot(object):
             rep_info = DataFrame(columns=['v_max', 'v_mean', 'pwr_max', 'pwr_mean', 'N'], index=ts.index)
             for i, row in ts.iteritems():
                 dat = data.loc[(data['timepoint'] >= row[0]) & (data['timepoint'] <= row[1]) ]
-                rep_info.loc[i, 'v_mean'] = round(dat['v_rms_raw_hp'].mean(), 2)
-                rep_info.loc[i, 'v_max'] = round(dat['v_rms_raw_hp'].max(), 2)
-                rep_info.loc[i, 'pwr_mean'] = round(dat['pwr_rms_raw_hp'].mean(), 2)
-                rep_info.loc[i, 'pwr_max'] = round(dat['pwr_rms_raw_hp'].max(), 2)
+                rep_info.loc[i, 'v_mean'] = round(dat['v_rms_hp'].mean(), 2)
+                rep_info.loc[i, 'v_max'] = round(dat['v_rms_hp'].max(), 2)
+                rep_info.loc[i, 'pwr_mean'] = round(dat['pwr_rms_hp'].mean(), 2)
+                rep_info.loc[i, 'pwr_max'] = round(dat['pwr_rms_hp'].max(), 2)
                 rep_info.loc[i, 'N'] = dat.shape[0]
 
             #: Run calculations over all timepoints for total average
             rep_info.reset_index(inplace=True)
             rep_info['rep_num'] = (rep_info['rep_num'] + 1).astype(str)
-            rep_info = rep_info.append(DataFrame(
+            # Add Overall numbers to TOP of rep_info so it prints first
+            rep_info = concat([DataFrame(
                 data={'rep_num': 'Overall',
                       'v_max': rep_info['v_max'].max(),
                       'v_mean': (rep_info['v_mean']*rep_info['N']).sum()/float(rep_info['N'].sum()),
                       'pwr_max': rep_info['pwr_max'].max(),
                       'pwr_mean': (rep_info['pwr_mean'] * rep_info['N']).sum() / float(rep_info['N'].sum())
                       }, index=[0]
-                ), ignore_index=True)
+                ), rep_info])
 
             #: Don't need column N any more
             rep_info.drop('N', axis=1, inplace=True)
@@ -396,6 +392,8 @@ class LiftPlot(object):
 
         # ## Rep start/stop lines from database ##
         self.rep_info.text = self.rep_info_text
+
+        self.calc_button_info.text = 'Ready'  # reset per-rep calc report text
 
         rep_dat = self.get_data('rep_data')
 
@@ -442,17 +440,13 @@ class LiftPlot(object):
 
     def make_raw_plot(self, source, rep_start_source, rep_stop_source):
         tooltips = '''<div><span style="font-size: 12px;"> <b>time  :</b> @timepoint s</span></div>
-                      <div><span style="font-size: 12px;"> <b>acc   :</b> @a_x m/s^2</span></div>
                       <div><span style="font-size: 12px;"> <b>acc HP:</b> @a_x_hp m/s^2</span></div>
-                      <div><span style="font-size: 12px;"> <b>vel HP:</b> @v_x_hp m/s</span></div>
-                      <div><span style="font-size: 12px;"> <b>pwr HP:</b> @pwr_x_hp W</span></div>
-                      <div><span style="font-size: 12px;"> <b>pos HP:</b> @pos_x_hp m</span></div>'''
+                      <div><span style="font-size: 12px;"> <b>vel HP:</b> @v_x_hp m/s</span></div>'''
 
         #: Gold line that moves to where user clicks to show which timepoint will be logged on use of TapTool
         src = ColumnDataSource(
                 dict(
                     x=[0., 0.],
-                    # y=[min(source.data['a_x']), max(source.data['a_x'])]
                     y=[PLOT_Y_MIN, PLOT_Y_MAX]
                 )
             )
