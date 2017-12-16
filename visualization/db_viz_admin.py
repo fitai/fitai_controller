@@ -1,6 +1,6 @@
 from itertools import product
 from sqlalchemy import create_engine
-from pandas import read_sql, DataFrame
+from pandas import read_sql, DataFrame, concat
 from os.path import dirname, abspath
 from sys import path as sys_path
 from json import dumps
@@ -20,10 +20,15 @@ from bokeh.models.widgets import CheckboxGroup, Button, RadioButtonGroup
 from bokeh.models.widgets.inputs import Select
 from bokeh.models.widgets.markups import Div
 from bokeh.plotting import curdoc, show
+from collections import OrderedDict
 
 from databasing.conn_strings import db_conn_string
 from databasing.database_pull import pull_data_by_lift
 from processing.util import process_data
+
+# Header fields to print on top of plot
+HEADER_PRINT = ['athlete_id', 'calc_reps', 'created_at', 'final_num_reps', 'lift_id', 'lift_type',
+                'test_lift', 'user_comment']
 
 # ### Effectively a global value - all possible signals that could be passed in ###
 #: By default, all signals must be plotted because I only want to update the ColumnDataSource, not
@@ -62,7 +67,6 @@ class LiftPlot(object):
         self.all_cols = ALL_COLS
         self.all_dims = ALL_DIMS
         self.all_signals = all_opts
-        self.active_signals = list()  # to be filled in each time update_datasource() is called
 
         # ###
         # TODO: Consider rearranging order of element creation and layout of app
@@ -110,7 +114,8 @@ class LiftPlot(object):
             width=80,
             height=150,
             labels=self.all_dims,
-            active=range(len(self.all_dims))
+            # active=range(len(self.all_dims))
+            active=[2]
         )
         self.dim_select.on_change('active', self._on_signal_change)
 
@@ -119,6 +124,10 @@ class LiftPlot(object):
         self.del_button = Button(label='DELETE LIFT', button_type='danger', width=100, height=30)
         self.del_button.on_click(self._del_click)
         self.del_button_text = 'N/A'
+
+        #: Button to delete all rep start/stop points in given lift
+        self.del_rep_button = Button(label='DELETE REPS', button_type='danger', width=100, height=30)
+        self.del_rep_button.on_click(self._del_reps)
 
         #: To switch TapTool action to assign either "rep_start" or "rep_stop" on user tap
         self.tap_select = RadioButtonGroup(
@@ -146,7 +155,7 @@ class LiftPlot(object):
 
     def _establish_outputs(self):
         # Has to be initialized before I can set the text.
-        self.lift_info = Div(width=500, height=50)
+        self.lift_info = Div(width=500, height=60)
         # To print success/fail
         self.del_button_info = Div(width=200, height=20)
         self.rep_info = Div(width=100, height=100)
@@ -154,56 +163,59 @@ class LiftPlot(object):
 
     def _create_layout(self):
 
-        #: del_header contains the delete button and a text field
-        self.del_header = Column(width=150, height=50)
-        self.del_header.children = [self.del_button, self.del_button_info]
-
         #: calc_header contains calc_button and a text field for the outputs
         self.calc_header = Column(width=300, height=100)
         self.calc_header.children = [self.calc_button, self.calc_button_info]
 
         #: Format the row that the tap_select tool will be in
-        self.h_filler = Div(width=20, height=100)
-        self.tap_select_row = Row(width=600, height=100)
-        self.tap_select_row.children = [self.h_filler, self.tap_select, self.tap_action, self.rep_info, self.calc_header]
+        self.h_filler = Column(width=20, height=100)
+        self.v_filler = Row(width=100, height=100)
+        self.tap_select_row = Row(width=self.plot_width+100, height=100)
+        self.tap_select_row.children = [self.tap_select, self.tap_action,
+                                        self.rep_info, self.h_filler, self.calc_header]
 
         #: right_header contains the text box with lift metadata and the tap_select buttongroup
         self.right_header = Column(width=500, height=150)
         self.right_header.children = [self.lift_info, self.tap_select_row]
 
         #: plot_header contains all input tools, text boxes, etc that sit above the plot
-        self.plot_header = Row(width=self.plot_width+100, height=185)
-        self.plot_header.children = [self.lift_select, self.signal_select, self.dim_select, self.right_header, self.del_header]
+        self.plot_header = Row(width=self.plot_width+100, height=170)
+        self.plot_header.children = [self.lift_select, self.signal_select, self.dim_select, self.right_header]
 
-        # ## RMS PLOT ##
-
-        # Box that contains the RMS plot (Box may be unnecessary)
-        self.rms_panel_box = Column(width=self.plot_width, height=self.plot_height)
-        self.rms_panel_box.children = [self.rms_plot]
-
-        # Panel that contains the RMS box
-        self.panel_rms = Panel(
-            child=self.rms_plot, title='RMS Plot', closable=False, width=self.plot_width, height=self.plot_height)
-
-        # ## RAW PLOT ##
-
-        self.raw_panel_box = Column(width=self.plot_width, height=self.plot_height)
-        self.raw_panel_box.children = [self.raw_plot]
+        # ## RAW PLOT PANEL ##
 
         self.panel_raw = Panel(
             child=self.raw_plot, title='Raw Plot', closable=False, width=self.plot_width, height=self.plot_height)
+
+        # ## DELETE PANEL ###
+
+        #: del_header contains the delete button and a text field
+        self.del_header = Column(width=150, height=80)
+        # self.del_header.children = [self.del_button, self.del_rep_button, self.del_button_info]
+        self.del_header.children = [self.del_button_info]
+
+        #: plot_footer contains sensitive buttons
+        self.del_buttons = Column(width=200, height=self.plot_height)
+        self.del_buttons.children = [self.del_rep_button, self.v_filler, self.del_button]
+
+        self.del_tab = Row(width=self.plot_width, height=self.plot_height, children=[self.del_buttons, self.del_header])
+
+        self.panel_del = Panel(
+            child=self.del_tab, title='DELETE BUTTONS', closable=False, width=self.plot_width, height=200)
 
         # ##
 
         # Contains ALL panels
         self.panel_parent = Tabs(width=self.plot_width+10, height=self.plot_height, active=0)
-        self.panel_parent.tabs = [self.panel_raw]
+        self.panel_parent.tabs = [self.panel_raw, self.panel_del]
+        # self.panel_parent = Column(width=self.plot_width+10, height=self.plot_height)
+        # self.panel_parent.children = [self.panel_raw]
 
-        self.layout = Column(children=[self.plot_header, self.panel_parent], width=self.plot_width+20, height=self.plot_height)
+        self.layout = Column(children=[self.plot_header, self.panel_parent],
+                             width=self.plot_width+20, height=self.plot_height)
 
     def _load_content(self):
         self.update_datasource()
-        # self.rms_plot = self.make_RMS_plot(self.plot_source)
         self.raw_plot = self.make_raw_plot(self.plot_source, self.rep_start_source, self.rep_stop_source)
 
     #: Controls behavior of Checkboxgroup Selection tool
@@ -219,6 +231,7 @@ class LiftPlot(object):
     #: Controls behavior of dropdown Select tool
     def _on_lift_change(self, attr, old, new):
         print 'Updating plot with lift_id: {}'.format(new)
+        self.rep_info_text = ''  # clear rep_info text when update_datasource() gets called
         self._reset_tap_buttons()
         self.update_datasource()
 
@@ -226,12 +239,32 @@ class LiftPlot(object):
         self.tap_action.active = 0
         self.tap_select.active = 0
 
+    def _del_reps(self):
+        lift_id = self.lift_select.value
+        print 'Deleting rep start/stop points for lift_id {}...'.format(lift_id)
+
+        sql = '''
+        DELETE FROM lift_event WHERE lift_id = {lid};
+        '''.format(lid=lift_id)
+
+        conn = create_engine(self.connection_string)
+        ret = conn.execute(sql)
+        ret.close()
+
+        text = 'Deleted rep start/stop points for lift_id {} from table "lift_event"'.format(lift_id)
+
+        self.del_button_text = text
+        self.rep_info_text = ''  # clear rep_info_text, if not already cleared
+
+        # refresh the plot
+        self.update_datasource()
+
     def _del_click(self):
         lift_id = self.lift_select.value
         print 'Deleting data for lift_id {}...'.format(lift_id)
 
         sql = '''
-        DELETE FROM athlete_lift WHERE lift_id = {id};
+        DELETE FROM lifts WHERE lift_id = {id};
         DELETE FROM lift_data WHERE lift_id = {id};
         '''.format(id=lift_id)
 
@@ -239,7 +272,7 @@ class LiftPlot(object):
         ret = conn.execute(sql)
         ret.close()
 
-        text = 'Executed deletion for lift_id {id} from tables athlete_lift and lift_data'.format(id=lift_id)
+        text = 'Executed deletion for lift_id {id} from "tables" lifts and "lift_data"'.format(id=lift_id)
 
         print text
         self.del_button_text = text
@@ -264,7 +297,7 @@ class LiftPlot(object):
 
         #: Retrieve all rep events for this lift
         sql = '''
-        SELECT * FROM lift_event WHERE lift_id = {};
+        SELECT * FROM lift_event WHERE lift_id = {} ORDER BY timepoint ASC;
         '''.format(lift_id)
 
         conn = create_engine(self.connection_string)
@@ -303,23 +336,24 @@ class LiftPlot(object):
             rep_info = DataFrame(columns=['v_max', 'v_mean', 'pwr_max', 'pwr_mean', 'N'], index=ts.index)
             for i, row in ts.iteritems():
                 dat = data.loc[(data['timepoint'] >= row[0]) & (data['timepoint'] <= row[1]) ]
-                rep_info.loc[i, 'v_mean'] = round(dat['v_rms_raw_hp'].mean(), 2)
-                rep_info.loc[i, 'v_max'] = round(dat['v_rms_raw_hp'].max(), 2)
-                rep_info.loc[i, 'pwr_mean'] = round(dat['pwr_rms_raw_hp'].mean(), 2)
-                rep_info.loc[i, 'pwr_max'] = round(dat['pwr_rms_raw_hp'].max(), 2)
+                rep_info.loc[i, 'v_mean'] = round(dat['v_rms_hp'].mean(), 2)
+                rep_info.loc[i, 'v_max'] = round(dat['v_rms_hp'].max(), 2)
+                rep_info.loc[i, 'pwr_mean'] = round(dat['pwr_rms_hp'].mean(), 2)
+                rep_info.loc[i, 'pwr_max'] = round(dat['pwr_rms_hp'].max(), 2)
                 rep_info.loc[i, 'N'] = dat.shape[0]
 
             #: Run calculations over all timepoints for total average
             rep_info.reset_index(inplace=True)
             rep_info['rep_num'] = (rep_info['rep_num'] + 1).astype(str)
-            rep_info = rep_info.append(DataFrame(
+            # Add Overall numbers to TOP of rep_info so it prints first
+            rep_info = concat([DataFrame(
                 data={'rep_num': 'Overall',
                       'v_max': rep_info['v_max'].max(),
                       'v_mean': (rep_info['v_mean']*rep_info['N']).sum()/float(rep_info['N'].sum()),
                       'pwr_max': rep_info['pwr_max'].max(),
                       'pwr_mean': (rep_info['pwr_mean'] * rep_info['N']).sum() / float(rep_info['N'].sum())
                       }, index=[0]
-                ), ignore_index=True)
+                ), rep_info])
 
             #: Don't need column N any more
             rep_info.drop('N', axis=1, inplace=True)
@@ -348,7 +382,6 @@ class LiftPlot(object):
         header['created_at'] = header['created_at'].strftime('%Y-%m-%d')
         header['ended_at'] = header['ended_at'].strftime('%Y-%m-%d')
         header['updated_at'] = header['updated_at'].strftime('%Y-%m-%d')
-        self.lift_info.text = dumps(header)
 
         # It's unknown ahead of time which raw dimensions will be present in each lift, so we need to find
         # them all dynamically. We known RMS will be present for a, v, p.
@@ -360,6 +393,8 @@ class LiftPlot(object):
 
         # ## Rep start/stop lines from database ##
         self.rep_info.text = self.rep_info_text
+
+        self.calc_button_info.text = 'Ready'  # reset per-rep calc report text
 
         rep_dat = self.get_data('rep_data')
 
@@ -379,6 +414,16 @@ class LiftPlot(object):
             start_src = ColumnDataSource({'xs': [], 'ys': []})
             stop_src = ColumnDataSource({'xs': [], 'ys': []})
 
+        # update number of starts and stops present
+        # TODO - figure out where to put these??
+        n_starts = len(start_src.data['xs'])
+        n_stops = len(stop_src.data['xs'])
+
+        # subset header data
+        print_header = OrderedDict([(k, header[k]) for k in HEADER_PRINT])
+        print_header.update({'starts': n_starts, 'stops': n_stops})
+        self.lift_info.text = dumps(print_header)
+
         # ### Update the data sources ###
 
         #: The plot is set up to accept all values (e.g. a_x, a_x_rms, v_x, p_x_rms, etc)
@@ -396,17 +441,13 @@ class LiftPlot(object):
 
     def make_raw_plot(self, source, rep_start_source, rep_stop_source):
         tooltips = '''<div><span style="font-size: 12px;"> <b>time  :</b> @timepoint s</span></div>
-                      <div><span style="font-size: 12px;"> <b>acc   :</b> @a_x m/s^2</span></div>
                       <div><span style="font-size: 12px;"> <b>acc HP:</b> @a_x_hp m/s^2</span></div>
-                      <div><span style="font-size: 12px;"> <b>vel HP:</b> @v_x_hp m/s</span></div>
-                      <div><span style="font-size: 12px;"> <b>pwr HP:</b> @pwr_x_hp W</span></div>
-                      <div><span style="font-size: 12px;"> <b>pos HP:</b> @pos_x_hp m</span></div>'''
+                      <div><span style="font-size: 12px;"> <b>vel HP:</b> @v_x_hp m/s</span></div>'''
 
         #: Gold line that moves to where user clicks to show which timepoint will be logged on use of TapTool
         src = ColumnDataSource(
                 dict(
                     x=[0., 0.],
-                    # y=[min(source.data['a_x']), max(source.data['a_x'])]
                     y=[PLOT_Y_MIN, PLOT_Y_MAX]
                 )
             )
@@ -414,36 +455,6 @@ class LiftPlot(object):
         draw_line_cb = CustomJS(
             args=dict(src=src, source=source),
             code="""
-
-                // var path = document.location.pathname;
-                // console.log(path);
-
-
-                // package pg located at /usr/local/lib/node_modules/pg
-                // var pg = require("/usr/local/lib/node_modules/pg");
-
-                // var pg = require("pg");
-                // console.log(require.paths);
-
-                //var connectionString = "postgres://localhost:5432/fitai";
-                //var pgClient = new pg.Client(connectionString);
-                //pgClient.connect();
-                //var query = pgClient.query("SELECT * FROM athlete_lift WHERE lift_id = 1");
-
-                /*
-                query.on("row", function(row, result){
-                            result.addRow(row);
-                        });
-
-                pgClient.end()
-                */
-
-                // get data source from Callback args
-                // var data = src.data;
-
-                // bokeh TapTool callback object (cb_obj)
-                // console.log(cb_obj);
-
                 // 0d level specific to taptool - only returns one value, the index of the value tapped
                 // Use this index "idx" to extract the timepoint
                 var idx = cb_obj.selected['0d'].indices[0];
@@ -475,7 +486,6 @@ class LiftPlot(object):
         plot = Plot(
             title=None,
             x_range=Range1d(min(source.data['x_axis']), max(source.data['x_axis'])),
-            # y_range=Range1d(min(self.plot_source.data['a_rms']), max(self.plot_source.data['a_rms'])),
             y_range=Range1d(PLOT_Y_MIN, PLOT_Y_MAX),  # all signals have been max-min normalized
             plot_width=self.plot_width,
             plot_height=self.plot_height,
@@ -493,33 +503,33 @@ class LiftPlot(object):
 
                 #: Split out signal type (a/v/p) by color
                 if 'a' in y_val:
-                    c = 'black'
+                    style = 'solid'
                 elif 'v' in y_val:
-                    c = 'blue'
+                    style = 'dotted'
                 elif 'pwr' in y_val:
-                    c = 'purple'
+                    style = 'dashed'
                 elif 'pos' in y_val:
-                    c = 'brown'
+                    style = 'dashdot'
                 else:
                     #: Uncaught line type here - make red so we can see it easily
-                    c = 'red'
+                    style = 'dashdot'
 
                 #: Differentiate between high-passed signal and non-HP signal
                 if dim == 'x_hp':
-                    style = 'dashed'
+                    c = 'purple'
                 elif dim == 'y_hp':
-                    style = 'dotted'
+                    c = 'blue'
                 elif dim == 'z_hp':
-                    style = 'solid'
-                else:  # dim == z
-                    style = 'dashdot'
+                    c = 'black'
+                else:
+                    c = 'red'
 
                 l = Line(x='x_axis', y=y_val, name=y_val, line_color=c, line_dash=style, line_alpha=1)
                 rend = GlyphRenderer(data_source=source, glyph=l, name=y_val)
                 rends.append(rend)
 
                 if y_val == 'a_z_hp':
-                    #: Explicitly set the a_x glyph to be the basis of the hover tool
+                    #: Explicitly set the a_z glyph to be the basis of the hover tool
                     h_rends = [rend]
 
         hover = HoverTool(renderers=h_rends,tooltips=tooltips, point_policy='follow_mouse')
@@ -537,9 +547,6 @@ class LiftPlot(object):
         rep_stops_glyph = MultiLine(xs='xs', ys='ys', line_color='red', line_dash='dashed', line_width=2)
         rep_stops_rend = GlyphRenderer(data_source=rep_stop_source, glyph=rep_stops_glyph, name='rep_stops')
         rends.append(rep_stops_rend)
-
-        # tap_lines = MultiLine(xs='xs', ys='ys', line_color=['red'], line_dash='dashed', line_width=2)
-        # tap_lines_renderer = GlyphRenderer(data_source=src, glyph=tap_lines, name='tap_lines')
 
         # tap_rends = [tap_line_renderer] + h_rends
         taptool = TapTool(renderers=h_rends, callback=draw_line_cb)
@@ -616,9 +623,10 @@ class LiftPlot(object):
             filt_events = events.loc[event_mask, :].reset_index(drop=True)
 
             if filt_events.shape[0] > 0:
-                # sort so that min(timepoint) comes first
-                filt_events = filt_events.sort_values(by='timepoint', ascending=True).reset_index(drop=True)
-                nearest_event = filt_events.ix[0]  # returns a pandas Series
+                filt_events['dist'] = abs(t - filt_events['timepoint'])  # calc distance from click
+                # sort so that min(dist) comes first
+                filt_events = filt_events.sort_values(by='dist', ascending=True).reset_index(drop=True)
+                nearest_event = filt_events.iloc[0]  # returns a pandas Series
             else:
                 nearest_event = None
                 text = 'No events of type {e} within {lim} seconds of tap at {t}'.format(e=e_type, lim=t_lim, t=t)
