@@ -7,13 +7,12 @@ import matplotlib.pyplot as plt
 from sqlalchemy import create_engine
 from copy import copy
 
-from sklearn.ensemble import RandomForestRegressor
-from sklearn.linear_model import Ridge, Lasso
-
 from databasing.conn_strings import db_conn_string
 from databasing.database_pull import pull_data_by_lift
 from processing.util import process_data
-from ml.utils import load_events, build_rep_prob_signal, build_centered_rep_prob_signal
+from ml.utils import load_events, build_rep_prob_signal, build_centered_rep_prob_signal, clean_timepoints, \
+    max_min_norm, proximity_dist, prox_ordered_dists, rigid_ordered_dist
+# from ml.modeling import run_model
 
 #: Step 1 - Pull all rep_start and rep_stop events
 conn = create_engine(db_conn_string)
@@ -46,10 +45,12 @@ events, lift_ids = load_events()
 
 # for id in lift_ids:
 # id = lift_ids[0]
-id = 395
+id = 395  # baseline lift
+# id = 396
 
 # pull unprocessed lift header (metadata) and data (acceleration values)
 header, data = pull_data_by_lift(id)
+# data = clean_timepoints(data)  # ensure everything downstream has rounded timepoints
 
 # process acceleration and calculate a/v/pwr/pos/f
 a, v, pwr, pos, force = process_data(header, data, RMS=False, highpass=True, verbose=True)
@@ -73,7 +74,6 @@ events = events.loc[events['lift_id'].eq(id)]
 starts = events.loc[events['event'].eq('rep_start')].reset_index(drop=True)
 stops = events.loc[events['event'].eq('rep_stop')].reset_index(drop=True)
 
-
 # Prep split into test/train
 # NOTE: the "timepoint" field will be used as index
 N = len(dat)
@@ -81,8 +81,6 @@ N1 = int(float(N)*3/5)
 
 tr_idx, te_idx = dat.loc[:N1, 'timepoint'], dat.loc[N1:, 'timepoint']
 
-#: Build probability signals
-#: NOTE: p0 = prob(stop), p1 = prob(start)
 start_ps = pd.DataFrame()
 start_ts = pd.DataFrame()
 for i, row in starts.iterrows():
@@ -90,51 +88,25 @@ for i, row in starts.iterrows():
     start_ps = start_ps.append(pd.Series(ps, name=i))  # stack set of gaussian probabilities with known mean and std
     start_ts = start_ts.append(pd.Series(ts, name=i))  # stack set of timepoints associated with probabilities
 
+#: Build probability signals
 # everything point outside of +/- 1/2 t_window is set to probability 0
-zeros = pd.Series(0., index=dat['timepoint'])  # signal of zeros
+#: NOTE: p0 = prob(stop), p1 = prob(start)
+# zeros = pd.Series(0., index=dat['timepoint'])  # signal of zeros
 
 # p1 = (zeros + probs).fillna(0.)
 # p1.name = 'p1'
 
-probs = pd.Series()
-for i, row in stops.iterrows():
-    probs = probs.append(build_rep_prob_signal(row['timepoint'], header['sampling_rate'], t_window=1.))
-
-p0 = (zeros + probs).fillna(0.)
-p0.name = 'p0'
+# probs = pd.Series()
+# for i, row in stops.iterrows():
+#     probs = probs.append(build_rep_prob_signal(row['timepoint'], float(header['sampling_rate']), t_window=1.))
+#
+# p0 = (zeros + probs).fillna(0.)
+# p0.name = 'p0'
 
 #: Prep inputs
 X = dat.drop(['lift_id', 'millis'], axis=1).copy().set_index('timepoint')
 
-
-def run_model(X, tr, te, p0, p1, model_type='rf'):
-    if model_type == 'rf':
-        m0, m1 = RandomForestRegressor(n_estimators=200), RandomForestRegressor(n_estimators=200)
-    elif model_type == 'ridge':
-        m0, m1 = Ridge(), Ridge()
-    elif model_type == 'lasso':
-        m0, m1 = Lasso(), Lasso()
-
-    # predict starts
-    m1.fit(X.ix[tr], p1.ix[tr])
-    p1_pred = pd.Series(m1.predict(X.ix[te]), index=te)
-
-    fig = plt.figure(0)
-    plt.plot(p1.ix[te], 'black', label='testing')
-    plt.plot(p1_pred, 'blue', label='prediction')
-    fig.legend()
-
-    m0.fit(X.ix[tr], p0.ix[tr])
-    p0_pred = pd.Series(m0.predict(X.ix[te]), index=te)
-
-    # fig = plt.figure(1)
-    # plt.plot(p0.ix[te], 'black', label='testing')
-    # plt.plot(p0_pred, 'blue', label='prediction')
-    # fig.legend()
-
-    return m0, m1
-
-_, _ = run_model(X, tr_idx, te_idx, p0, p1, 'ridge')
+# _, _ = run_model(X, tr_idx, te_idx, p0, p1, 'ridge')
 
 # from sklearn.neural_network import MLPRegressor
 #
@@ -144,9 +116,6 @@ _, _ = run_model(X, tr_idx, te_idx, p0, p1, 'ridge')
 #
 # plt.plot(p1.reset_index(drop=True), 'black')
 # plt.plot(y_hat, 'blue')
-
-def max_min_norm(s):
-    return (s - min(s))/(max(s) - min(s))
 
 plt.figure()
 plt.plot(d['timepoint'], max_min_norm(d['a_x']), color='black', alpha=0.75)
@@ -159,13 +128,14 @@ for _, e in events.iterrows():
 
 r = range(650, 1500)
 t = d['timepoint'].iloc[r]
-sig = d['pos_z'].iloc[r]
+# sig = d['pos_z'].iloc[r]
+sig = d['v_z'].iloc[r]
 sig = sig.rolling(window=5, min_periods=0, center=False).mean().fillna(0.)
 x = sig.rolling(window=15, min_periods=0, center=False).apply(lambda y: np.mean(sorted(y)[3:-3])).fillna(0.)
 # x_ = sig.rolling(window=15, min_periods=10, center=False).mean().fillna(0.)
 
-pos = (sig > x) * 1
-p_ = pos.diff()
+mask = (sig > x) * 1
+p_ = mask.diff()
 
 plt.figure()
 plt.plot(t, sig, color='black')
@@ -177,8 +147,15 @@ for _, e in events.loc[events['timepoint'] < t.iloc[-1]].iterrows():
     c = 'g' if 'start' in e['event'] else 'r'
     plt.axvline(e['timepoint'], color=c, linestyle='dashed')
 
+
+# ### REAL-TIME EMULATOR ###
+
 t_min = 650
 
+events.groupby(['lift_type', 'event', 'lift_id'])['timepoint']
+
+# sig = d['a_z'].iloc[t_min:]
+# sig = d['v_z'].iloc[t_min:]
 sig = d['pos_z'].iloc[t_min:]
 prev_val = sig.iloc[t_min-1]
 
@@ -200,16 +177,21 @@ stops = []
 t_track = 0.
 # idx_max = t_min
 hold = False
+t_prev = -1 * sampling_rate
 for i in range(1, n):
-    print i
     t0 = t_min+(i-1)*packet_size
     t1 = t_min+i*packet_size - 1  # right-exclude
 
     # split off current packet
     packet = sig.loc[t0:t1].copy()
+    # acc, vel, pwr, pos, force = process_data(header, packet, RMS=False, highpass=True)
 
+    # packet = pos  # signal choice here
+
+    # calculate signals of interest
     if prev_dat is None:  # no preceding packets. can't process
-        d_ = packet.rolling(window=5, min_periods=0, center=True).mean().fillna(packet.mean())
+        d_ = packet.rolling(window=10, min_periods=0, center=False).apply(
+            lambda y: np.mean(sorted(y))).fillna(packet.mean())
         # calculate truncated rolling mean
         m_ = packet.rolling(window=15, min_periods=0, center=False).apply(
             lambda y: np.mean(sorted(y)[3:-3])).fillna(prev_val)
@@ -219,22 +201,39 @@ for i in range(1, n):
         # bring in previous data to apply rolling window over, then slice out most recent data via iloc
         dat = prev_dat.append(packet)
         # smooth data
-        d_ = dat.rolling(window=5, min_periods=0, center=True).mean().iloc[packet_size:]
+        d_ = dat.rolling(window=10, min_periods=0, center=False).apply(
+            lambda y: np.mean(sorted(y))).iloc[packet_size-1:]
         # calculate truncated rolling mean
         m_ = dat.rolling(window=15, min_periods=0, center=False).apply(
-            lambda y: np.mean(sorted(y)[3:-3])).iloc[packet_size:]
+            lambda y: np.mean(sorted(y)[3:-3])).iloc[packet_size-1:]
         prev_dat = packet
         prev_mean = m_
 
-    sig_track = sig_track.append(d_)
-    mean_track = mean_track.append(m_)
-    pos = (d_ > m_) * 1
+    # look for crossings
+    mask = (d_ > m_) * 1
     # any positive values represent crossings from 0 to 1
     # any negative values represent crossings from 1 to 0
-    p_ = pos.diff().fillna(0.)
+    p_ = mask.diff().fillna(0.)
+    # check that there was a crossings, and
+    # crossings are far enough away from most recent prior stop
+    # NOTE: result of p_ > 0 is a Series, result of p_.index - t_prev is an array. These two cannot be
+    #       combined directly via & ; have to convert the Series to an array via Series.values
+    crossings = p_.loc[(abs(p_) > 0).values & ((p_.index - t_prev) >= sampling_rate)]
 
-    crossings = p_.loc[abs(p_) > 0]
+    # for viz later
+    sig_track = sig_track.append(d_.iloc[1:])
+    mean_track = mean_track.append(m_.iloc[1:])
 
+    # if 320 < t1 < 380:
+    #     print i
+    #     plt.figure()
+    #     plt.plot(d_, 'black')
+    #     plt.plot(m_, 'blue')
+    #     if crossings.shape[0] > 0:
+    #         print crossings
+    #         print cross_track
+
+    # handle any crossings
     if crossings.shape[0] > 0:
         xyz = xyz.append(crossings)
         # before moving forward, if no positive crossings have been registered (i.e. len(cross_track) == 0),
@@ -258,44 +257,47 @@ for i in range(1, n):
         if len(cross_track) < 4:
             continue
         elif len(cross_track) > 4:
-            hold_c = cross_track[4:]  # preserve future crossings
-            hold_t = ts[4:]
+            if ts[4] - ts[3] > sampling_rate:
+                hold_c = cross_track[4:]  # preserve future crossings
+                hold_t = ts[4:]
+                hold = True
             cross_track = cross_track[:4]  # move forward with current crossings
             ts = ts[:4]
-            hold = True
-        else:  # registered 4 crossings
-            starts.append(ts[0])
-            stops.append(ts[3])
 
+        starts.append(ts[0])
+        stops.append(ts[3])
+        t_prev = ts[3]
+        # else:  # registered 4 crossings
+        #     starts.append(ts[0])
+        #     stops.append(ts[3])
+
+        # triggers when len(cross_track) >= 4
         # clear tracking variables
-        if hold:
+        if hold and (ts[0] - t_prev >= sampling_rate):
             cross_track = copy(hold_c)
             ts = copy(hold_t)
-            hold = False
         else:
             cross_track = []
             ts = []
 
+        # because of the "and" in the if condition, hard-reset hold each time this triggers, just in case
+        hold = False
 
-s_ = sig.rolling(window=5, min_periods=0, center=True).mean().fillna(0.)
-x_ = sig.rolling(window=15, min_periods=0, center=False).apply(lambda y: np.mean(sorted(y)[3:-3])).fillna(0.)
+# s_ = sig.rolling(window=5, min_periods=0, center=False).mean().fillna(0.)
+# x_ = sig.rolling(window=10, min_periods=0, center=False).apply(lambda y: np.mean(sorted(y)[3:-3])).fillna(0.)
 
 plt.figure()
-plt.plot(s_, 'black', alpha=0.5)
-plt.plot(sig_track, 'blue', linestyle='dashed', alpha=0.5)
+plt.plot(sig_track, 'black', alpha=0.5)
+# plt.plot(sig_track, 'blue', linestyle='dashed', alpha=0.5)
+plt.plot(mean_track, 'blue', alpha=0.5)
 
 for i, start in enumerate(starts):
     plt.axvline(start, color='g', linestyle='dashed')
     plt.axvline(stops[i], color='r', linestyle='dashed')
 
-# for tp in xyz.index:
-#     plt.axvline(tp, color='purple', alpha=0.5)
-
 calc_reps = len(starts)
 n_reps = metadata['final_num_reps'].iloc[0] if metadata['final_num_reps'].iloc[0] is not None else metadata['init_num_reps'].iloc[0]
 print('calculated reps: {r1}, actual reps: {r2}'.format(r1=calc_reps, r2=n_reps))
-
-from utils import proximity_dist, prox_ordered_dists, rigid_ordered_dist
 
 start1 = copy(starts)
 start2 = copy((events.loc[events['event'].eq('rep_start')]['timepoint']*30.).values)

@@ -78,26 +78,30 @@ def truncate(s1, s2):
     return s1, s2
 
 
+# make sure that all even timepoints occur on an even point (multiple of 0.02)
+# if the point is odd, then subtract 0.01 from it to make it even
+def clean_timepoints(df):
+    df['timepoint'] = [x if round(x * 100, 2) % 2 == 0 else round(x, 2) - 0.01 for x in df['timepoint']]
+    return df
+
+
 def load_events():
     conn = create_engine(db_conn_string)
 
     events_sql = '''
     SELECT
-        lift_id
-        , ROUND(timepoint::NUMERIC, 2) AS timepoint
-        , event
-    FROM lift_event
+        le.lift_id
+        , ROUND(le.timepoint::NUMERIC, 2) AS timepoint
+        , le.event
+        , l.lift_type
+    FROM lift_event AS le
+    INNER JOIN lifts AS l  
+        ON le.lift_id = l.lift_id
     WHERE event IN ('rep_start', 'rep_stop')
     '''
     events = pd.read_sql(events_sql, conn)
 
-    # make sure that all even timepoints occur on an even point (multiple of 0.02)
-    # if the point is odd, then subtract 0.01 from it to make it even
-    def clean_event_times(events):
-        events['timepoint'] = [x if round(x * 100, 2) % 2 == 0 else round(x, 2) - 0.01 for x in events['timepoint']]
-        return events
-
-    events = clean_event_times(events)
+    events = clean_timepoints(events)
 
     # pull data and metadata for all lifts in events df
     lift_ids = events['lift_id'].unique()
@@ -110,23 +114,21 @@ def build_rep_prob_signal(t, sampling, t_window):
     #: appropriate mean, std
     #: Where mean = t_start (or t_stop) ( = t)
     #:       std = such that any values outside of +/- 4*std will be truncated to zero
-    t_half = t_window/2.  # half of range on each side (+/-) of t
-    sig = (t_half/3.)   # anything outside this gets truncated to prob = 0
+    t_half = t_window / 2.  # half of range on each side (+/-) of t
+    sig = (t_half / 4.)  # anything outside this gets truncated to prob = 0
 
     #: NOTE TO SELF: Look into why this doesn't create numbers spaced evenly
     # test = np.linspace(t - t_half, t + t_half, num=t_range * sampling)
 
-    bound = int(t_half*sampling)
+    bound = int(t_half * sampling)
     # Round so that float conversion won't introduce error and make
     # resultant timepoints un-alignable with original data timepoints.
-    ts = [round((float(x)/sampling), 3) for x in range(-1*bound, bound+1)]
-    g_x = [np.exp(-np.power(x, 2.) / (2 * np.power(sig, 2.))) for x in ts]
+    ts = [round(t + (x / sampling), 3) for x in range(-1 * bound, bound + 1)]
+    g_x = [np.exp(-np.power(x - t, 2.) / (2 * np.power(sig, 2.))) for x in ts]
 
     #: Convert to series
     g_x = pd.Series(data=g_x, index=ts)
-
-    ts = [round(t + (float(x)/sampling), 3) for x in range(-1*bound, bound+1)]
-    return g_x, ts
+    return g_x
 
 
 def build_centered_rep_prob_signal(t, sampling, t_window):
@@ -152,3 +154,6 @@ def build_centered_rep_prob_signal(t, sampling, t_window):
     ts = [round(t + (float(x)/sampling), 3) for x in range(-1*bound, bound+1)]
     return g_x, ts
 
+
+def max_min_norm(s):
+    return (s - min(s))/(max(s) - min(s))
