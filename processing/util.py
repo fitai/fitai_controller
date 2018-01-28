@@ -88,8 +88,8 @@ def process_data(collar_obj, content, RMS=False, highpass=True, verbose=False):
         content = DataFrame(content)
 
     # Drop columns that contain more than 10% missing values
-    x = content.isnull().sum(axis=0) > 0.1*content.shape[0]
-    content = content.loc[:, x.loc[~x].index]
+    # x = content.isnull().sum(axis=0) > 0.1*content.shape[0]
+    # content = content.loc[:, x.loc[~x].index]
 
     #: Establish column headers so that any piece of the function can access
     accel_headers = [x for x in content.columns if x in ['a_x', 'a_y', 'a_z']]
@@ -98,7 +98,6 @@ def process_data(collar_obj, content, RMS=False, highpass=True, verbose=False):
     pos_headers = ['pos_' + x.split('_')[-1] for x in accel_headers]
     force_headers = ['force_' + x.split('_')[-1] for x in accel_headers]
 
-    # Try to impose high pass on acceleration - see if it will fix the velocity drift
     if highpass:
         for col in accel_headers:
             content[col] = filter_signal(content[col], filter_type='highpass', f_low=0.1, fs=collar_obj['sampling_rate'])
@@ -119,10 +118,6 @@ def process_data(collar_obj, content, RMS=False, highpass=True, verbose=False):
         for i, header in enumerate(accel_headers):
             vel[vel_headers[i]] = calc_integral(content[header], scale=1., fs=fs)
 
-        pwr = DataFrame(columns=pwr_headers)
-        for i in range(len(accel_headers)):
-            pwr[pwr_headers[i]] = calc_power(content[accel_headers[i]], vel[vel_headers[i]], weight)
-
         pos = DataFrame(columns=pos_headers)
         for i, header in enumerate(accel_headers):
             pos[pos_headers[i]] = calc_pos(content[header], scale=1., fs=fs)
@@ -130,6 +125,10 @@ def process_data(collar_obj, content, RMS=False, highpass=True, verbose=False):
         force = DataFrame(columns=force_headers)
         for i, header in enumerate(accel_headers):
             force[force_headers[i]] = calc_force(content[header], weight)
+
+        pwr = DataFrame(columns=pwr_headers)
+        for i in range(len(accel_headers)):
+            pwr[pwr_headers[i]] = calc_power(content[accel_headers[i]], vel[vel_headers[i]], weight)
 
     if RMS:
         a = calc_rms(content, accel_headers).to_frame()

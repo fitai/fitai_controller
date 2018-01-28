@@ -88,19 +88,20 @@ hold = False
 t_prev = -1 * sampling_rate
 for i in range(1, n):
     t0 = t_min+(i-1)*packet_size
-    t1 = t_min+i*packet_size - 1  # right-exclude
+    t1 = t_min+i*packet_size   # right-exclude
 
     # split off current packet
-    packet = sig.loc[t0:t1].copy()
-    accel = packet
-    # packet = data.iloc[t0:t1].copy()
-    # accel = packet[['timepoint', 'a_x', 'a_y', 'a_z']]
+    # packet = sig.loc[t0:t1].copy()
+    # accel = packet
+    packet = data.iloc[t0:t1].copy()
+    accel = packet[['timepoint', 'a_x', 'a_y', 'a_z']]
 
     # calculate signals of interest
     if len(prev_dat) < 2:  # no preceding packets. can't process
-        # acc, vel, pwr, pos, force = process_data(header, accel, RMS=False, highpass=True)
-        # s_ = pos['pos_z'].sort_index()
-        s_ = accel
+        acc, vel, pwr, pos, force = process_data(header, accel, RMS=False, highpass=True)
+        s_ = vel['v_z']
+        # s_ = accel
+        # smooth data
         d_ = s_.rolling(window=10, min_periods=0, center=False).apply(
             lambda y: np.mean(y)).fillna(s_.mean())
         # calculate truncated rolling mean
@@ -110,13 +111,11 @@ for i in range(1, n):
     else:
         # bring in previous data to apply rolling window over, then slice out most recent data via iloc
         dat = pd.concat(prev_dat + [accel], axis=0)
-        # acc, vel, pwr, pos, force = process_data(header, dat, RMS=False, highpass=True)
-        # s_ = pos['pos_z'].sort_index()
-        s_ = dat
-        # smooth data
+        acc, vel, pwr, pos, force = process_data(header, dat, RMS=False, highpass=True)
+        s_ = vel['v_z']
+        # s_ = dat
         d_ = s_.rolling(window=10, min_periods=0, center=False).apply(
             lambda y: np.mean(y)).iloc[2*packet_size-1:]
-        # calculate truncated rolling mean
         m_ = s_.rolling(window=20, min_periods=0, center=False).apply(
             lambda y: np.mean(sorted(y)[3:-3])).iloc[2*packet_size-1:]
         prev_dat.pop(0)  # remove oldest packet
@@ -190,8 +189,9 @@ mask = (sig_track > mean_track) * 1
 p_ = mask.diff()
 plt.figure()
 plt.plot(sig_track.reset_index(drop=True), 'black', alpha=0.5)
-plt.plot(mean_track.reset_index(drop=True), 'blue', alpha=0.5)
-plt.plot(p_, 'purple', alpha=0.5)
+plt.plot(sig_, 'black', linestyle='dashed')
+# plt.plot(mean_track.reset_index(drop=True), 'blue', alpha=0.5)
+# plt.plot(p_, 'purple', alpha=0.5)
 
 for i, start in enumerate(starts):
     plt.axvline(start, color='g', linestyle='dashed')
