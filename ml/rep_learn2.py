@@ -109,7 +109,7 @@ for i in range(1, n):
         prev_dat.append(accel)
     else:
         # bring in previous data to apply rolling window over, then slice out most recent data via iloc
-        dat = pd.concat(prev_dat + [accel], axis=0).reset_index(drop=True)
+        dat = pd.concat(prev_dat + [accel], axis=0)
         # acc, vel, pwr, pos, force = process_data(header, dat, RMS=False, highpass=True)
         # s_ = pos['pos_z'].sort_index()
         s_ = dat
@@ -170,8 +170,8 @@ for i in range(1, n):
         # ensure the rep lasted at least sampling_rate samples - cut out jitter
         if ts[3] - ts[0] > min_intra_samples:
             print('logging start/stop pair')
-            starts.append(ts[0])
-            stops.append(ts[3])
+            starts.append(ts[0] - t_min)
+            stops.append(ts[3] - t_min)
             t_prev = ts[3]
 
         # triggers when len(cross_track) >= 4
@@ -186,13 +186,9 @@ for i in range(1, n):
         # because of the "and" in the if condition, hard-reset hold each time this triggers, just in case
         hold = False
 
-plt.figure()
-compare = sig.rolling(window=10, min_periods=0, center=False).apply(lambda y: np.mean(y)).fillna(sig.mean())
-# plt.plot(compare, 'black', linestyle='dashed')
-# plt.plot(sig_, 'blue')
 mask = (sig_track > mean_track) * 1
 p_ = mask.diff()
-
+plt.figure()
 plt.plot(sig_track.reset_index(drop=True), 'black', alpha=0.5)
 plt.plot(mean_track.reset_index(drop=True), 'blue', alpha=0.5)
 plt.plot(p_, 'purple', alpha=0.5)
