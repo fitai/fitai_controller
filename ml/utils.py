@@ -157,3 +157,20 @@ def build_centered_rep_prob_signal(t, sampling, t_window):
 
 def max_min_norm(s):
     return (s - min(s))/(max(s) - min(s))
+
+
+def calc_rep_times(df):
+    starts = df.loc[df['event'].eq('rep_start'), :].sort_values(by='timepoint')
+    stops = df.loc[df['event'].eq('rep_stop'), :].sort_values(by='timepoint')
+
+    n_events = min(starts.shape[0], stops.shape[0])
+    starts = starts.iloc[:n_events].reset_index(drop=True).copy()
+    stops = stops.iloc[:n_events].reset_index(drop=True).copy()
+
+    rep_times = (stops['timepoint'] - starts['timepoint']).to_frame('intra_rep').stack()
+    inter_rep = (starts.shift(-1)['timepoint'] - stops['timepoint']).dropna().to_frame('inter_rep').stack()
+
+    times = rep_times.append(inter_rep).to_frame('delta_t')
+    times.index = times.index.reorder_levels([1, 0])  # swap levels 0 (index number) and 1 (intra/inter designation)
+
+    return times

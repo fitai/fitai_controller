@@ -11,7 +11,7 @@ from databasing.conn_strings import db_conn_string
 from databasing.database_pull import pull_data_by_lift
 from processing.util import process_data
 from ml.utils import load_events, build_rep_prob_signal, build_centered_rep_prob_signal, clean_timepoints, \
-    max_min_norm, proximity_dist, prox_ordered_dists, rigid_ordered_dist
+    max_min_norm, proximity_dist, prox_ordered_dists, rigid_ordered_dist, calc_rep_times
 # from ml.modeling import run_model
 
 #: Step 1 - Pull all rep_start and rep_stop events
@@ -51,6 +51,13 @@ id = 395  # baseline lift
 # pull unprocessed lift header (metadata) and data (acceleration values)
 header, data = pull_data_by_lift(id)
 # data = clean_timepoints(data)  # ensure everything downstream has rounded timepoints
+
+# loads in time between reps
+irts = events.loc[events['lift_type'].eq(header['lift_type'])].groupby('lift_id').apply(lambda df: calc_rep_times(df))
+inters = irts.xs([id, 'inter_rep'], level=[0, 1])
+min_irt = max(inters.min().values[0], 1.)
+intras = irts.xs([id, 'intra_rep'], level=[0, 1])
+min_intra = max(intras.min().values[0], 1.)
 
 # process acceleration and calculate a/v/pwr/pos/f
 a, v, pwr, pos, force = process_data(header, data, RMS=False, highpass=True, verbose=True)
@@ -126,21 +133,22 @@ for _, e in events.iterrows():
     plt.axvline(e['timepoint'], color=c, linestyle='dashed')
 
 
-r = range(650, 1500)
+r = range(0, 1500)
 t = d['timepoint'].iloc[r]
 # sig = d['pos_z'].iloc[r]
 sig = d['v_z'].iloc[r]
-sig = sig.rolling(window=5, min_periods=0, center=False).mean().fillna(0.)
-x = sig.rolling(window=15, min_periods=0, center=False).apply(lambda y: np.mean(sorted(y)[3:-3])).fillna(0.)
-# x_ = sig.rolling(window=15, min_periods=10, center=False).mean().fillna(0.)
+sig = sig.rolling(window=10, min_periods=0, center=False).mean().fillna(0.)
+x = sig.rolling(window=20, min_periods=0, center=False).apply(lambda y: np.mean(sorted(y)[3:-3])).fillna(0.)
+v_ = sig.rolling(window=20, min_periods=0, center=False).apply(lambda y: np.var(sorted(y)[3:-3])).fillna(0.)
 
 mask = (sig > x) * 1
 p_ = mask.diff()
 
-plt.figure()
-plt.plot(t, sig, color='black')
-plt.plot(t, x, color='blue', alpha=0.5)
-plt.plot(t, p_*.03, color='purple', alpha=0.5)
+# plt.figure()
+# plt.plot(t, sig, color='black')
+# plt.plot(t, x, color='blue', alpha=0.5)
+# plt.plot(t, p_*.3, color='purple', alpha=0.5)
+# plt.plot(t, v_, color='red', alpha=0.5)
 # plt.plot(t, x_.iloc[r], color='red', alpha=0.5)
 # plt.axhline(y=0, color='black', linestyle='dashed')
 for _, e in events.loc[events['timepoint'] < t.iloc[-1]].iterrows():
@@ -150,9 +158,7 @@ for _, e in events.loc[events['timepoint'] < t.iloc[-1]].iterrows():
 
 # ### REAL-TIME EMULATOR ###
 
-t_min = 650
-
-events.groupby(['lift_type', 'event', 'lift_id'])['timepoint']
+t_min = 0
 
 # sig = d['a_z'].iloc[t_min:]
 # sig = d['v_z'].iloc[t_min:]
@@ -165,7 +171,6 @@ sampling_rate = 30
 
 n = int(np.ceil((sig.shape[0]) / float(packet_size)))
 
-xyz = pd.Series()
 sig_track = pd.Series()
 mean_track = pd.Series()
 prev_dat = None
@@ -175,6 +180,8 @@ ts = []
 starts = []
 stops = []
 t_track = 0.
+min_irt_samples = min_irt * sampling_rate  # minimum number of samples between rep stop and next rep start
+min_intra_samples = 0.9*min_intra * sampling_rate  # min number samples within a rep
 # idx_max = t_min
 hold = False
 t_prev = -1 * sampling_rate
@@ -193,7 +200,7 @@ for i in range(1, n):
         d_ = packet.rolling(window=10, min_periods=0, center=False).apply(
             lambda y: np.mean(sorted(y))).fillna(packet.mean())
         # calculate truncated rolling mean
-        m_ = packet.rolling(window=15, min_periods=0, center=False).apply(
+        m_ = packet.rolling(window=20, min_periods=0, center=False).apply(
             lambda y: np.mean(sorted(y)[3:-3])).fillna(prev_val)
         prev_dat = packet
         prev_mean = m_
@@ -204,13 +211,13 @@ for i in range(1, n):
         d_ = dat.rolling(window=10, min_periods=0, center=False).apply(
             lambda y: np.mean(sorted(y))).iloc[packet_size-1:]
         # calculate truncated rolling mean
-        m_ = dat.rolling(window=15, min_periods=0, center=False).apply(
+        m_ = dat.rolling(window=20, min_periods=0, center=False).apply(
             lambda y: np.mean(sorted(y)[3:-3])).iloc[packet_size-1:]
         prev_dat = packet
         prev_mean = m_
 
     # look for crossings
-    mask = (d_ > m_) * 1
+    mask = (d_ < m_) * 1
     # any positive values represent crossings from 0 to 1
     # any negative values represent crossings from 1 to 0
     p_ = mask.diff().fillna(0.)
@@ -218,7 +225,7 @@ for i in range(1, n):
     # crossings are far enough away from most recent prior stop
     # NOTE: result of p_ > 0 is a Series, result of p_.index - t_prev is an array. These two cannot be
     #       combined directly via & ; have to convert the Series to an array via Series.values
-    crossings = p_.loc[(abs(p_) > 0).values & ((p_.index - t_prev) >= sampling_rate)]
+    crossings = p_.loc[(abs(p_) > 0).values & ((p_.index - t_prev) >= min_irt_samples)]
 
     # for viz later
     sig_track = sig_track.append(d_.iloc[1:])
@@ -235,14 +242,13 @@ for i in range(1, n):
 
     # handle any crossings
     if crossings.shape[0] > 0:
-        xyz = xyz.append(crossings)
         # before moving forward, if no positive crossings have been registered (i.e. len(cross_track) == 0),
         #  the next crossing must be positive. Enforce this here
-        if len(cross_track) == 0 and any(crossings == -1) and (crossings.shape[0] > 1):
+        if len(cross_track) == 0 and any(crossings == 1) and (crossings.shape[0] > 1):
             # eliminate any negative crossing before a positive crossing
-            tc = crossings.loc[crossings == 1].index[0]  # id index of first positive crossing
+            tc = crossings.loc[crossings == -1].index[0]  # id index of first positive crossing
             crossings = crossings.loc[tc:]  # slice out anything before first positive crossing
-        elif len(cross_track) == 0 and any(crossings == -1) and (crossings.shape[0] == 1):
+        elif len(cross_track) == 0 and any(crossings == 1) and (crossings.shape[0] == 1):
             # only one crossing, and it's negative; do not log this
             continue
 
@@ -257,23 +263,25 @@ for i in range(1, n):
         if len(cross_track) < 4:
             continue
         elif len(cross_track) > 4:
-            if ts[4] - ts[3] > sampling_rate:
+            if ts[4] - ts[3] > min_irt_samples:
                 hold_c = cross_track[4:]  # preserve future crossings
                 hold_t = ts[4:]
                 hold = True
             cross_track = cross_track[:4]  # move forward with current crossings
             ts = ts[:4]
 
-        starts.append(ts[0])
-        stops.append(ts[3])
-        t_prev = ts[3]
+        # ensure the rep lasted at least sampling_rate samples - cut out jitter
+        if ts[3] - ts[0] > min_intra_samples:
+            starts.append(ts[0])
+            stops.append(ts[3])
+            t_prev = ts[3]
         # else:  # registered 4 crossings
         #     starts.append(ts[0])
         #     stops.append(ts[3])
 
         # triggers when len(cross_track) >= 4
         # clear tracking variables
-        if hold and (ts[0] - t_prev >= sampling_rate):
+        if hold and (ts[0] - t_prev >= min_irt_samples):
             cross_track = copy(hold_c)
             ts = copy(hold_t)
         else:
@@ -282,9 +290,6 @@ for i in range(1, n):
 
         # because of the "and" in the if condition, hard-reset hold each time this triggers, just in case
         hold = False
-
-# s_ = sig.rolling(window=5, min_periods=0, center=False).mean().fillna(0.)
-# x_ = sig.rolling(window=10, min_periods=0, center=False).apply(lambda y: np.mean(sorted(y)[3:-3])).fillna(0.)
 
 plt.figure()
 plt.plot(sig_track, 'black', alpha=0.5)
