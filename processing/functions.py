@@ -32,12 +32,15 @@ def calc_integral(signal, scale=1., fs=20.):
     return Series(data=integral, name='integral')
 
 
-def calc_pos(signal, scale=1., fs=20.):
-    delta_t = scale / fs
-    integral = cumsum(0.5 * (signal[1:] + diff(signal) / 2.) * (delta_t**2))
-    integral[0] = 0.
-    # integral = insert(integral, 0, [0])  # because of the use of diff() above, the first value as cut off. insert it here
-    return integral
+def calc_pos(signal, scale=1., fs=30.):
+    # delta_t = scale / fs
+    # pos = cumsum(0.5 * (signal[1:] + diff(signal) / 2.) * (delta_t**2))
+    # pos = insert(pos.values, 0, pos.iloc[0])
+    integral = calc_integral_sp(signal, scale, fs)
+    integral = insert(integral, 0, integral[0])
+    pos = calc_integral_sp(integral, scale, fs)
+    pos = insert(pos, 0, pos[0])
+    return pos
 
 
 #: Scipy's trapezoid method
