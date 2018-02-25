@@ -26,10 +26,10 @@ def calc_vel1(signal, scale, fs):
 #: Euler method
 #: Accepts single dimension of values (e.g. series or array)
 #: Returns pandas Series
-def calc_integral(signal, scale=1., fs=20.):
-    delta_t = scale / fs
-    integral = cumsum(signal * delta_t)
-    return Series(data=integral, name='integral')
+def calc_integral(signal, y0=0., scale=1., fs=20.):
+    dx = scale / fs
+    y = y0 + cumsum(signal * dx)
+    return Series(data=y, name='integral')
 
 
 def calc_pos(signal, scale=1., fs=30.):
@@ -37,9 +37,9 @@ def calc_pos(signal, scale=1., fs=30.):
     # pos = cumsum(0.5 * (signal[1:] + diff(signal) / 2.) * (delta_t**2))
     # pos = insert(pos.values, 0, pos.iloc[0])
     integral = calc_integral_sp(signal, scale, fs)
-    integral = insert(integral, 0, integral[0])
+    # integral = insert(integral, 0, integral[0])
     pos = calc_integral_sp(integral, scale, fs)
-    pos = insert(pos, 0, pos[0])
+    # pos = insert(pos, 0, pos[0])
     return pos
 
 
@@ -48,7 +48,9 @@ def calc_integral_sp(signal, scale, fs):
     delta_t = scale / fs
     integral = cumtrapz(signal, dx=delta_t)
 
-    return integral
+    integral = insert(integral, 0, integral[0])
+    # return integral
+    return Series(data=integral, name='integral', index=signal.index)
 
 
 def calc_derivative(signal, scale, fs):

@@ -5,7 +5,6 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 from sqlalchemy import create_engine
-from copy import copy
 
 from databasing.conn_strings import db_conn_string
 from databasing.database_pull import pull_data_by_lift
@@ -16,22 +15,24 @@ conn = create_engine(db_conn_string)
 
 events, lift_ids = load_events()
 
-id = 395  # baseline lift
-# id = 396
+# id = 395  # baseline lift
+id = 396
+# id = 510
 
 # pull unprocessed lift header (metadata) and data (acceleration values)
 header, data = pull_data_by_lift(id)
 
 # loads in time between reps
-irts = events.loc[events['lift_type'].eq(header['lift_type'])].groupby('lift_id').apply(lambda df: calc_rep_times(df))
-inters = irts.xs([id, 'inter_rep'], level=[0, 1])
-min_irt = max(inters.min().values[0], 1.)
-intras = irts.xs([id, 'intra_rep'], level=[0, 1])
-min_intra = max(intras.min().values[0], 1.)
+# irts = events.loc[events['lift_type'].eq(header['lift_type'])].groupby('lift_id').apply(lambda df: calc_rep_times(df))
+# inters = irts.xs([id, 'inter_rep'], level=[0, 1])
+# min_irt = max(inters.min().values[0], 1.)
+# intras = irts.xs([id, 'intra_rep'], level=[0, 1])
+# min_intra = max(intras.min().values[0], 1.)
 
 # process acceleration and calculate a/v/pwr/pos/f
-a, v, pwr, pos, force = process_data(header, data, RMS=False, highpass=True, verbose=True)
-events = events.loc[events['lift_id'].eq(id)]
+a, v, pwr, pos, force = process_data(header, data, {}, RMS=False, highpass=True, verbose=True)
+# events = events.loc[events['lift_id'].eq(id)]
+
 # build entire input data set; join in all data signals
 d = a.join(v).join(pwr).join(pos).join(force)
 d['timepoint'] = data['timepoint']
@@ -39,32 +40,28 @@ d['lift_id'] = header['lift_id']
 
 r = range(0, 1500)
 t = d['timepoint'].iloc[r]
-sig = d['v_z'].iloc[r]
-# sig = d['v_z'].iloc[r]
-sig = sig.rolling(window=10, min_periods=0, center=False).mean().fillna(0.)
-sig_ = sig.copy()
-x = sig.rolling(window=20, min_periods=0, center=False).apply(lambda y: np.mean(sorted(y)[3:-3])).fillna(0.)
-# v_ = sig.rolling(window=20, min_periods=0, center=False).apply(lambda y: np.var(sorted(y)[3:-3])).fillna(0.)
+sig = d['v_z'].iloc[r].copy()
+x = sig.rolling(window=10, min_periods=0, center=False).apply(np.mean).fillna(0.)
+v_ = sig.rolling(window=10, min_periods=0, center=False).apply(lambda y: np.var(sorted(y)[2:-2])).fillna(0.)
 
-mask = (sig > x) * 1
-p_ = mask.diff()
+mask_var = (v_ > 0.01*max(v_)) * 1
+v_m = mask_var.rolling(window=10, min_periods=0, center=False).apply(np.mean)
+p_ = ((v_m > 0.05)*1).diff()
 
-plt.figure()
+# plt.figure()
 plt.plot(t, sig, color='black')
 plt.plot(t, x, color='blue', alpha=0.5)
-plt.plot(t, p_*1, color='purple', alpha=0.5)
-for _, e in events.loc[events['timepoint'] < t.iloc[-1]].iterrows():
-    c = 'g' if 'start' in e['event'] else 'r'
-    plt.axvline(e['timepoint'], color=c, linestyle='dashed')
+plt.plot(t, p_, color='purple', alpha=0.5)
+# for _, e in events.loc[events['timepoint'] < t.iloc[-1]].iterrows():
+#     c = 'g' if 'start' in e['event'] else 'r'
+#     plt.axvline(e['timepoint'], color=c, linestyle='dashed')
 
 # ### REAL-TIME EMULATOR ###
 
 t_min = 0
 t_max = 1500
 
-# sig = d['a_z'].iloc[t_min:]
-# sig = d['v_z'].iloc[t_min:]
-sig = d['v_z'].iloc[t_min:t_max+1]
+sig = d['v_z'].iloc[t_min:t_max+1].copy()
 prev_val = sig.iloc[t_min-1] if t_min > 0 else 0.
 
 # build time series of 30 samples at a time; one packet = 30 samples
@@ -73,6 +70,8 @@ sampling_rate = header['sampling_rate']
 
 n = int(np.ceil((sig.shape[0]) / float(packet_size)))
 
+temp = []
+raw_sig = pd.Series()
 sig_track = pd.Series()
 mean_track = pd.Series()
 prev_dat = []
@@ -81,26 +80,33 @@ ts = []
 starts = []
 stops = []
 t_track = 0.
-min_irt_samples = min_irt * sampling_rate  # minimum number of samples between rep stop and next rep start
-min_intra_samples = 0.9*min_intra * sampling_rate  # min number samples within a rep
+# min_irt_samples = min_irt * sampling_rate  # minimum number of samples between rep stop and next rep start
+# min_intra_samples = 0.9*min_intra * sampling_rate  # min number samples within a rep
 # idx_max = t_min
 hold = False
 t_prev = -1 * sampling_rate
+prev_vz = 0.
+prev_az = 0.
+prev_filt_az = 0.
 for i in range(1, n):
     t0 = t_min+(i-1)*packet_size
     t1 = t_min+i*packet_size   # right-exclude
 
-    # split off current packet
-    # packet = sig.loc[t0:t1].copy()
-    # accel = packet
     packet = data.iloc[t0:t1].copy()
     accel = packet[['timepoint', 'a_x', 'a_y', 'a_z']]
 
+    if i == 1:
+        y0 = None
+    else:
+        y0 = {'x': prev_az, 'y': prev_filt_az}
+
+    inits = {'v_z': prev_vz, 'a_z': y0}
     # calculate signals of interest
-    if len(prev_dat) < 2:  # no preceding packets. can't process
-        acc, vel, pwr, pos, force = process_data(header, accel, RMS=False, highpass=True)
+    if len(prev_dat) < 1:  # no preceding packets. can't process
+        dat = accel.copy()
+        # dat['a_z'] = accel['a_z'].rolling(window=5, min_periods=0, center=False)
+        acc, vel, pwr, pos, force = process_data(header, dat, inits=inits, RMS=False, highpass=True)
         s_ = vel['v_z']
-        # s_ = accel
         # smooth data
         d_ = s_.rolling(window=10, min_periods=0, center=False).apply(
             lambda y: np.mean(y)).fillna(s_.mean())
@@ -111,15 +117,24 @@ for i in range(1, n):
     else:
         # bring in previous data to apply rolling window over, then slice out most recent data via iloc
         dat = pd.concat(prev_dat + [accel], axis=0)
-        acc, vel, pwr, pos, force = process_data(header, dat, RMS=False, highpass=True)
+        # dat['a_z'] = dat['a_z'].rolling(window=5, min_periods=0, center=False)
+        acc, vel, pwr, pos, force = process_data(header, dat, inits, RMS=False, highpass=True)
         s_ = vel['v_z']
         # s_ = dat
         d_ = s_.rolling(window=10, min_periods=0, center=False).apply(
-            lambda y: np.mean(y)).iloc[2*packet_size-1:]
+            lambda y: np.mean(y)).iloc[packet_size-1:]
         m_ = s_.rolling(window=20, min_periods=0, center=False).apply(
-            lambda y: np.mean(sorted(y)[3:-3])).iloc[2*packet_size-1:]
+            lambda y: np.mean(sorted(y)[3:-3])).iloc[packet_size-1:]
         prev_dat.pop(0)  # remove oldest packet
         prev_dat.append(accel)
+        s_ = s_.iloc[packet_size:]
+
+    raw_sig = raw_sig.append(s_)
+    prev_vz = s_.iloc[-1]
+    prev_az = accel['a_z'].iloc[-1]
+    prev_filt_az = acc['a_z'].iloc[-1]
+    # for v in temp:
+    #     plt.plot(v)
 
     # look for crossings
     mask = (d_ > m_) * 1
@@ -185,21 +200,25 @@ for i in range(1, n):
         # because of the "and" in the if condition, hard-reset hold each time this triggers, just in case
         hold = False
 
-mask = (sig_track > mean_track) * 1
-p_ = mask.diff()
+# plt.plot(raw_sig, color='black', linestyle='dashed', alpha=0.5, label='estimated')
+# plt.plot(sig_, color='red', linestyle='dashed', alpha=0.5, label='actual')
+# plt.legend()
+
+# mask = (sig_track > mean_track) * 1
+# p_ = mask.diff()
 plt.figure()
-plt.plot(sig_track.reset_index(drop=True), 'black', alpha=0.5)
-plt.plot(sig_, 'black', linestyle='dashed')
+plt.plot(raw_sig.reset_index(drop=True), 'blue', alpha=0.5)
+plt.plot(sig, 'black', linestyle='dashed')
 # plt.plot(mean_track.reset_index(drop=True), 'blue', alpha=0.5)
 # plt.plot(p_, 'purple', alpha=0.5)
 
-for i, start in enumerate(starts):
-    plt.axvline(start, color='g', linestyle='dashed')
-    plt.axvline(stops[i], color='r', linestyle='dashed')
-
-calc_reps = len(starts)
-n_reps = header['final_num_reps'] if header['final_num_reps'] is not None else header['init_num_reps']
-print('calculated reps: {r1}, actual reps: {r2}'.format(r1=calc_reps, r2=n_reps))
+# for i, start in enumerate(starts):
+#     plt.axvline(start, color='g', linestyle='dashed')
+#     plt.axvline(stops[i], color='r', linestyle='dashed')
+#
+# calc_reps = len(starts)
+# n_reps = header['final_num_reps'] if header['final_num_reps'] is not None else header['init_num_reps']
+# print('calculated reps: {r1}, actual reps: {r2}'.format(r1=calc_reps, r2=n_reps))
 
 # start1 = copy(starts)
 # start2 = copy((events.loc[events['event'].eq('rep_start')]['timepoint']*30.).values)

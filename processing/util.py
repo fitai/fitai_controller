@@ -1,8 +1,9 @@
 import sys
 from pandas import DataFrame
 from datetime import datetime as dt
+from copy import copy
 
-from processing.functions import calc_integral, calc_rms, calc_power, calc_force, calc_pos
+from processing.functions import calc_integral, calc_rms, calc_power, calc_force, calc_pos, calc_vel1, calc_integral_sp
 from processing.filters import filter_signal
 from databasing.redis_controls import get_default_collar
 
@@ -81,15 +82,13 @@ def extract_sampling_rate(header):
 # Expects a dataframe with known fields
 # Timepoint, a_x, (a_y, a_z), lift_id
 #: NOTE: default is to process accel & vel into RMS signals
-def process_data(collar_obj, content, RMS=False, highpass=True, verbose=False):
+def process_data(collar_obj, content, inits={}, RMS=False, highpass=True, verbose=False):
     if not isinstance(content, DataFrame):
         if verbose:
             print 'Content (type {}) is not a dataframe. Will try to convert...'.format(type(content))
         content = DataFrame(content)
 
-    # Drop columns that contain more than 10% missing values
-    # x = content.isnull().sum(axis=0) > 0.1*content.shape[0]
-    # content = content.loc[:, x.loc[~x].index]
+    content = copy(content)
 
     #: Establish column headers so that any piece of the function can access
     accel_headers = [x for x in content.columns if x in ['a_x', 'a_y', 'a_z']]
@@ -100,7 +99,12 @@ def process_data(collar_obj, content, RMS=False, highpass=True, verbose=False):
 
     if highpass:
         for col in accel_headers:
-            content[col] = filter_signal(content[col], filter_type='highpass', f_low=0.1, fs=collar_obj['sampling_rate'])
+            if col in inits.keys():
+                y0 = inits[col]  # runs online HP code; adjusts for initial offsets
+            else:
+                y0 = None  # runs offline HP code
+
+            content[col] = filter_signal(content[col], y0=y0, filter_type='highpass', f_low=.5, fs=collar_obj['sampling_rate'])
 
     fs = extract_sampling_rate(collar_obj)
     weight = extract_weight(collar_obj, verbose)
@@ -116,7 +120,11 @@ def process_data(collar_obj, content, RMS=False, highpass=True, verbose=False):
         # then combine into RMS signal
         vel = DataFrame(columns=vel_headers)
         for i, header in enumerate(accel_headers):
-            vel[vel_headers[i]] = calc_integral(content[header], scale=1., fs=fs)
+            if 'z' in header and 'v_z' in inits.keys():
+                v0 = inits['v_z']
+            else:
+                v0 = 0.
+            vel[vel_headers[i]] = calc_integral(content[header], v0, scale=1., fs=fs)
 
         pos = DataFrame(columns=pos_headers)
         for i, header in enumerate(accel_headers):
