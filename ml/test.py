@@ -10,6 +10,7 @@ from databasing.conn_strings import db_conn_string
 from databasing.database_pull import pull_data_by_lift
 from ml.utils import load_events
 from processing.util import process_data
+from processing.filters import filter_signal
 
 conn = create_engine(db_conn_string)
 
@@ -24,13 +25,21 @@ header, data = pull_data_by_lift(lift_id)
 # data['a_z'] = data['a_z'].rolling(window=10, min_periods=0, center=False).apply(np.mean)
 
 events = events.loc[events['lift_id'].eq(lift_id)]
-a, v, _, _, _ = process_data(header, data, inits={}, RMS=False, highpass=True)
 
-r = range(0, 1500)
+a, v, _, _, _ = process_data(header, data, inits={'a_z': {'x': 0, 'y': 0}}, RMS=False, highpass=True)
+
+r = range(data.shape[0])
 sig = v['v_z'].iloc[r].copy()
-x = sig.rolling(window=10, min_periods=0, center=False).apply(np.mean).fillna(0.)
-v_ = sig.rolling(window=10, min_periods=0, center=False).apply(lambda y: np.abs(np.mean(sorted(y)[3:-3]))).fillna(0.)
-var_ = sig.rolling(window=10, min_periods=0, center=False).apply(lambda y: np.var(sorted(y)[2:-2])).fillna(0.)
+vel_ = pd.Series(filter_signal(sig.values, {'x': 0, 'y': 0}, 'highpass', freqs=[.1, None], fs=header['sampling_rate'], filter_order=1), name='v_z')
+
+plt.figure()
+plt.plot(sig, color='black', alpha=0.5, label='orig')
+plt.plot(vel_, color='blue', alpha=0.5, linestyle='dashed', label='filtered')
+plt.legend()
+
+x = vel_.rolling(window=10, min_periods=0, center=False).apply(np.mean).fillna(0.)
+v_ = vel_.rolling(window=10, min_periods=0, center=False).apply(lambda y: np.abs(np.mean(sorted(y)[3:-3]))).fillna(0.)
+var_ = vel_.rolling(window=10, min_periods=0, center=False).apply(lambda y: np.var(sorted(y)[2:-2])).fillna(0.)
 t = data['timepoint'].iloc[r]
 
 var_max = max(var_)
@@ -39,14 +48,14 @@ v_m = mask_var.rolling(window=10, min_periods=0, center=False).apply(np.mean)
 # p_ = ((v_m > 0.05)*1).diff() * 1
 p_ = (v_m > 0.05) * 1
 
-plt.figure(1)
-plt.plot(t, sig, color='black')
+plt.figure()
+plt.plot(t, vel_, color='black')
 # plt.plot(t, v_, color='blue', alpha=0.5)
 plt.plot(t, var_, color='green', alpha=0.5)
 plt.plot(t, mask_var, color='purple', alpha=0.5)
 # plt.plot(t, v_m, color='blue', alpha=0.5)
 # plt.plot(t, p_, color='purple', alpha=0.5)
-plt.axhline(0.02*var_max, color='black', linestyle='dashed')
+# plt.axhline(0.02*var_max, color='black', linestyle='dashed')
 
 for _, e in events.loc[events['timepoint'] < t.iloc[-1]].iterrows():
     c = 'g' if 'start' in e['event'] else 'r'
@@ -55,15 +64,18 @@ for _, e in events.loc[events['timepoint'] < t.iloc[-1]].iterrows():
 
 t_min = 0
 t_max = data.shape[0]
+# t_max = 120
 
-sig = v['v_z'].iloc[t_min:t_max+1]
-prev_val = sig.iloc[t_min-1] if t_min > 0 else 0.
+# sig = v['v_z'].iloc[t_min:t_max+1]
+# prev_val = sig.iloc[t_min-1] if t_min > 0 else 0.
+prev_val = 0
 
 # build time series of 30 samples at a time; one packet = 30 samples
 packet_size = header['sampling_rate']
 sampling_rate = header['sampling_rate']
 
-n = int(np.ceil((data.shape[0]) / float(packet_size))) + 1
+# n = int(np.ceil((data.shape[0]) / float(packet_size))) + 1
+n = int(t_max/float(packet_size))
 
 sig_track = pd.Series()
 a_track = pd.Series()
@@ -71,6 +83,7 @@ p_track = pd.Series()
 prev_dat = []
 # initial_conditions
 prev_vz = 0.
+prev_filt_vz = 0.
 prev_az = 0.
 prev_filt_az = 0.
 prev_var = 0.
@@ -85,21 +98,20 @@ starts = []
 stops = []
 ts = []
 
-for i in range(1, n):
+for i in range(1, n+1):
     t0 = t_min+(i-1)*packet_size
     t1 = t_min+i*packet_size   # right-exclude
 
     # establish initial conditions
-    if i == 1:
-        y0 = None
-    else:
-        y0 = {'x': prev_az, 'y': prev_filt_az}
+    y0 = {'x': prev_az, 'y': prev_filt_az}
 
     # bring in data packet
     packet = data.iloc[t0:t1].copy()
     accel = packet[['timepoint', 'a_x', 'a_y', 'a_z']]
     acc, vel, _, _, _ = process_data(header, accel, inits={'v_z': prev_vz, 'a_z': y0}, RMS=False, highpass=True)
     sig = vel['v_z']
+    v0 = {'x': prev_vz, 'y': prev_filt_vz}
+    sig = pd.Series(filter_signal(sig.values, v0, 'highpass', [.1, None], header['sampling_rate'], 1), index=vel['v_z'].index, name='v_z')
 
     if len(prev_dat) < 1:
         var_ = sig.rolling(window=10, min_periods=0, center=False).apply(lambda y: np.var(sorted(y)[2:-2])).fillna(0.)
@@ -119,9 +131,10 @@ for i in range(1, n):
     p_track = p_track.append(p_)
     a_track = a_track.append(acc['a_z'])
 
-    prev_vz = sig.iloc[-1]
-    prev_filt_az = acc['a_z'].iloc[-1]
+    prev_vz = vel['v_z'].iloc[-1]
+    prev_filt_vz = sig.iloc[-1]
     prev_az = accel['a_z'].iloc[-1]
+    prev_filt_az = acc['a_z'].iloc[-1]
     prev_var = var_.iloc[-1]
 
     # look for crossings
@@ -131,8 +144,6 @@ for i in range(1, n):
     # crossings are far enough away from most recent prior stop
     # NOTE: result of p_ > 0 is a Series, result of p_.index - t_prev is an array. These two cannot be
     #       combined directly via & ; have to convert the Series to an array via Series.values
-    # p_ = p_.diff()
-
     crossings = p_.loc[(abs(p_) > 0).values & ((p_.index - t_prev) >= min_irt_samples)]
 
     # handle any crossings
@@ -185,25 +196,25 @@ for i in range(1, n):
         hold = False
 
 # plt.figure()
-# plt.title('Acceleration comparison')
-# plt.plot(a_track, 'blue', alpha=0.5, label='online')
-# plt.plot(a['a_z'].iloc[t_min:t_max], 'black', linestyle='dashed', alpha=0.5, label='offline')
+# plt.title('Velocity Comparison')
+# plt.plot(data['timepoint'].iloc[t_min:t_max], vel_.iloc[t_min:t_max], 'black', alpha=0.5, linestyle='dashed', label='offline')
+# plt.plot(data['timepoint'].iloc[t_min:t_max], sig_track, 'blue', alpha=0.5, label='online')
 # plt.legend()
 
 plt.figure(2)
 plt.title('Detector Output')
-plt.plot(data['timepoint'], sig_track, 'blue', label='online')
-# plt.plot(data['timepoint'], v['v_z'].iloc[t_min:t_max], 'black', linestyle='dashed', alpha=0.5, label='offline')
+plt.plot(data['timepoint'], sig_track, 'blue', alpha=0.75, label='online_vz')
+# plt.plot(data['timepoint'], vel_, 'black', alpha=0.5, label='offline_filt')
+# plt.plot(data['timepoint'], p_track, 'purple', alpha=0.5, label='var_trigger')
 plt.legend()
-# plt.plot(data['timepoint'], p_track, 'purple', alpha=0.5)
 
-starts = [x/sampling_rate for x in starts]
-stops = [x/sampling_rate for x in stops]
+start_ts = [x/sampling_rate for x in starts]
+stop_ts = [x/sampling_rate for x in stops]
 
 # plt.axhline(0.02*var_max, color='black', linestyle='dashed')
-for i, start in enumerate(starts):
+for i, start in enumerate(start_ts):
     plt.axvline(start, color='g', linestyle='dashed')
-    plt.axvline(stops[i], color='r', linestyle='dashed')
+    plt.axvline(stop_ts[i], color='r', linestyle='dashed')
 
 for _, e in events.loc[events['timepoint'] < t_max].iterrows():
     c = 'g' if 'start' in e['event'] else 'r'
