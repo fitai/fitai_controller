@@ -21,3 +21,6 @@ thresh_dict.txt
 
 # Database dump/store
 db_archive
+
+# not necessary
+.ipynb_checkpoints
