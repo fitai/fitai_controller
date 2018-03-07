@@ -1,4 +1,4 @@
-from scipy.signal import butter, lfilter
+from scipy.signal import butter, lfilter, lfilter_zi
 import numpy as np
 
 
@@ -26,15 +26,20 @@ def butter_lowpass(highcut, fs, order):
     return b, a
 
 
-def butter_lowpass_filter(data, highcut, fs, order=5):
+def butter_lowpass_filter(signal, y0, highcut, fs, order):
     b, a = butter_lowpass(highcut, fs, order=order)
-    y = lfilter(b, a, data)
+    y = lfilter(b, a, signal)
     return y
 
 
-def butter_highpass_filter(data, lowcut, fs, order=5):
+def butter_highpass_filter(signal, y0, lowcut, fs, order):
     b, a = butter_highpass(lowcut, fs, order=order)
-    y = lfilter(b, a, data)
+    # zi = lfilter_zi(b, a)
+    zi = [y0['y']]
+
+    signal = np.insert(signal, 0, y0['x'])  # insert initial condition
+    y, _ = lfilter(b, a, signal, zi=zi)
+    y = y[1:]  # remove initial condition
     return y
 
 
@@ -45,17 +50,17 @@ def butter_bandpass_filter(data, lowcut, highcut, fs, order=5):
 
 
 #: Starting with the bandpass filter, but want to
-def filter_signal(signal, y0=0., filter_type='bandpass', f_low=1.0, f_high=40., fs=100., filter_order=3):
+def filter_signal(signal, y0, filter_type, freqs, fs, filter_order):
     #: Apply filter
     if filter_type == 'highpass':
-        # y = butter_highpass_filter(signal, lowcut=f_low, fs=fs, order=filter_order)
-        y = simple_highpass(signal, y0, fc=f_low, fs=fs)
+        # y = butter_highpass_filter(signal, y0, lowcut=freqs[0], fs=fs, order=filter_order)
+        y = simple_highpass(signal, y0, fc=freqs[0], fs=fs)
 
     elif filter_type == 'bandpass':
-        y = butter_bandpass_filter(signal, lowcut=f_low, highcut=f_high, fs=fs, order=filter_order)
+        y = butter_bandpass_filter(signal, lowcut=freqs[0], highcut=freqs[1], fs=fs, order=filter_order)
 
     elif filter_type == 'lowpass':
-        y = butter_lowpass_filter(signal, highcut=f_high, fs=fs, order=filter_order)
+        y = butter_lowpass_filter(signal, highcut=freqs[1], fs=fs, order=filter_order)
 
     return y
 
@@ -66,26 +71,22 @@ def running_mean(x, n):
 
 
 # y0 = {'x': x0, 'y': y0}
-def simple_highpass(signal, y0=None, fc=.1, fs=30.):
-    sig = signal.values
-
+def simple_highpass(signal, y0, fc=.1, fs=30.):
     # establish constants
     RC = 1. / (fc * 2. * np.pi)
     dt = 1. / fs
     alpha = RC / (RC + dt)
 
     # initial code
-    if y0 is not None:  # set initial conditions + grow sig by 1 (temporary)
-        filt = [y0['y']]
-        sig = np.insert(sig, 0, y0['x'])
-    else:
-        filt = [0.]
+    # set initial conditions (grows signal by 1 (temporary))
+    filt = [y0['y']]
+    signal = np.insert(signal, 0, y0['x'])
 
-    for i in range(1, len(sig)):
-        x = alpha * (filt[-1] + sig[i] - sig[i-1])  # y[i] := alpha * y[i-1] + alpha * (x[i] - x[i-1])
+    for i in range(1, len(signal)):
+        x = alpha * (filt[-1] + signal[i] - signal[i-1])  # y[i] := alpha * y[i-1] + alpha * (x[i] - x[i-1])
         filt.append(x)
 
-    if y0 is not None:
-        filt = filt[1:]
+    # remove inserted initial condition point
+    filt = filt[1:]
 
     return filt

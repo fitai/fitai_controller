@@ -102,9 +102,9 @@ def process_data(collar_obj, content, inits={}, RMS=False, highpass=True, verbos
             if col in inits.keys():
                 y0 = inits[col]  # runs online HP code; adjusts for initial offsets
             else:
-                y0 = None  # runs offline HP code
+                y0 = {'x': 0, 'y': 0}
 
-            content[col] = filter_signal(content[col], y0=y0, filter_type='highpass', f_low=.5, fs=collar_obj['sampling_rate'])
+            content[col] = filter_signal(content[col].values, y0, 'highpass', freqs=[.6, None], fs=collar_obj['sampling_rate'], filter_order=1)
 
     fs = extract_sampling_rate(collar_obj)
     weight = extract_weight(collar_obj, verbose)
