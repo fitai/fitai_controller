@@ -1,4 +1,6 @@
 # To learn how to identify rep start/stop points
+from __future__ import division
+
 import pandas as pd
 import numpy as np
 from copy import copy
@@ -17,70 +19,64 @@ conn = create_engine(db_conn_string)
 
 events, lift_ids = load_events()
 
-# id = 395  # baseline lift
-id = 396
-# id = 510
+lift_id = 395  # baseline lift
+# lift_id  = 396
+# lift_id = 510
 
 # pull unprocessed lift header (metadata) and data (acceleration values)
-header, data = pull_data_by_lift(id)
+header, data = pull_data_by_lift(lift_id)
 
-# loads in time between reps
+# Establish expectations on time between reps and within reps
 irts = events.loc[events['lift_type'].eq(header['lift_type'])].groupby('lift_id').apply(lambda df: calc_rep_times(df))
-inters = irts.xs([id, 'inter_rep'], level=[0, 1])
+inters = irts.xs([lift_id, 'inter_rep'], level=[0, 1])
 min_irt = max(inters.min().values[0], 1.)
-intras = irts.xs([id, 'intra_rep'], level=[0, 1])
+intras = irts.xs([lift_id, 'intra_rep'], level=[0, 1])
 min_intra = max(intras.min().values[0], 1.)
 
-# process acceleration and calculate a/v/pwr/pos/f
-a, v, _, _, _ = process_data(header, data, inits={'a_z': {'x': 0, 'y': 0}}, RMS=False, highpass=True)
-events = events.loc[events['lift_id'].eq(id)]
+# ### offline ###
 
-r = range(data.shape[0])
-sig = v['v_z'].iloc[r].copy()
-vel_ = pd.Series(filter_signal(sig.values, {'x': 0, 'y': 0}, 'highpass', freqs=[.1, None], fs=header['sampling_rate'], filter_order=1), name='v_z')
-
-plt.figure()
-plt.plot(sig, color='black', alpha=0.5, label='orig')
-plt.plot(vel_, color='blue', alpha=0.5, linestyle='dashed', label='filtered')
-plt.legend()
-
-x = vel_.rolling(window=10, min_periods=0, center=False).apply(np.mean).fillna(0.)
-v_ = vel_.rolling(window=10, min_periods=0, center=False).apply(lambda y: np.abs(np.mean(sorted(y)[3:-3]))).fillna(0.)
-var_ = vel_.rolling(window=10, min_periods=0, center=False).apply(lambda y: np.var(sorted(y)[2:-2])).fillna(0.)
-t = data['timepoint'].iloc[r]
-
-var_max = max(var_)
-mask_var = (var_ > 0.02*var_max) * 1
-v_m = mask_var.rolling(window=10, min_periods=0, center=False).apply(np.mean)
-
-plt.figure()
-plt.plot(t, vel_, color='black')
-plt.plot(t, var_, color='green', alpha=0.5)
-plt.plot(t, mask_var, color='purple', alpha=0.5)
-
+# # process acceleration and calculate a/v/pwr/pos/f
+# a, v, _, _, _ = process_data(header, data, inits={'a_z': {'x': 0, 'y': 0}}, RMS=False, highpass=True)
+# events = events.loc[events['lift_id'].eq(lift_id)]
+#
+# r = range(data.shape[0])
+# sig = v['v_z'].iloc[r].copy()
+# vel_ = pd.Series(filter_signal(sig.values, {'x': 0, 'y': 0}, 'highpass', freqs=[.1, None], fs=header['sampling_rate'], filter_order=1), name='v_z')
+#
+# x = vel_.rolling(window=10, min_periods=0, center=False).apply(np.mean).fillna(0.)
+# v_ = vel_.rolling(window=10, min_periods=0, center=False).apply(lambda y: np.abs(np.mean(sorted(y)[3:-3]))).fillna(0.)
+# var_ = vel_.rolling(window=10, min_periods=0, center=False).apply(lambda y: np.var(sorted(y)[2:-2])).fillna(0.)
+# t = data['timepoint'].iloc[r]
+#
+# var_max = max(var_)
+# mask_var = (var_ > 0.02*var_max) * 1
+# v_m = mask_var.rolling(window=10, min_periods=0, center=False).apply(np.mean)
+#
+# plt.figure()
+# plt.plot(t, vel_, color='black')
+# plt.plot(t, var_, color='green', alpha=0.5)
+# plt.plot(t, mask_var, color='purple', alpha=0.5)
+#
 # for _, e in events.loc[events['timepoint'] < t.iloc[-1]].iterrows():
 #     c = 'g' if 'start' in e['event'] else 'r'
 #     plt.axvline(e['timepoint'], color=c, linestyle='dashed')
 
 # ### REAL-TIME EMULATOR ###
 
-
 t_min = 0
 t_max = data.shape[0]
-
-prev_val = 0
 
 # build time series of 30 samples at a time; one packet = 30 samples
 packet_size = header['sampling_rate']
 sampling_rate = header['sampling_rate']
 
-# n = int(np.ceil((data.shape[0]) / float(packet_size))) + 1
-n = int(t_max/float(packet_size))
+n = int(np.ceil((t_max-t_min)/packet_size))
 
 sig_track = pd.Series()
 a_track = pd.Series()
 p_track = pd.Series()
 prev_dat = []
+
 # initial_conditions
 prev_vz = 0.
 prev_filt_vz = 0.
@@ -197,8 +193,6 @@ for i in range(1, n+1):
 plt.figure(2)
 plt.title('Detector Output')
 plt.plot(data['timepoint'], sig_track, 'blue', alpha=0.75, label='online_vz')
-# plt.plot(data['timepoint'], vel_, 'black', alpha=0.5, label='offline_filt')
-# plt.plot(data['timepoint'], p_track, 'purple', alpha=0.5, label='var_trigger')
 plt.legend()
 
 start_ts = [x/sampling_rate for x in starts]
@@ -210,7 +204,7 @@ for i, start in enumerate(start_ts):
     plt.axvline(stop_ts[i], color='r', linestyle='dashed')
 
 # plot labeled points
-for _, e in events.loc[events['timepoint'] < t_max].iterrows():
+for _, e in events.loc[(events['timepoint'] < t_max) & (events['lift_id'].eq(lift_id))].iterrows():
     c = 'g' if 'start' in e['event'] else 'r'
     plt.axvline(e['timepoint'], color=c, linestyle='solid')
 
