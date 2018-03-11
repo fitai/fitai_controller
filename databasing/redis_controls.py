@@ -5,23 +5,25 @@ from json import loads, dumps
 #: Instantiate a default tracker object
 #: All fields that trigger logic are commented. DO NOT CHANGE
 def get_default_tracker():
-    return {'tracker_id': 'None'
-            , 'athlete_id': 0
-            , 'lift_id': 'None'
-            , 'created_at': 'None'
-            , 'lift_type': "Barbell Deadlift"
-            , 'lift_weight': 100
-            , 'weight_units': "lbs"
-            , 'init_num_reps': 0
-            , 'final_num_reps': None
-            , 'calc_reps': 0
-            , 'max_t': 0.
-            , 'sampling_rate': 20.
-            , 'updated_at': 'None'
-            , 'push_header': False
-            , 'prev_az': 0.
-            , 'prev_filt_az': 0.
-            }
+    tracker = {
+        'tracker_id': 'None'
+        , 'athlete_id': 0
+        , 'lift_id': 'None'
+        , 'created_at': 'None'
+        , 'lift_type': 'Barbell Deadlift'
+        , 'lift_weight': 100
+        , 'weight_units': 'lbs'
+        , 'init_num_reps': 0
+        , 'final_num_reps': None
+        , 'calc_reps': 0
+        , 'max_t': 0.
+        , 'sampling_rate': 20.
+        , 'updated_at': 'None'
+        , 'push_header': False
+        , 'prev_az': 0.
+        , 'prev_filt_az': 0.
+    }
+    return tracker
 
 
 #: Opens connection to redis server on whichever host is passed

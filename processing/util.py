@@ -155,7 +155,7 @@ def process_data(tracker_obj, content, inits={}, RMS=False, highpass=True, verbo
 def prep_tracker(tracker, head, thresh_dict):
 
     # Quick check that at least one expected field is in tracker object
-    if 'pwr_x_thresh' not in tracker.keys():
+    if 'prev_az' not in tracker.keys():
         print 'Redis tracker object {} appears broken. ' \
               'Will replace with default and update as needed.'.format(tracker['tracker_id'])
         tracker_tmp = tracker.copy()
