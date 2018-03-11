@@ -65,7 +65,6 @@ intras = irts.xs([lift_id, 'intra_rep'], level=[0, 1])
 min_intra = max(intras.min().values[0], 1.)
 
 # Initial conditions/variables, specific to detector
-
 t_min = 0
 t_max = data.shape[0]
 
@@ -92,6 +91,7 @@ prev_filt_vz = 0.
 prev_az = 0.
 prev_filt_az = 0.
 t_prev = 0.
+n_reps = 0.
 hold = False
 
 # detector parameters
@@ -131,12 +131,13 @@ for i in range(1, n+1):
         , 'min_intra_samples': min_intra_samples
         , 'starts': starts
         , 'stops': stops
+        , 'n_reps': n_reps
         , 't_min': t_min
         # extra, just for plotting purposes:
         , 'sig_track': sig_track
         , 'p_track': p_track
     }
-    sig, prev_dat, hold, cross_track, ts, sig_track, p_track = run_detector(**detector_input)
+    sig, prev_dat, hold, cross_track, ts, n_reps, sig_track, p_track = run_detector(**detector_input)
 
     # initial conditions for next loop
     prev_vz = vel['v_z'].iloc[-1]

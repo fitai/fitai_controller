@@ -15,6 +15,7 @@ bin_size = 1.  # Number of samples to collect before processing the signal (floa
 ALL_SIGS = [x + y for (x, y) in product(['a', 'v', 'pwr', 'pos', 'force'], ['_x', '_y', '_z'])]
 ALL_THRESH = [x+'_thresh' for x in ALL_SIGS]
 
+
 #: Returns dict of lift_type: adjusted_thresholds
 #: Where adjusted_thresholds is a dict of a/v/p_thresh: threshold_value
 #: So, per lift type, this function should return a dict of 3 threshold values, one for each signal type
@@ -159,8 +160,7 @@ def learn_on_lift_id(lift_id, smooth, alpha, plot, verbose):
             #: Force break if err can't get to 0
             if cnt > int(300./alpha):
                 print 'lift_id {l} ({t}): Couldnt converge to 0 error after {n} iterations. ' \
-                      '(error: {e} reps). Breaking..'.format(
-                    t=header['lift_type'], l=lift_id, n=cnt, e=err)
+                      '(error: {e} reps). Breaking..'.format(t=header['lift_type'], l=lift_id, n=cnt, e=err)
                 break
 
         #: Store are pieces necessary to build plots for EACH signal

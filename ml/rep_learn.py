@@ -10,7 +10,7 @@ from processing.filters import filter_signal
 
 # attempts to find start/stop points in incoming signal
 def run_detector(vel, sampling_rate, prev_dat, prev_vz, prev_filt_vz, packet_size, t_prev, hold, cross_track, ts,
-                 var_max, min_irt_samples, min_intra_samples, starts, stops, t_min, sig_track, p_track):
+                 var_max, min_irt_samples, min_intra_samples, starts, stops, n_reps, t_min, sig_track, p_track):
     sig = vel['v_z']
     v0 = {'x': prev_vz, 'y': prev_filt_vz}
     sig = Series(filter_signal(sig.values, v0, 'highpass', [.1, None], sampling_rate, 1), index=sig.index, name='v_z')
@@ -51,7 +51,7 @@ def run_detector(vel, sampling_rate, prev_dat, prev_vz, prev_filt_vz, packet_siz
             crossings = crossings.loc[tc:]  # slice out anything before first positive crossing
         elif len(cross_track) == 0 and any(crossings == -1) and (crossings.shape[0] == 1):
             # only one crossing, and it's negative; do not log this
-            return sig, prev_dat, hold, cross_track, ts, sig_track, p_track
+            return sig, prev_dat, hold, cross_track, ts, n_reps, sig_track, p_track
 
         # update tracking variables
         if len(cross_track) == 0:
@@ -62,7 +62,7 @@ def run_detector(vel, sampling_rate, prev_dat, prev_vz, prev_filt_vz, packet_siz
             ts += list(crossings.index)
 
         if len(cross_track) < 2:
-            return sig, prev_dat, hold, cross_track, ts, sig_track, p_track
+            return sig, prev_dat, hold, cross_track, ts, n_reps, sig_track, p_track
         elif len(cross_track) > 2:
             if ts[2] - ts[1] > min_irt_samples:
                 hold_c = cross_track[2:]  # preserve future crossings
@@ -77,6 +77,8 @@ def run_detector(vel, sampling_rate, prev_dat, prev_vz, prev_filt_vz, packet_siz
             starts.append(ts[0] - t_min)
             stops.append(ts[1] - t_min)
             t_prev = ts[1]
+            n_reps += 1
+            print('user at {} reps'.format(n_reps))
 
         # triggers when len(cross_track) >= 4
         # clear tracking variables
@@ -90,4 +92,4 @@ def run_detector(vel, sampling_rate, prev_dat, prev_vz, prev_filt_vz, packet_siz
         # because of the "and" in the if condition, hard-reset hold each time this triggers, just in case
         hold = False
 
-    return sig, prev_dat, hold, cross_track, ts, sig_track, p_track
+    return sig, prev_dat, hold, cross_track, ts, n_reps, sig_track, p_track
