@@ -10,8 +10,8 @@ from processing.filters import filter_signal
 
 # attempts to find start/stop points in incoming signal
 def run_detector(vel, sampling_rate, prev_dat, prev_vz, prev_filt_vz, packet_size, t_prev, hold, cross_track, ts,
-                 var_max, min_irt_samples, min_intra_samples, starts, stops, n_reps, t_min, sig_track, p_track):
-    sig = vel['v_z']
+                 var_max, min_irt_samples, min_intra_samples, starts, stops, n_reps, t_min, sig_track=None, p_track=None):
+    sig = vel.copy()
     v0 = {'x': prev_vz, 'y': prev_filt_vz}
     sig = Series(filter_signal(sig.values, v0, 'highpass', [.1, None], sampling_rate, 1), index=sig.index, name='v_z')
 
@@ -29,8 +29,10 @@ def run_detector(vel, sampling_rate, prev_dat, prev_vz, prev_filt_vz, packet_siz
         # var_ = var_.iloc[packet_size:]  # used for tracking signal
         prev_dat[0] = sig  # overwrite old packet
 
-    sig_track = sig_track.append(sig)
-    p_track = p_track.append(p_)
+    if sig_track is not None:
+        sig_track = sig_track.append(sig)
+    if p_track is not None:
+        p_track = p_track.append(p_)
 
     # look for crossings
     # any positive values represent crossings from 0 to 1

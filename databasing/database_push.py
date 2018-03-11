@@ -10,7 +10,7 @@ from databasing.conn_strings import db_conn_string
 conn = create_engine(db_conn_string)
 
 
-def push_to_db(header, content, crossings):
+def push_to_db(header, content):
     if header is not None:
         if header['push_header'].iloc[0]:
             print 'pushing collar metadata to db...'

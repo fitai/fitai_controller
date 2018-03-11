@@ -65,14 +65,6 @@ intras = irts.xs([lift_id, 'intra_rep'], level=[0, 1])
 min_intra = max(intras.min().values[0], 1.)
 
 # Initial conditions/variables, specific to detector
-t_min = 0
-t_max = data.shape[0]
-
-# build time series of 30 samples at a time; one packet = 30 samples
-packet_size = header['sampling_rate']
-sampling_rate = header['sampling_rate']
-
-n = int(np.ceil((t_max-t_min)/packet_size))
 
 # signal tracking
 sig_track = pd.Series()
@@ -102,6 +94,15 @@ min_intra_samples = 60
 # min_intra_samples = min_intra * header['sampling_rate']
 
 # ### Real-Time Emulator
+# initial conditions
+t_min = 0
+t_max = data.shape[0]
+
+# build time series of 30 samples at a time; one packet = 30 samples
+packet_size = header['sampling_rate']
+sampling_rate = header['sampling_rate']
+n = int(np.ceil((t_max-t_min)/packet_size))
+
 for i in range(1, n+1):
     t0 = t_min+(i-1)*packet_size
     t1 = t_min+i*packet_size   # right-exclude
@@ -116,7 +117,7 @@ for i in range(1, n+1):
 
     # these will likely change a lot, so use kwargs input to keep things easy
     detector_input = {
-        'vel': vel
+        'vel': vel['v_z']
         , 'sampling_rate': sampling_rate
         , 'prev_dat': prev_dat
         , 'prev_vz': prev_vz
