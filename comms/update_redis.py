@@ -13,7 +13,7 @@ except NameError:
 
 from databasing.database_pull import lift_to_json, pull_max_lift_id
 from databasing.database_push import update_calc_reps
-from databasing.redis_controls import establish_redis_client, update_collar_by_id, get_default_collar
+from databasing.redis_controls import establish_redis_client, update_tracker_by_id, get_default_collar
 from databasing.conn_strings import redis_host
 from comms.mqtt_client import redis_client
 
@@ -166,7 +166,7 @@ def main(args):
             update_lift_id = False
             collar = dat
 
-        response = update_collar_by_id(redis_client, collar, collar['tracker_id'], verbose)
+        response = update_tracker_by_id(redis_client, collar, collar['tracker_id'], verbose)
         collar_stat = str(collar['tracker_id']) + '_status'
         redis_client.set(collar_stat, 'stale')
 

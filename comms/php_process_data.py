@@ -9,7 +9,7 @@ from pandas import DataFrame
 # except NameError:
 #     print 'working in Dev mode.'
 
-from databasing.redis_controls import establish_redis_client, retrieve_collar_by_id, update_collar_by_id
+from databasing.redis_controls import establish_redis_client, retrieve_tracker_by_id, update_tracker_by_id
 from processing.util import read_header_mqtt, read_content_mqtt, process_data, prep_collar
 from databasing.conn_strings import redis_host
 
@@ -39,7 +39,7 @@ def main(argv):
 
     header = read_header_mqtt(data)
 
-    collar = prep_collar(retrieve_collar_by_id(redis_client, header['tracker_id']), header, None)
+    collar = prep_collar(retrieve_tracker_by_id(redis_client, header['tracker_id']), header, None)
 
     accel = read_content_mqtt(data, collar)
 

@@ -11,19 +11,19 @@ except NameError:
     syspath.append('/Users/kyle/PycharmProjects/fitai_controller')
     print 'Working in Dev mode.'
 
-from databasing.redis_controls import retrieve_collar_by_id, update_collar_by_id, establish_redis_client
+from databasing.redis_controls import retrieve_tracker_by_id, update_tracker_by_id, establish_redis_client
 from databasing.redis_conn_strings import redis_host
 
 
 def reset_reps(tracker_id):
     redis_client = establish_redis_client(hostname=redis_host)
 
-    collar = retrieve_collar_by_id(redis_client, tracker_id)
+    collar = retrieve_tracker_by_id(redis_client, tracker_id)
     collar['calc_reps'] = 0
 
     print 'pushing reset through pipeline'
 
-    res = update_collar_by_id(redis_client, collar, collar['tracker_id'], verbose=False)
+    res = update_tracker_by_id(redis_client, collar, collar['tracker_id'], verbose=False)
 
     if res:
         print 'Successfully reset reps on collar {}'.format(tracker_id)
