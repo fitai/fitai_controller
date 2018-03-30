@@ -152,7 +152,7 @@ def mqtt_on_message(client, userdata, msg):
             if 'lift_start' in tracker.keys():
                 tracker.pop('lift_start')
             header = DataFrame(data=tracker, index=[0]).drop(
-                ['active', 'curr_state', 'max_t'] + ALL_THRESH,
+                ['active', 'curr_state', 'max_t'],
                 axis=1)
             content = merge(accel, gyro, on='timepoint', how='left').fillna(0.)
 
