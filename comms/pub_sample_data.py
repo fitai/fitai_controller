@@ -19,7 +19,7 @@ except NameError:
     print 'Working in Dev mode.'
 
 from databasing.database_pull import pull_data_by_lift
-from databasing.redis_controls import reset_collar_by_id
+from databasing.redis_controls import reset_tracker_by_id
 
 
 # The callback for when the client successfully connects to the broker
@@ -79,7 +79,7 @@ def establish_cli_parser():
                       help='Specific lift_id to use as data source.')
     parser.add_option('-s', '--sleep', dest='sleep_time', default=None,
                       help='Delay between sending packets (in seconds).')
-    parser.add_option('-c', '--collar', dest='tracker_id', default='555',
+    parser.add_option('-c', '--tracker', dest='tracker_id', default='555',
                       help='Specify a tracker to use, other than 555 (default)')
     parser.add_option('-a', '--athlete', dest='athlete_id', default=None,
                       help='Specify an athlete_id to pass in')
@@ -109,7 +109,7 @@ def main(args):
     mqtt_client = establish_client(host_ip, host_port, mqtt_topic)
 
     #: Set tracker_id to default values
-    reset_collar_by_id(tracker_id)
+    reset_tracker_by_id(tracker_id)
 
     #: Delay between packets, in seconds
     if sleep_time is None:

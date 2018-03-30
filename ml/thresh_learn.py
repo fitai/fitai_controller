@@ -262,19 +262,19 @@ def learn_on_lift_id(lift_id, smooth, alpha, plot, verbose):
 
 
 # From an input power vector, detect any change in state and increment
-def calc_reps((acc, vel, pwr, pos, force), collar):
+def calc_reps((acc, vel, pwr, pos, force), tracker):
     """
     Simple - a crossing of ALL the thresholds (a, v, p) indicates a change in state. From this, determine where the
     user was (in the state-space), and adjust accordingly.
 
-    Takes determination of current state and calculated number of reps and updates collar object with info. Passes
-    back any crossings determined and the updated collar object.
+    Takes determination of current state and calculated number of reps and updates tracker object with info. Passes
+    back any crossings determined and the updated tracker object.
 
     :param acc: list-like acceleration vector. will be converted to pandas Series
     :param vel: list-like velocity vector. will be converted to pandas Series
     :param pwr: list-like power vector. will be converted to pandas Series
     :param pos: list-like position vector. will be converted to pandas Series
-    :param collar: (dict) dictionary with relevant metadata for the collar collecting this data
+    :param tracker: (dict) dictionary with relevant metadata for the tracker collecting this data
     :return:
     """
 
@@ -283,16 +283,16 @@ def calc_reps((acc, vel, pwr, pos, force), collar):
     # v_thresh = 1.
     # p_thresh = 1.
 
-    n_reps = collar['calc_reps']
-    state = collar['curr_state']
+    n_reps = tracker['calc_reps']
+    state = tracker['curr_state']
 
     data = acc.join(vel).join(pwr).join(pos).join(force)
 
     diff_data = DataFrame()
     for label in ALL_SIGS:
         t_label = label + '_thresh'
-        if t_label in collar.keys():
-            thresh = collar[t_label]
+        if t_label in tracker.keys():
+            thresh = tracker[t_label]
         else:
             thresh = 1.
 
@@ -355,20 +355,20 @@ def calc_reps((acc, vel, pwr, pos, force), collar):
         else:
             new_state = 'rest'
 
-        crossings['timepoint'] = (collar['max_t'] + crossings.index * (1. / collar['sampling_rate'])).values
-        crossings['lift_id'] = collar['lift_id']
+        crossings['timepoint'] = (tracker['max_t'] + crossings.index * (1. / tracker['sampling_rate'])).values
+        crossings['lift_id'] = tracker['lift_id']
 
     # If there aren't any crossings, then just return whatever came in
     else:
         new_state = state
         crossings = None
 
-    # update state of user via 'collar' dict
-    collar['calc_reps'] = n_reps
-    collar['curr_state'] = new_state
-    collar['max_t'] += len(acc) * 1. / collar['sampling_rate']  # track the last timepoint
+    # update state of user via 'tracker' dict
+    tracker['calc_reps'] = n_reps
+    tracker['curr_state'] = new_state
+    tracker['max_t'] += len(acc) * 1. / tracker['sampling_rate']  # track the last timepoint
 
-    return collar, crossings
+    return tracker, crossings
 
 
 #: Plot error curve (distance between estimated reps and actual reps

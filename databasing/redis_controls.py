@@ -54,14 +54,14 @@ def retrieve_tracker_by_id(redis_client=None, tracker_id=None, verbose=True):
         tracker_obj = loads(redis_client.get(tracker_id))
     except TypeError:
         if verbose:
-            print 'Collar {} not found in Redis. Will create new'.format(tracker_id)
+            print 'Tracker {} not found in Redis. Will create new'.format(tracker_id)
         # For whatever reason, I am making all this the default tracker values
         # Should only occur for DEV purposes
         tracker_obj = get_default_tracker()
         tracker_obj['tracker_id'] = tracker_id
     except ValueError:
         if verbose:
-            print 'Collar {} somehow corrupted and no longer a JSON string. Will create new.'.format(tracker_id)
+            print 'Tracker {} somehow corrupted and no longer a JSON string. Will create new.'.format(tracker_id)
         tracker_obj = get_default_tracker()
         tracker_obj['tracker_id'] = tracker_id
 
