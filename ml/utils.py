@@ -44,6 +44,7 @@ def prox_ordered_dists(s1, s2, remove_s2=[]):
     # values must go in order, but value from s1 is matched with closest of its neighbors in s2
     dists = []
     removed = []
+    disalignment_score=[]
     for i, val in enumerate(s1):
         if i < len(s2) - 1:
             d_l = np.abs(val-s2[i])  # distance to left point in s2
@@ -52,6 +53,13 @@ def prox_ordered_dists(s1, s2, remove_s2=[]):
             shift = np.argmin([d_l, d_r])
             dist = np.abs(val - s2[i+shift])
             dists.append(dist)
+
+            #keep track of instances where two the distance are calculated for the same event
+            if previous_shift==1 and shift==0: 
+                disalignment_score.append(i)
+
+
+            previous_shift=shift
 
             # the values in s1 skipped a value in s2 and all downstream points in s1 will be thrown off unless
             # this is accounted for
@@ -64,8 +72,11 @@ def prox_ordered_dists(s1, s2, remove_s2=[]):
 
     m = np.mean(dists)
     s = np.std(dists)
+    #disalignment score (number of disalignments)
+    ds = len(disalignment_score)
 
-    return m, s, removed
+
+    return m, s, removed, ds
 
 
 def truncate(s1, s2):
