@@ -3,15 +3,15 @@ from json import dumps
 
 
 # TODO - clean this up, too much overhead
-def prep_message(collar_obj, vel, pwr):
+def prep_message(tracker_obj, vel, pwr):
     now = dt.now()
-    if isinstance(collar_obj['created_at'], type(now)):
-        collar_obj['created_at'] = dt.strftime(collar_obj['created_at'], '%Y-%m-%d %H:%M:%S')
-    if isinstance(collar_obj['updated_at'], type(now)):
-        collar_obj['updated_at'] = dt.strftime(collar_obj['updated_at'], '%Y-%m-%d %H:%M:%S')
+    if isinstance(tracker_obj['created_at'], type(now)):
+        tracker_obj['created_at'] = dt.strftime(tracker_obj['created_at'], '%Y-%m-%d %H:%M:%S')
+    if isinstance(tracker_obj['updated_at'], type(now)):
+        tracker_obj['updated_at'] = dt.strftime(tracker_obj['updated_at'], '%Y-%m-%d %H:%M:%S')
 
-    msg_dict = {"header": collar_obj,
-                "rep_count": collar_obj['calc_reps'],
+    msg_dict = {"header": tracker_obj,
+                "rep_count": tracker_obj['calc_reps'],
                 "content":
                     {"v_rms": list(vel['rms']),
                      "p_rms": list(pwr['rms'])}
@@ -20,11 +20,11 @@ def prep_message(collar_obj, vel, pwr):
     return msg
 
 
-def redis_pub(redis_client, redis_channel, collar_obj, vals, source):
+def redis_pub(redis_client, redis_channel, tracker_obj, vals, source):
 
     if source == 'real_time':
         vel, pwr = vals[1], vals[2]  # pull out relevant entries
-        msg = prep_message(collar_obj, vel, pwr)
+        msg = prep_message(tracker_obj, vel, pwr)
     elif source == 'rfid':
         msg = vals  # pass message payload directly
     else:

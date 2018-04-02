@@ -1,10 +1,7 @@
-from scipy.signal import butter, lfilter
+from scipy.signal import butter, lfilter, lfilter_zi
 import numpy as np
-# import matplotlib.pyplot as plt
-from scipy.signal import freqz
 
 
-#: TODO: Replace butter_bandpass/highpass/lowpass with the relevant math. iOS may not have packages to support
 #: calculating numerators/denominators. May also want to implement the filtering in basic math.
 def butter_bandpass(lowcut, highcut, fs, order):
     nyq = 0.5 * fs
@@ -29,15 +26,20 @@ def butter_lowpass(highcut, fs, order):
     return b, a
 
 
-def butter_lowpass_filter(data, highcut, fs, order=5):
+def butter_lowpass_filter(signal, y0, highcut, fs, order):
     b, a = butter_lowpass(highcut, fs, order=order)
-    y = lfilter(b, a, data)
+    y = lfilter(b, a, signal)
     return y
 
 
-def butter_highpass_filter(data, lowcut, fs, order=5):
+def butter_highpass_filter(signal, y0, lowcut, fs, order):
     b, a = butter_highpass(lowcut, fs, order=order)
-    y = lfilter(b, a, data)
+    # zi = lfilter_zi(b, a)
+    zi = [y0['y']]
+
+    signal = np.insert(signal, 0, y0['x'])  # insert initial condition
+    y, _ = lfilter(b, a, signal, zi=zi)
+    y = y[1:]  # remove initial condition
     return y
 
 
@@ -48,32 +50,19 @@ def butter_bandpass_filter(data, lowcut, highcut, fs, order=5):
 
 
 #: Starting with the bandpass filter, but want to
-def filter_signal(signal, filter_type='bandpass', f_low=1.0, f_high=40., fs=100., filter_order=3):
+def filter_signal(signal, y0, filter_type, freqs, fs, filter_order):
     #: Apply filter
     if filter_type == 'highpass':
-        y = butter_highpass_filter(signal, lowcut=f_low, fs=fs, order=filter_order)
+        # y = butter_highpass_filter(signal, y0, lowcut=freqs[0], fs=fs, order=filter_order)
+        y = simple_highpass(signal, y0, fc=freqs[0], fs=fs)
 
     elif filter_type == 'bandpass':
-        y = butter_bandpass_filter(signal, lowcut=f_low, highcut=f_high, fs=fs, order=filter_order)
+        y = butter_bandpass_filter(signal, lowcut=freqs[0], highcut=freqs[1], fs=fs, order=filter_order)
 
     elif filter_type == 'lowpass':
-        y = butter_lowpass_filter(signal, highcut=f_high, fs=fs, order=filter_order)
+        y = butter_lowpass_filter(signal, highcut=freqs[1], fs=fs, order=filter_order)
 
     return y
-
-
-#: Will want to look in to the specifics of scipy.freqz so that we can recreate this, if need be, in the app
-# def plot_frequency_response(b, a, cutoff, fs):
-#     # Plot the frequency response.
-#     w, h = freqz(b, a, worN=8000)
-#     # plt.subplot(2, 1, 1)
-#     plt.plot(0.5*fs*w/np.pi, np.abs(h), 'b')
-#     plt.plot(cutoff, 0.5*np.sqrt(2), 'ko')
-#     plt.axvline(cutoff, color='k')
-#     plt.xlim(0, 0.5*fs)
-#     plt.title("Lowpass Filter Frequency Response")
-#     plt.xlabel('Frequency [Hz]')
-#     plt.grid()
 
 
 def running_mean(x, n):
@@ -81,11 +70,23 @@ def running_mean(x, n):
     return (cumsum[n:] - cumsum[:-n]) / float(n)
 
 
-def simple_highpass(curr_raw, prev_raw, prev_filtered, fc=1., fs=100.):
-
-    RC = 1. / (fc * 2. * 3.14)
+# y0 = {'x': x0, 'y': y0}
+def simple_highpass(signal, y0, fc=.1, fs=30.):
+    # establish constants
+    RC = 1. / (fc * 2. * np.pi)
     dt = 1. / fs
     alpha = RC / (RC + dt)
 
-    output = alpha * (prev_filtered + curr_raw - prev_raw)
-    return output
+    # initial code
+    # set initial conditions (grows signal by 1 (temporary))
+    filt = [y0['y']]
+    signal = np.insert(signal, 0, y0['x'])
+
+    for i in range(1, len(signal)):
+        x = alpha * (filt[-1] + signal[i] - signal[i-1])  # y[i] := alpha * y[i-1] + alpha * (x[i] - x[i-1])
+        filt.append(x)
+
+    # remove inserted initial condition point
+    filt = filt[1:]
+
+    return filt

@@ -22,7 +22,7 @@ from comms.redis_pubsub import redis_pub
 # Attempt to connect to redis server
 redis_client = establish_redis_client(hostname=redis_host, verbose=True)
 
-# If connection fails, MQTT client will not be able to update collar object, and will be useless. Kill and try again
+# If connection fails, MQTT client will not be able to update tracker object, and will be useless. Kill and try again
 if redis_client is None:
     print 'Couldnt connect to redis. Killing MQTT client.'
     exit(100)

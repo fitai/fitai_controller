@@ -1,10 +1,11 @@
 import sys
 from pandas import DataFrame
 from datetime import datetime as dt
+from copy import copy
 
 from processing.functions import calc_integral, calc_rms, calc_power, calc_force, calc_pos
 from processing.filters import filter_signal
-from databasing.redis_controls import get_default_collar
+from databasing.redis_controls import get_default_tracker
 
 
 def read_header_mqtt(data):
@@ -17,7 +18,7 @@ def read_header_mqtt(data):
     return head
 
 
-def read_content_mqtt(data, collar_obj):
+def read_content_mqtt(data, tracker_obj):
     try:
         dat = DataFrame(data['content'])
     except AttributeError:
@@ -27,20 +28,20 @@ def read_content_mqtt(data, collar_obj):
         dat = dat.reset_index().rename(columns={'index': 'timepoint'})
         a_cols = [x for x in dat.columns if 'a_' in x]
         g_cols = [x for x in dat.columns if 'g_' in x]
-        accel = dat[a_cols + ['timepoint', 'millis']]
-        gyro = dat[g_cols + ['timepoint']]
+        accel = dat.loc[:, a_cols + ['timepoint', 'millis']]
+        gyro = dat.loc[:, g_cols + ['timepoint']]
 
     try:
         # Scale timepoint values
-        accel['timepoint'] = accel['timepoint'].astype(float) / float(collar_obj['sampling_rate'])
-        gyro['timepoint'] = gyro['timepoint'].astype(float) / float(collar_obj['sampling_rate'])
+        accel['timepoint'] = accel['timepoint'].astype(float) / float(tracker_obj['sampling_rate'])
+        gyro['timepoint'] = gyro['timepoint'].astype(float) / float(tracker_obj['sampling_rate'])
     except KeyError:
         print 'Couldnt extract sample rate from header. Defaulting to 20 Hz'
         accel['timepoint'] = accel['timepoint'].astype(float) / 20.
         gyro['timepoint'] = gyro['timepoint'].astype(float) / 20.
 
     try:
-        accel['lift_id'] = collar_obj['lift_id']
+        accel['lift_id'] = tracker_obj['lift_id']
     except KeyError:
         print 'Couldnt extract lift_id from header'
         accel['lift_id'] = 0
@@ -81,15 +82,13 @@ def extract_sampling_rate(header):
 # Expects a dataframe with known fields
 # Timepoint, a_x, (a_y, a_z), lift_id
 #: NOTE: default is to process accel & vel into RMS signals
-def process_data(collar_obj, content, RMS=False, highpass=True, verbose=False):
+def process_data(tracker_obj, content, inits={}, RMS=False, highpass=True, verbose=False):
     if not isinstance(content, DataFrame):
         if verbose:
             print 'Content (type {}) is not a dataframe. Will try to convert...'.format(type(content))
         content = DataFrame(content)
 
-    # Drop columns that contain more than 10% missing values
-    x = content.isnull().sum(axis=0) > 0.1*content.shape[0]
-    content = content.loc[:, x.loc[~x].index]
+    content = copy(content)
 
     #: Establish column headers so that any piece of the function can access
     accel_headers = [x for x in content.columns if x in ['a_x', 'a_y', 'a_z']]
@@ -98,13 +97,17 @@ def process_data(collar_obj, content, RMS=False, highpass=True, verbose=False):
     pos_headers = ['pos_' + x.split('_')[-1] for x in accel_headers]
     force_headers = ['force_' + x.split('_')[-1] for x in accel_headers]
 
-    # Try to impose high pass on acceleration - see if it will fix the velocity drift
     if highpass:
         for col in accel_headers:
-            content[col] = filter_signal(content[col], filter_type='highpass', f_low=0.1, fs=collar_obj['sampling_rate'])
+            if col in inits.keys():
+                y0 = inits[col]  # runs online HP code; adjusts for initial offsets
+            else:
+                y0 = {'x': 0, 'y': 0}
 
-    fs = extract_sampling_rate(collar_obj)
-    weight = extract_weight(collar_obj, verbose)
+            content[col] = filter_signal(content[col].values, y0, 'highpass', freqs=[.6, None], fs=tracker_obj['sampling_rate'], filter_order=1)
+
+    fs = extract_sampling_rate(tracker_obj)
+    weight = extract_weight(tracker_obj, verbose)
 
     if len(accel_headers) == 0:
         if verbose:
@@ -117,11 +120,11 @@ def process_data(collar_obj, content, RMS=False, highpass=True, verbose=False):
         # then combine into RMS signal
         vel = DataFrame(columns=vel_headers)
         for i, header in enumerate(accel_headers):
-            vel[vel_headers[i]] = calc_integral(content[header], scale=1., fs=fs)
-
-        pwr = DataFrame(columns=pwr_headers)
-        for i in range(len(accel_headers)):
-            pwr[pwr_headers[i]] = calc_power(content[accel_headers[i]], vel[vel_headers[i]], weight)
+            if 'z' in header and 'v_z' in inits.keys():
+                v0 = inits['v_z']
+            else:
+                v0 = 0.
+            vel[vel_headers[i]] = calc_integral(content[header], v0, scale=1., fs=fs)
 
         pos = DataFrame(columns=pos_headers)
         for i, header in enumerate(accel_headers):
@@ -130,6 +133,10 @@ def process_data(collar_obj, content, RMS=False, highpass=True, verbose=False):
         force = DataFrame(columns=force_headers)
         for i, header in enumerate(accel_headers):
             force[force_headers[i]] = calc_force(content[header], weight)
+
+        pwr = DataFrame(columns=pwr_headers)
+        for i in range(len(accel_headers)):
+            pwr[pwr_headers[i]] = calc_power(content[accel_headers[i]], vel[vel_headers[i]], weight)
 
     if RMS:
         a = calc_rms(content, accel_headers).to_frame()
@@ -145,56 +152,56 @@ def process_data(collar_obj, content, RMS=False, highpass=True, verbose=False):
     return a, v, pwr, pos, force
 
 
-def prep_collar(collar, head, thresh_dict):
+def prep_tracker(tracker, head, thresh_dict):
 
-    # Quick check that at least one expected field is in collar object
-    if 'pwr_x_thresh' not in collar.keys():
-        print 'Redis collar object {} appears broken. ' \
-              'Will replace with default and update as needed.'.format(collar['tracker_id'])
-        collar_tmp = collar.copy()
-        collar = get_default_collar()
-        collar.update(collar_tmp)
+    # Quick check that at least one expected field is in tracker object
+    if 'prev_az' not in tracker.keys():
+        print 'Redis tracker object {} appears broken. ' \
+              'Will replace with default and update as needed.'.format(tracker['tracker_id'])
+        tracker_tmp = tracker.copy()
+        tracker = get_default_tracker()
+        tracker.update(tracker_tmp)
 
     # The only piece of information from the device not provided by the frontend:
-    collar['sampling_rate'] = head['sampling_rate']
+    tracker['sampling_rate'] = head['sampling_rate']
 
     # TODO: Don't like doing all these checks. Think of a more efficient way...
-    # If collar is newly generated, threshold will be 'None'
+    # If tracker is newly generated, threshold will be 'None'
     # Don't want to check all 15 possible fields being 'None', so just check a couple
-    if any([(collar[col] == 'None') for col in ['a_x_thresh', 'v_x_thresh', 'pwr_x_thresh', 'pos_x_thresh']]):
-        print 'Missing at least one signal threshold. Resetting all...'
-        try:
-            # try to extract lift_type
-            collar.update(thresh_dict[collar['lift_type']].copy())
-        except KeyError:
-            print 'Couldnt find any thresholds for lift_type {}. Defaulting to 1.'.format(collar['lift_type'])
-            for k in thresh_dict[thresh_dict.keys()[0]]:
-                collar[k] = 1.
+    # if any([(tracker[col] == 'None') for col in ['a_x_thresh', 'v_x_thresh', 'pwr_x_thresh', 'pos_x_thresh']]):
+    #     print 'Missing at least one signal threshold. Resetting all...'
+    #     try:
+    #         # try to extract lift_type
+    #         tracker.update(thresh_dict[tracker['lift_type']].copy())
+    #     except KeyError:
+    #         print 'Couldnt find any thresholds for lift_type {}. Defaulting to 1.'.format(tracker['lift_type'])
+    #         for k in thresh_dict[thresh_dict.keys()[0]]:
+    #             tracker[k] = 1.
 
     # start of the lift
     now = dt.now()  # returns local time, i.e. EST
-    if collar['created_at'] == 'None':
-        collar['created_at'] = now
+    if tracker['created_at'] == 'None':
+        tracker['created_at'] = now
 
     # added for patrick
-    if collar['updated_at'] == 'None':
-        collar['updated_at'] = now
+    if tracker['updated_at'] == 'None':
+        tracker['updated_at'] = now
 
-    #: Should only happen with default collar initialization
-    if collar['tracker_id'] == 'None':
-        collar['tracker_id'] = head['tracker_id']
+    #: Should only happen with default tracker initialization
+    if tracker['tracker_id'] == 'None':
+        tracker['tracker_id'] = head['tracker_id']
 
     if 'athlete_id' in head.keys():
-        collar['athlete_id'] = head['athlete_id']
+        tracker['athlete_id'] = head['athlete_id']
 
-    if collar['init_num_reps'] is None:
-        collar['init_num_reps'] = 0
+    if tracker['init_num_reps'] is None:
+        tracker['init_num_reps'] = 0
 
-    #: Left over from old collar format. Shouldn't need this forever - remove key "threshold" if exists
-    collar.pop('threshold', None)
+    #: Left over from old tracker format. Shouldn't need this forever - remove key "threshold" if exists
+    tracker.pop('threshold', None)
 
-    # If stored collar doesn't have "active" field, create it and set to False
-    if 'active' not in collar.keys():
-        collar['active'] = False
+    # If stored tracker doesn't have "active" field, create it and set to False
+    if 'active' not in tracker.keys():
+        tracker['active'] = False
 
-    return collar
+    return tracker

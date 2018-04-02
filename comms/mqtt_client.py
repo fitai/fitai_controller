@@ -13,13 +13,14 @@ try:
     print 'Adding {} to sys.path'.format(path)
     syspath.append(path)
 except NameError:
-    syspath.append('/Users/kyle/PycharmProjects/fitai_controller')
+    syspath.append('/Users/kyle/projects/fitai_controller')
     print 'Working in Dev mode.'
 
 from databasing.database_push import push_to_db
-from databasing.redis_controls import establish_redis_client, retrieve_collar_by_id
-from processing.util import read_header_mqtt, read_content_mqtt, process_data, prep_collar
-from ml.thresh_learn import calc_reps, load_thresh_dict, ALL_THRESH
+from databasing.redis_controls import establish_redis_client, retrieve_tracker_by_id
+from processing.util import read_header_mqtt, read_content_mqtt, process_data, prep_tracker
+from ml.thresh_learn import ALL_THRESH
+from ml.rep_learn import run_detector
 from databasing.conn_strings import redis_host
 from comms.redis_pubsub import redis_pub
 
@@ -35,10 +36,37 @@ from comms.redis_pubsub import redis_pub
 redis_client = establish_redis_client(hostname=redis_host, verbose=True)
 # redis_client = establish_redis_client(hostname='18.221.103.145', verbose=True)  # in case conn to server is needed
 
-# If connection fails, MQTT client will not be able to update collar object, and will be useless. Kill and try again
+# If connection fails, MQTT client will not be able to update tracker object, and will be useless. Kill and try again
 if redis_client is None:
     print 'Couldnt connect to redis. Killing MQTT client.'
     exit(100)
+
+
+def get_default_detector():
+    detector_input = {
+        'vel': None
+        , 'sampling_rate': None
+        , 'prev_dat': []
+        , 'prev_vz': 0.
+        , 'prev_filt_vz': 0.
+        , 'packet_size': None
+        , 't_prev': 0.
+        , 'hold': False
+        , 'cross_track': []
+        , 'ts': []
+        , 'var_max': 0.05
+        , 'min_irt_samples': 10
+        , 'min_intra_samples': 60
+        , 'starts': []
+        , 'stops': []
+        , 'n_reps': 0.
+        , 't_min': 0.
+        # extra, just for plotting purposes:
+        , 'sig_track': None
+        , 'p_track': None
+    }
+
+    return detector_input
 
 
 # The callback for when the client successfully connects to the broker
@@ -50,9 +78,9 @@ def mqtt_on_connect(client, userdata, rc):
     print 'connected'
 
 
-def update_collar_obj(client, tracker_id):
-    print('Updating collar {}'.format(tracker_id))
-    client.collars.update({tracker_id: retrieve_collar_by_id(redis_client, tracker_id)})
+def update_tracker_obj(client, tracker_id):
+    print('Updating tracker {}'.format(tracker_id))
+    client.trackers.update({tracker_id: retrieve_tracker_by_id(redis_client, tracker_id)})
     return client
 
 
@@ -66,56 +94,79 @@ def mqtt_on_message(client, userdata, msg):
 
     try:
         data = loads(msg.payload)
+        header = read_header_mqtt(data)
 
-        head = read_header_mqtt(data)
+        tracker_id = str(header['tracker_id'])
+        # if client doesn't contain tracker object for this tracker_id, create a holder for it
+        if tracker_id not in client.trackers.keys():
+            client.trackers.update({tracker_id: None})
 
-        tracker_id = str(head['tracker_id'])
-        # if client doesn't contain collar object for this tracker_id, create a holder for it
-        if tracker_id not in client.collars.keys():
-            client.collars.update({tracker_id: None})
+        if tracker_id not in client.detectors.keys():
+            client.detectors.update({tracker_id: None})
 
-        collar_stat = tracker_id + '_status'
+        tracker_stat = tracker_id + '_status'
         # Check status of this object (separate stored item in redis). status == 'stale', means
         #   that the object has been updated elsewhere and needs to be refreshed
-        if (client.collars[tracker_id] is None) or (redis_client.get(collar_stat) == 'stale'):
-            print 'refreshing collar'
-            client = update_collar_obj(client, tracker_id)
-            redis_client.set(collar_stat, 'fresh')
-            client.collars[tracker_id]['push_header'] = True  # on first collar update, push header to db
+        if (client.trackers[tracker_id] is None) or (redis_client.get(tracker_stat) == 'stale'):
+            print 'refreshing tracker'
+            client = update_tracker_obj(client, tracker_id)
+            redis_client.set(tracker_stat, 'fresh')
+            client.trackers[tracker_id]['push_header'] = True  # on first tracker update, push header to db
+            client.detectors[tracker_id] = get_default_detector()
 
-        collar = prep_collar(client.collars[tracker_id], head, client.thresh_dict)
+        tracker = prep_tracker(client.trackers[tracker_id], header, client.thresh_dict)
+        detector = client.detectors[tracker_id]
 
-        accel, gyro = read_content_mqtt(data, collar)
+        accel, gyro = read_content_mqtt(data, tracker)
 
         # NOTE: process_data() returns accel, vel, power, position. All those returns are useful for
         #       calc_reps(), but are re-calculated differently before being pushed to redis pubsub,
         #       so I decided just to pass them straight through to the calc_reps function
-        collar, crossings = calc_reps(process_data(collar, accel, RMS=False, highpass=True), collar)
+        # tracker, crossings = calc_reps(process_data(tracker, accel, RMS=False, highpass=True), tracker)
+        filt_inits = {'a_z': {'x': tracker['prev_az'], 'y': tracker['prev_filt_az']}, 'v_z': detector['prev_vz']}
+        acc, vel, _, _, _ = process_data(tracker, accel, filt_inits, RMS=False, highpass=True)
 
-        redis_pub(redis_client, 'lifts', collar, process_data(collar, accel, RMS=True, highpass=True), source='real_time')
+        detector.update({'vel': vel['v_z'], 'sampling_rate': header['sampling_rate'], 'packet_size': header['sampling_rate']})
+        # detector['vel'] = vel['v_z']
+        # detector['sampling_rate'] = header['sampling_rate']
+        # detector['packet_size'] = header['sampling_rate']
 
-        client.collars[tracker_id] = collar  # update stored collar object
+        sig, prev_dat, hold, cross_track, ts, n_reps, _, _ = run_detector(**detector)
 
-        if collar['active']:
-            if 'lift_start' in collar.keys():
-                collar.pop('lift_start')
-            header = DataFrame(data=collar, index=[0]).drop(
-                ['active', 'curr_state', 'max_t'] + ALL_THRESH,
+        # store outputs from detector for next loop
+        detector.update({'prev_dat': prev_dat, 'hold': hold, 'cross_track': cross_track, 'ts': ts, 'n_reps': n_reps,
+                         'sig_track': None, 'p_track': None})
+        tracker['calc_reps'] = n_reps
+
+        # filter initial conditions for next loop
+        detector['prev_vz'] = vel['v_z'].iloc[-1]
+        detector['prev_filt_vz'] = sig.iloc[-1]
+        tracker['prev_az'] = accel['a_z'].iloc[-1]
+        tracker['prev_filt_az'] = acc['a_z'].iloc[-1]
+
+        redis_pub(redis_client, 'lifts', tracker, process_data(tracker, accel, filt_inits, RMS=True, highpass=True), 'real_time')
+
+        client.trackers[tracker_id] = tracker  # update stored tracker object
+
+        if tracker['active']:
+            if 'lift_start' in tracker.keys():
+                tracker.pop('lift_start')
+            header = DataFrame(data=tracker, index=[0]).drop(
+                ['active', 'curr_state', 'max_t', 'prev_az', 'prev_filt_az'],
                 axis=1)
             content = merge(accel, gyro, on='timepoint', how='left').fillna(0.)
 
             # create new thread for the db push
-            db_thread = Thread(target=push_to_db, args=(header, content, crossings))
+            db_thread = Thread(target=push_to_db, args=(header, content))
             db_thread.start()
 
-            if client.collars[tracker_id]['push_header']:  # assume push was done
-                client.collars[tracker_id]['push_header'] = False  # skip the header push to db on all subsequent loops
+            if client.trackers[tracker_id]['push_header']:  # assume push was done
+                client.trackers[tracker_id]['push_header'] = False  # skip the header push to db on all subsequent loops
         else:
-            print 'Received and processed data for collar {}, but collar is not active...'.format(collar['tracker_id'])
+            print 'Processed data for tracker {}, but tracker is not active...'.format(tracker['tracker_id'])
 
     except KeyError, e:
-        print 'Key not found in data header. ' \
-              'Cannot retrieve relevant information and update redis object.'
+        print 'Key not found in data header. Cannot retrieve relevant information and update redis object.'
         print 'Error message: \n{}'.format(e)
     except ValueError, e:
         print 'Error processing JSON object. Message: \n{}'.format(str(e))
@@ -128,8 +179,10 @@ def mqtt_on_message(client, userdata, msg):
 def establish_mqtt_client(ip, port, topic):
     client = mqtt.Client()
     # custom additions
-    client.thresh_dict = load_thresh_dict(fname='thresh_dict.txt')
-    client.collars = {}
+    # client.thresh_dict = load_thresh_dict(fname='thresh_dict.txt')
+    client.thresh_dict = {}
+    client.trackers = {}
+    client.detectors = {}
 
     client.on_connect = mqtt_on_connect
     client.on_message = mqtt_on_message
@@ -159,7 +212,7 @@ def establish_cli_parser():
     parser = OptionParser()
     parser.add_option('-p', '--port', dest='host_port', default=1883,
                       help='Port on server hosting MQTT')
-    parser.add_option('-i', '--ip', dest='host_ip', default='localhost',  # -18.221.103.145 fitai-dev
+    parser.add_option('-i', '--ip', dest='host_ip', default='localhost',  # 18.221.103.145 fitai-dev
                       help='IP address of server hosting MQTT')
     parser.add_option('-t', '--topic', dest='mqtt_topic', default='fitai',
                       help='MQTT topic messages are to be received from')
