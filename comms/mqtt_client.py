@@ -19,7 +19,6 @@ except NameError:
 from databasing.database_push import push_to_db
 from databasing.redis_controls import establish_redis_client, retrieve_tracker_by_id
 from processing.util import read_header_mqtt, read_content_mqtt, process_data, prep_tracker
-from ml.thresh_learn import ALL_THRESH
 from ml.rep_learn import run_detector
 from databasing.conn_strings import redis_host
 from comms.redis_pubsub import redis_pub
