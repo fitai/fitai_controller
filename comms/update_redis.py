@@ -13,7 +13,7 @@ except NameError:
 
 from databasing.database_pull import lift_to_json, pull_max_lift_id
 from databasing.database_push import update_calc_reps
-from databasing.redis_controls import establish_redis_client, update_collar_by_id, get_default_collar
+from databasing.redis_controls import establish_redis_client, update_tracker_by_id, get_default_tracker
 from databasing.conn_strings import redis_host
 from comms.mqtt_client import redis_client
 
@@ -44,18 +44,18 @@ def main(args):
 
     The fields listed are what are relevant to the switching logic in update_redis.py. There are more fields in the
     JSON string: they are pieces of metadata that needs to be attached to the lift, and are updated in the
-    collar object, but do not impact anything here (other than getting incorporated into the collar object).
+    tracker object, but do not impact anything here (other than getting incorporated into the tracker object).
 
-    The "tracker_id" field tells update_redis.py which collar to grab/update. The "active" field doesn't have
-    an impact in this script, but it tells update_redis.py to change the active state of the collar,
-    which mqtt_client.py will interpret as a sign to START pushing any data received for that collar to the
+    The "tracker_id" field tells update_redis.py which tracker to grab/update. The "active" field doesn't have
+    an impact in this script, but it tells update_redis.py to change the active state of the tracker,
+    which mqtt_client.py will interpret as a sign to START pushing any data received for that tracker to the
     database. The "athlete_id" field also has no impact on update_redis.py, but will impact which PHP frontend
     is listening to the data pushed to the websocket from mqtt_client.py
 
     "lift_id": "None" is the key trigger in this JSON string. It triggers the logic
     "if dat['lift_id'] == "None" ", which tells update_redis.py that the user has triggered a new lift, and
     (importantly) tells update_redis.py to iterate the stored Redis lift_id object, which is how we track
-    the most recent lift_id in a shared manner (all collars will have access to the Redis storage). The collar
+    the most recent lift_id in a shared manner (all trackers will have access to the Redis storage). The tracker
     object is updated with all the relevant information contained in the passed JSON string, and is then
     saved to the Redis server. Assuming proper saving of the Redis object, the
     " if response & update_lift_id: " logic is triggered, which causes the "lift_id" Redis object to be incremented
@@ -79,17 +79,17 @@ def main(args):
 
     :param args: (-j) JSON string containing "tracker_id" and "active"
 
-    The "tracker_id" field tells update_redis.py which collar to grab/update, and the "active" field
-    tells update_redis.py to change the active state of the collar, which mqtt_client.py will interpret as
-    a sign to STOP pushing any data received for that collar to the database.
+    The "tracker_id" field tells update_redis.py which tracker to grab/update, and the "active" field
+    tells update_redis.py to change the active state of the tracker, which mqtt_client.py will interpret as
+    a sign to STOP pushing any data received for that tracker to the database.
 
     Note that field "lift_id" is NOT present in this JSON string. This triggers the "If lift_id not in dat.keys()"
     logic, which tells the script to disregard any potential change to lift_id info (i.e. don't iterate the
-    max lift_id object stored in Redis), to wipe the athlete_id currently associated with that collar (because
+    max lift_id object stored in Redis), to wipe the athlete_id currently associated with that tracker (because
     the lift is finished), and to switch the "active" field from true to False.
 
     The final if/elif/else logic block is then triggered. In this instance, the "elif not update_lift_id" should
-    trigger, which calls lift_to_json and passes in whatever lift_id the collar has associated with it, which
+    trigger, which calls lift_to_json and passes in whatever lift_id the tracker has associated with it, which
     should be the lift_id of whichever lift was just ended. lift_to_json queries the database for data relevant
     to that lift_id, then processes it and prints to stdout, which is how the PHP gets ahold of it. The PHP then
     uses that printed data to build the Summary Screen.
@@ -120,10 +120,10 @@ def main(args):
             print 'Found tracker_id {}'.format(dat['tracker_id'])
 
         try:
-            collar = loads(redis_client.get(dat['tracker_id']))
+            tracker = loads(redis_client.get(dat['tracker_id']))
         except TypeError:  # if loading from redis fails, expect to get TypeError
             print 'Unable to find redis object for tracker {}. Loading default'.format(dat['tracker_id'])
-            collar = get_default_collar()
+            tracker = get_default_tracker()
 
         next_lift_id = redis_client.get('lift_id')
         # In case redis can't be reached, can move forward assuming that the content of athlete_lift table
@@ -137,16 +137,16 @@ def main(args):
         if 'lift_id' not in dat.keys():
             # No lift_id field occurs when End Lift button is pressed, and we want to stop pushing data to db
             # In this case, first update the athlete_lift table with the calculated number of reps,
-            # then update collar object with new values and push to redis. DO NOT iterate lift_id
+            # then update tracker object with new values and push to redis. DO NOT iterate lift_id
             update_lift_id = False
             for key in dat.keys():
-                collar[key] = dat[key]
-            collar['athlete_id'] = 'None'  # Release athlete from collar
-            collar['active'] = False  # stop pushing data to db
+                tracker[key] = dat[key]
+            tracker['athlete_id'] = 'None'  # Release athlete from tracker
+            tracker['active'] = False  # stop pushing data to db
 
             # Update calc_reps in database with final calculated value
-            # if ('calc_reps' in collar.keys()) & (collar['calc_reps'] is not None):
-            #     update_calc_reps(collar)
+            # if ('calc_reps' in tracker.keys()) & (tracker['calc_reps'] is not None):
+            #     update_calc_reps(tracker)
 
         elif dat['lift_id'] == 'None':
             # lift_id = 'None' is sent to trigger new workout, which means lift_id needs to be updated.
@@ -155,20 +155,20 @@ def main(args):
             for key in dat.keys():
                 #: Temporary workaround until patrick renames this field
                 # if key == 'lift_num_reps':
-                #     collar['init_num_reps'] = dat[key]
+                #     tracker['init_num_reps'] = dat[key]
                 # else:
-                collar[key] = dat[key]
-            # collar['active'] = True  # shouldn't be necessary
-            collar['lift_id'] = next_lift_id
+                tracker[key] = dat[key]
+            # tracker['active'] = True  # shouldn't be necessary
+            tracker['lift_id'] = next_lift_id
         else:
             if verbose:
                 print 'sent update explicitly for lift_id {}, which is not currently handled.'.format(dat['lift_id'])
             update_lift_id = False
-            collar = dat
+            tracker = dat
 
-        response = update_collar_by_id(redis_client, collar, collar['tracker_id'], verbose)
-        collar_stat = str(collar['tracker_id']) + '_status'
-        redis_client.set(collar_stat, 'stale')
+        response = update_tracker_by_id(redis_client, tracker, tracker['tracker_id'], verbose)
+        tracker_stat = str(tracker['tracker_id']) + '_status'
+        redis_client.set(tracker_stat, 'stale')
 
         #: Switching logic to dictate whether or not the script should call up the info stored
         #: for whatever lift just ended.
@@ -176,8 +176,8 @@ def main(args):
             #: This is triggered when a Submit form is sent, and the user is about to START lifting
             # print 'Redis object updated properly. Will increment lift_id'
             if verbose:
-                print 'lift_id: {}'.format(collar['lift_id'])
-            # lift_id was 'None', and the redis collar object was successfully updated
+                print 'lift_id: {}'.format(tracker['lift_id'])
+            # lift_id was 'None', and the redis tracker object was successfully updated
             redis_client.incr('lift_id', 1)
         elif not response:
             #: This is triggered when a Submit form is sent, but redis couldn't be updated properly.
@@ -190,13 +190,13 @@ def main(args):
 
             # In this case, we want to retrieve whatever information we just stored about the lift the user
             # just finished. We do this by calling a function (lift_to_json) that will pull any acceleration
-            # data associated with the lift_id currently in the collar, will process it, and will print to
+            # data associated with the lift_id currently in the tracker, will process it, and will print to
             # stdout so that the PHP can retrieve it.
 
             # print 'JSON object did not include lift_id'
             if verbose:
-                print 'found lift_id: {}'.format(collar['lift_id'])
-            print lift_to_json(collar['lift_id'])
+                print 'found lift_id: {}'.format(tracker['lift_id'])
+            print lift_to_json(tracker['lift_id'])
         else:
             print 'SHOULDNT SEE THIS!?!'
 
