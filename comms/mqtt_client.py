@@ -70,8 +70,9 @@ def get_default_detector():
 
 # The callback for when the client successfully connects to the broker
 def mqtt_on_connect(client, userdata, rc):
-    ''' We subscribe on_connect() so that if we lose the connection
-        and reconnect, subscriptions will be renewed. '''
+    """
+    We subscribe on_connect() so that if we lose the connection and reconnect, subscriptions will be renewed.
+    """
 
     # client.subscribe('fitai')
     print 'connected'
@@ -121,14 +122,10 @@ def mqtt_on_message(client, userdata, msg):
         # NOTE: process_data() returns accel, vel, power, position. All those returns are useful for
         #       calc_reps(), but are re-calculated differently before being pushed to redis pubsub,
         #       so I decided just to pass them straight through to the calc_reps function
-        # tracker, crossings = calc_reps(process_data(tracker, accel, RMS=False, highpass=True), tracker)
         filt_inits = {'a_z': {'x': tracker['prev_az'], 'y': tracker['prev_filt_az']}, 'v_z': detector['prev_vz']}
         acc, vel, _, _, _ = process_data(tracker, accel, filt_inits, RMS=False, highpass=True)
 
         detector.update({'vel': vel['v_z'], 'sampling_rate': header['sampling_rate'], 'packet_size': header['sampling_rate']})
-        # detector['vel'] = vel['v_z']
-        # detector['sampling_rate'] = header['sampling_rate']
-        # detector['packet_size'] = header['sampling_rate']
 
         sig, prev_dat, hold, cross_track, ts, n_reps, _, _ = run_detector(**detector)
 
@@ -249,7 +246,7 @@ if __name__ == '__main__':
 # data = {"header": {"tracker_id": 555,"lift_id": "None","sampling_rate":50},"content":{
 # "a_x": [0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00],
 # "a_y":[0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00],
-# "a_z":[0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00,0.00],
+# "a_z":[0.10,0.20,0.30,0.20,0.10,0.00,-0.10,-0.20,-0.30,-0.20,-0.10,0.00,0.10,-0.10,0.00],
 # "g_x":[-1.75,-1.83,-1.87,-1.85,-1.87,-1.97,-1.83,-1.82,-1.72,-1.79,-1.81,-1.84,-1.85,-1.82,-1.91],
 # "g_y":[1.49,1.46,1.46,1.54,1.53,1.57,1.73,1.63,1.60,1.60,1.64,1.63,1.59,1.56,1.61],
 # "g_z":[0.77,0.74,0.76,0.84,0.89,0.88,0.85,0.87,0.80,0.82,0.85,0.82,0.83,0.85,0.85],
