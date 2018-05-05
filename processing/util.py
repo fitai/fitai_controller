@@ -82,16 +82,16 @@ def extract_sampling_rate(header):
 # Expects a dataframe with known fields
 # Timepoint, a_x, (a_y, a_z), lift_id
 #: NOTE: default is to process accel & vel into RMS signals
-def process_data(tracker_obj, content, inits={}, RMS=False, highpass=True, verbose=False):
-    if not isinstance(content, DataFrame):
+def process_data(tracker_obj, accel, inits={}, RMS=False, highpass=True, verbose=False):
+    if not isinstance(accel, DataFrame):
         if verbose:
-            print 'Content (type {}) is not a dataframe. Will try to convert...'.format(type(content))
-        content = DataFrame(content)
+            print 'Accel (type {}) is not a dataframe. Will try to convert...'.format(type(accel))
+        accel = DataFrame(accel)
 
-    content = copy(content)
+    accel_ = accel.copy(deep=True)
 
     #: Establish column headers so that any piece of the function can access
-    accel_headers = [x for x in content.columns if x in ['a_x', 'a_y', 'a_z']]
+    accel_headers = [x for x in accel_.columns if x in ['a_x', 'a_y', 'a_z']]
     vel_headers = ['v_' + x.split('_')[-1] for x in accel_headers]
     pwr_headers = ['pwr_' + x.split('_')[-1] for x in accel_headers]
     pos_headers = ['pos_' + x.split('_')[-1] for x in accel_headers]
@@ -102,9 +102,9 @@ def process_data(tracker_obj, content, inits={}, RMS=False, highpass=True, verbo
             if col in inits.keys():
                 y0 = inits[col]  # runs online HP code; adjusts for initial offsets
             else:
-                y0 = {'x': 0, 'y': 0}
+                y0 = {'x': 0., 'y': 0.}
 
-            content[col] = filter_signal(content[col].values, y0, 'highpass', freqs=[.6, None], fs=tracker_obj['sampling_rate'], filter_order=1)
+            accel_[col] = filter_signal(accel_[col].values, y0, 'highpass', freqs=[.6, None], fs=tracker_obj['sampling_rate'], filter_order=1)
 
     fs = extract_sampling_rate(tracker_obj)
     weight = extract_weight(tracker_obj, verbose)
@@ -124,29 +124,29 @@ def process_data(tracker_obj, content, inits={}, RMS=False, highpass=True, verbo
                 v0 = inits['v_z']
             else:
                 v0 = 0.
-            vel[vel_headers[i]] = calc_integral(content[header], v0, scale=1., fs=fs)
+            vel[vel_headers[i]] = calc_integral(accel_[header], v0, scale=1., fs=fs)
 
         pos = DataFrame(columns=pos_headers)
         for i, header in enumerate(accel_headers):
-            pos[pos_headers[i]] = calc_pos(content[header], scale=1., fs=fs)
+            pos[pos_headers[i]] = calc_pos(accel_[header], scale=1., fs=fs)
 
         force = DataFrame(columns=force_headers)
         for i, header in enumerate(accel_headers):
-            force[force_headers[i]] = calc_force(content[header], weight)
+            force[force_headers[i]] = calc_force(accel_[header], weight)
 
         pwr = DataFrame(columns=pwr_headers)
         for i in range(len(accel_headers)):
-            pwr[pwr_headers[i]] = calc_power(content[accel_headers[i]], vel[vel_headers[i]], weight)
+            pwr[pwr_headers[i]] = calc_power(accel_[accel_headers[i]], vel[vel_headers[i]], weight)
 
     if RMS:
-        a = calc_rms(content, accel_headers).to_frame()
+        a = calc_rms(accel_, accel_headers).to_frame()
         v = calc_rms(vel, vel_headers).to_frame()
         pwr = calc_rms(pwr, pwr_headers).to_frame()
         pos = calc_rms(pos, pos_headers).to_frame()
         force = calc_rms(force, force_headers).to_frame()
 
     else:
-        a = content
+        a = accel_
         v = vel
 
     return a, v, pwr, pos, force
